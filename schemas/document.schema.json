@@ -1,0 +1,233 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/nuncaeslupus/research-docs-generator/schemas/document.schema.json",
+    "title": "Research Document",
+    "description": "Schema for research-docs-generator input documents",
+    "type": "object",
+    "required": ["meta", "tabs", "sections"],
+    "properties": {
+        "meta": {
+            "type": "object",
+            "required": ["version", "date"],
+            "properties": {
+                "version": { "type": "string", "description": "Document version, e.g. '1.0'" },
+                "date": { "type": "string", "description": "Human-readable date, e.g. 'March 2026'" },
+                "title": { "type": "string", "description": "Full document title (used in HTML <title> and title page)", "default": "Documentation" },
+                "short_title": { "type": "string", "description": "Short title for sidebar header (defaults to title)" },
+                "subtitle": { "type": "string", "description": "Subtitle shown on the title page" },
+                "title_page_section": { "type": "string", "description": "Section ID that gets title-page treatment (default: 'ov-intro')", "default": "ov-intro" },
+                "phase": { "type": "string" },
+                "language": { "type": "string", "default": "English" }
+            },
+            "additionalProperties": true
+        },
+        "tabs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/tab" }
+        },
+        "sections": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/section" }
+        },
+        "changelog": { "$ref": "#/$defs/changelog" }
+    },
+    "additionalProperties": true,
+    "$defs": {
+        "tab": {
+            "type": "object",
+            "required": ["id", "label"],
+            "properties": {
+                "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+                "label": { "type": "string" },
+                "nav": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/navGroup" }
+                },
+                "sections": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Ordered list of section IDs to render in this tab"
+                }
+            }
+        },
+        "navGroup": {
+            "type": "object",
+            "properties": {
+                "label": { "type": "string", "description": "Group heading in the sidebar" },
+                "items": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/navItem" }
+                }
+            }
+        },
+        "navItem": {
+            "type": "object",
+            "required": ["href", "label"],
+            "properties": {
+                "href": { "type": "string", "description": "Anchor ID (without #)" },
+                "label": { "type": "string" },
+                "sub": { "type": "boolean", "description": "Indent as sub-item" },
+                "subsub": { "type": "boolean", "description": "Indent as sub-sub-item" }
+            }
+        },
+        "section": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "section_label": { "type": "string" },
+                "badge": { "type": "string" },
+                "blocks": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/block" }
+                }
+            }
+        },
+        "block": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "p", "h3", "h4", "heading", "paragraph", "hr",
+                        "ul", "ol", "code", "callout", "verdict", "table",
+                        "svg", "usage_banner", "agnostic_banner", "cc_banner",
+                        "phase_cards", "card_grid"
+                    ]
+                }
+            },
+            "allOf": [
+                {
+                    "if": { "properties": { "type": { "const": "p" } } },
+                    "then": { "properties": { "md": { "type": "string" }, "style": { "type": "string" } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "h3" } } },
+                    "then": { "properties": { "md": { "type": "string" }, "id": { "type": "string" }, "badge": { "type": "string" } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "h4" } } },
+                    "then": { "properties": { "md": { "type": "string" }, "id": { "type": "string" } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "heading" } } },
+                    "then": {
+                        "required": ["content"],
+                        "properties": {
+                            "level": { "type": "integer", "enum": [3, 4] },
+                            "content": { "type": "string" },
+                            "id": { "type": "string" }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "paragraph" } } },
+                    "then": {
+                        "required": ["content"],
+                        "properties": { "content": { "type": "string" }, "style": { "type": "string" } }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "code" } } },
+                    "then": { "properties": { "text": { "type": "string" }, "lang": { "type": "string" } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "callout" } } },
+                    "then": {
+                        "properties": {
+                            "md": { "type": "string" },
+                            "variant": { "type": "string", "enum": ["blue", "green", "amber", "red", "purple"] },
+                            "title": { "type": "string" }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "verdict" } } },
+                    "then": {
+                        "properties": {
+                            "md": { "type": "string" },
+                            "badge": { "type": "string" },
+                            "badge_text": { "type": "string" },
+                            "label": { "type": "string" }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "table" } } },
+                    "then": {
+                        "properties": {
+                            "headers": { "type": "array", "items": { "type": "string" } },
+                            "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "ul" } } },
+                    "then": { "properties": { "items": { "type": "array", "items": { "type": "string" } } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "ol" } } },
+                    "then": { "properties": { "items": { "type": "array", "items": { "type": "string" } } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "svg" } } },
+                    "then": { "properties": { "html": { "type": "string" } } }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "phase_cards" } } },
+                    "then": {
+                        "properties": {
+                            "cards": { "type": "array", "items": {
+                                "type": "object",
+                                "properties": {
+                                    "phase": { "type": "string" },
+                                    "title": { "type": "string" },
+                                    "items": { "type": "array", "items": { "type": "string" } }
+                                }
+                            }}
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "card_grid" } } },
+                    "then": {
+                        "properties": {
+                            "cols": { "type": "integer", "enum": [2, 3] },
+                            "cards": { "type": "array", "items": {
+                                "type": "object",
+                                "properties": { "title": { "type": "string" }, "md": { "type": "string" } }
+                            }}
+                        }
+                    }
+                }
+            ]
+        },
+        "changelog": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/changelogEntry" }
+                },
+                "protocol_blocks": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/block" }
+                }
+            }
+        },
+        "changelogEntry": {
+            "type": "object",
+            "required": ["version"],
+            "properties": {
+                "id": { "type": "string", "pattern": "^cl-v\\d+$" },
+                "version": { "type": "string" },
+                "current": { "type": "boolean" },
+                "paragraphs": { "type": "array", "items": { "type": "string" } },
+                "title": { "type": "string" },
+                "items": { "type": "array", "items": { "type": "string" } }
+            }
+        }
+    }
+}
