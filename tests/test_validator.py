@@ -35,15 +35,17 @@ class TestStarterDocIntegrity:
     def test_starter_sections_and_subtitles(self, starter_doc: dict) -> None:
         # Check first tab first section
         overview = starter_doc["tabs"][0]
-        # The first section title should match meta.title in init, 
+        # The first section title should match meta.title in init,
         # but in raw STARTER_DOCUMENT it is "Project Objective"
-        first_title = list(overview["sections"].keys())[0]
+        first_title = next(iter(overview["sections"].keys()))
         assert overview["sections"][first_title]["subtitle"] == "Primary goals and project scope"
 
         # Check research tab sections
         research = starter_doc["tabs"][1]
         assert "Methodology" in research["sections"]
-        assert research["sections"]["Methodology"]["subtitle"] == "Standards for sourcing and validating information"
+        assert research["sections"]["Methodology"]["subtitle"] == (
+            "Standards for sourcing and validating information"
+        )
 
         assert "Reasoning Journey" in research["sections"]
         assert research["sections"]["Reasoning Journey"]["subtitle"] == "How We Arrived Here"
@@ -62,6 +64,4 @@ class TestStarterDocIntegrity:
         # Check implementation tab
         impl = starter_doc["tabs"][4]
         assert "Build Guide" in impl["sections"]
-        assert (
-            impl["sections"]["Build Guide"]["subtitle"] == "Steps to deploy the current design"
-        )
+        assert impl["sections"]["Build Guide"]["subtitle"] == "Steps to deploy the current design"
