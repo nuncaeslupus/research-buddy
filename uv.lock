@@ -703,7 +703,7 @@ wheels = [
 ]
 
 [[package]]
-name = "research-docs-generator"
+name = "research-buddy"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -79,11 +79,13 @@ def _collect_all_ids(doc: Doc) -> list[str]:
 
     # Tab sections
     for tab in doc.get("tabs", []):
+
         def _walk(secs: dict[str, Any]) -> None:
             for title, sec in secs.items():
                 ids.append(slugify(title))
                 ids.extend(_collect_block_ids(sec.get("blocks", [])))
                 _walk(sec.get("subsections", {}))
+
         _walk(tab.get("sections", {}))
 
     # Changelog (legacy structure check if still present)
@@ -102,6 +104,7 @@ def _parse_ver(v: str) -> tuple[int, ...]:
 def _validate_references(doc: Doc) -> list[str]:
     warnings = []
     for tab in doc.get("tabs", []):
+
         def _walk(secs: dict[str, Any]) -> None:
             for title, sec in secs.items():
                 for b in sec.get("blocks", []):
@@ -123,6 +126,7 @@ def _validate_references(doc: Doc) -> list[str]:
                                     f"REFERENCE ORDER in '{title}': dates not descending"
                                 )
                 _walk(sec.get("subsections", {}))
+
         _walk(tab.get("sections", {}))
     return warnings
 

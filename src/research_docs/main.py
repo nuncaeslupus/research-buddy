@@ -96,10 +96,7 @@ def perform_build(
         try:
             from weasyprint import HTML  # type: ignore[import-untyped]
         except ImportError:
-            print(
-                "Error: weasyprint not installed. Run 'pip install weasyprint'.",
-                file=sys.stderr
-            )
+            print("Error: weasyprint not installed. Run 'pip install weasyprint'.", file=sys.stderr)
             return 1
 
         pdf_name = output_name.replace(".html", ".pdf")
@@ -149,7 +146,7 @@ def cmd_build(args: argparse.Namespace) -> int:
             def on_modified(self, event: FileSystemEvent) -> None:
                 src_path = str(event.src_path)
                 if src_path.endswith(".json") or src_path.endswith(".css"):
-                    ts = datetime.now().strftime('%H:%M:%S')
+                    ts = datetime.now().strftime("%H:%M:%S")
                     print(f"\n[{ts}] Change detected. Rebuilding...")
                     try:
                         jp, pr = _resolve_source(path)
@@ -281,9 +278,7 @@ def main() -> None:
     p_build.add_argument(
         "--output", default="docs.html", help="Output filename (default: docs.html)"
     )
-    p_build.add_argument(
-        "--validate-only", action="store_true", help="Validate without building"
-    )
+    p_build.add_argument("--validate-only", action="store_true", help="Validate without building")
     p_build.add_argument(
         "--watch", action="store_true", help="Watch for changes and rebuild automatically"
     )

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -13,6 +13,7 @@ import pytest
 def starter_doc() -> dict:
     """Return a fresh copy of the default starter document."""
     from research_docs.main import _load_starter_template
+
     return _load_starter_template()
 
 
@@ -20,6 +21,7 @@ def starter_doc() -> dict:
 def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
     """Create a temporary project directory with a valid document."""
     from research_docs.main import _load_starter_template
+
     doc = _load_starter_template()
 
     source_dir = tmp_path / "source"

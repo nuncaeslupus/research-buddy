@@ -15,26 +15,30 @@ Doc = dict[str, Any]
 
 # ── Constants ───────────────────────────────────────────────────────────────
 
-VALID_TAG_CLASSES = frozenset({
-    "tag-blue",
-    "tag-green",
-    "tag-amber",
-    "tag-red",
-    "tag-teal",
-    "tag-purple",
-    "phase-1",
-    "phase-2",
-    "cloud",
-    "skip",
-    "tag",
-})
+VALID_TAG_CLASSES = frozenset(
+    {
+        "tag-blue",
+        "tag-green",
+        "tag-amber",
+        "tag-red",
+        "tag-teal",
+        "tag-purple",
+        "phase-1",
+        "phase-2",
+        "cloud",
+        "skip",
+        "tag",
+    }
+)
 
 MAX_NOWRAP_COLUMN_LENGTH = 30
 
 # ── State Management ────────────────────────────────────────────────────────
 
+
 class BuildState:
     """Tracks state during a single build pass, primarily for unique ID generation."""
+
     def __init__(self) -> None:
         self.used_ids: set[str] = set()
 
@@ -49,6 +53,7 @@ class BuildState:
             counter += 1
         self.used_ids.add(candidate)
         return candidate
+
 
 # ── Assets ──────────────────────────────────────────────────────────────────
 
@@ -181,12 +186,14 @@ def r_code(b: Block, _state: BuildState) -> str:
     if not lang:
         # Require at least two Python-specific signals to avoid mis-classifying
         # JSON/YAML/shell blocks that happen to contain a bare "# comment"
-        py_signals = sum([
-            "def " in text,
-            "import " in text,
-            "class " in text,
-            text.lstrip().startswith("# "),
-        ])
+        py_signals = sum(
+            [
+                "def " in text,
+                "import " in text,
+                "class " in text,
+                text.lstrip().startswith("# "),
+            ]
+        )
         if py_signals >= 2:
             lang = "python"
     code = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -288,8 +295,14 @@ def _table_col_widths(headers: list[str], ncols: int) -> tuple[dict[int, str], b
 
     # Verdict / rejection tables (Discarded Alternatives etc.)
     REJECTION_WORDS = (
-        "rejected", "verdict", "alternative", "discarded",
-        "approach", "why", "decision", "status"
+        "rejected",
+        "verdict",
+        "alternative",
+        "discarded",
+        "approach",
+        "why",
+        "decision",
+        "status",
     )
     if any(w in h for w in REJECTION_WORDS):
         if ncols == 2:
@@ -350,8 +363,8 @@ def r_usage_banner(b: Block, _state: BuildState) -> str:
 
 
 def r_agnostic_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get('title', '')
-    md_val = b.get('md', '')
+    title_val = b.get("title", "")
+    md_val = b.get("md", "")
     return (
         f'<div class="agnostic">'
         f'<div class="ico">🌐</div>'
@@ -362,14 +375,9 @@ def r_agnostic_banner(b: Block, _state: BuildState) -> str:
 
 
 def r_cc_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get('title', '')
-    md_val = b.get('md', '')
-    return (
-        f'<div class="cc-banner">'
-        f"<div><h4>{title_val}</h4>"
-        f"<p>{md(md_val)}</p>"
-        f"</div></div>\n"
-    )
+    title_val = b.get("title", "")
+    md_val = b.get("md", "")
+    return f'<div class="cc-banner"><div><h4>{title_val}</h4><p>{md(md_val)}</p></div></div>\n'
 
 
 def r_phase_cards(b: Block, _state: BuildState) -> str:
@@ -391,7 +399,7 @@ def r_card_grid(b: Block, _state: BuildState) -> str:
     cards_html = ""
     for card in b.get("cards", []):
         title_val = card.get("title", "")
-        md_val = card.get('md', '')
+        md_val = card.get("md", "")
         cards_html += (
             f'<div class="card">'
             f'<div class="card-title">{md(title_val)}</div>'

@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from research_docs.build import (
@@ -95,11 +92,7 @@ class TestSectionRendering:
         nav = []
         sec = {
             "blocks": [{"type": "p", "md": "root"}],
-            "subsections": {
-                "Sub": {
-                    "blocks": [{"type": "p", "md": "child"}]
-                }
-            }
+            "subsections": {"Sub": {"blocks": [{"type": "p", "md": "child"}]}},
         }
         html = render_section("Top", sec, state, nav, level=2, number="1")
         assert 'id="top"' in html
