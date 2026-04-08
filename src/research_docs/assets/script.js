@@ -40,11 +40,22 @@ if (tabBar) {
 /* ── Sidebar toggle (mobile) ─────────────────────────────────────────── */
 var menuToggle = $('menu-toggle');
 if (menuToggle) {
-  menuToggle.addEventListener('click', function() {
+  menuToggle.addEventListener('click', function(e) {
+    e.stopPropagation();
     var sb = $('sidebar');
     if (sb) sb.classList.toggle('open');
   });
 }
+
+/* Close sidebar when clicking outside on mobile */
+document.addEventListener('click', function(e) {
+  var sb = $('sidebar');
+  if (sb && sb.classList.contains('open')) {
+    if (!sb.contains(e.target) && e.target !== $('menu-toggle')) {
+      sb.classList.remove('open');
+    }
+  }
+});
 
 /* ── Cross-tab xlinks ────────────────────────────────────────────────── */
 document.addEventListener('click', function(e) {

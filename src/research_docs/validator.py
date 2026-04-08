@@ -140,10 +140,10 @@ def validate(doc: Doc) -> list[str]:
 
     # 1. Structural JSON Schema validation
     schema = _load_schema()
-    try:
-        jsonschema.validate(instance=doc, schema=schema)
-    except jsonschema.ValidationError as e:
-        warnings.append(f"[{'.'.join(str(p) for p in e.path)}] {e.message}")
+    validator = jsonschema.Draft202012Validator(schema)
+    for error in sorted(validator.iter_errors(doc), key=lambda e: str(list(e.absolute_path))):
+        path = ".".join(str(p) for p in error.absolute_path) or "(root)"
+        warnings.append(f"[{path}] {error.message}")
 
     # 2. Semantic validations
     warnings.extend(_validate_references(doc))

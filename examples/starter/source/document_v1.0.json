@@ -159,6 +159,26 @@
             }
           ]
         },
+        "Open Research Queue": {
+          "subtitle": "Topics pending evaluation",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "Priority",
+                "Topic",
+                "Status"
+              ],
+              "rows": [
+                [
+                  "1",
+                  "Initial Project Setup",
+                  "OPEN"
+                ]
+              ]
+            }
+          ]
+        },
         "Reasoning Journey": {
           "subtitle": "How We Arrived Here",
           "blocks": [
