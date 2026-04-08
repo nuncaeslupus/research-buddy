@@ -5,13 +5,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from research_docs.cli import cmd_build, cmd_init, cmd_validate
+from research_docs.main import cmd_build, cmd_init, cmd_validate
 
 
 class _Args:
     """Minimal argparse.Namespace substitute."""
 
     def __init__(self, **kwargs: object) -> None:
+        self.watch = False
+        self.pdf = False
+        self.title = None
+        self.subtitle = None
+        self.ver = "1.0"
         for k, v in kwargs.items():
             setattr(self, k, v)
 

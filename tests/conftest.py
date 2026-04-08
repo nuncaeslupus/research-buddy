@@ -4,28 +4,30 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Generator
 
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def starter_doc() -> dict:
-    """Return the starter document that `init` generates."""
-    from research_docs.cli import STARTER_DOCUMENT
+    """Return a fresh copy of the default starter document."""
+    from research_docs.main import _load_starter_template
+    return _load_starter_template()
 
-    return json.loads(json.dumps(STARTER_DOCUMENT))
 
-
-@pytest.fixture()
-def tmp_project(tmp_path: Path) -> Path:
-    """Scaffold a project in tmp_path and return the directory."""
-    from research_docs.cli import STARTER_DOCUMENT
+@pytest.fixture
+def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
+    """Create a temporary project directory with a valid document."""
+    from research_docs.main import _load_starter_template
+    doc = _load_starter_template()
 
     source_dir = tmp_path / "source"
     source_dir.mkdir()
     (tmp_path / "versions").mkdir()
-    doc = json.loads(json.dumps(STARTER_DOCUMENT))
-    doc["meta"]["date"] = "January 2026"
-    with open(source_dir / "document_v1.0.json", "w") as f:
+
+    doc_path = source_dir / "document_v1.0.json"
+    with open(doc_path, "w", encoding="utf-8") as f:
         json.dump(doc, f)
-    return tmp_path
+
+    yield tmp_path
