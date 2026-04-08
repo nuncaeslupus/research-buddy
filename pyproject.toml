@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "research-docs-generator"
+name = "research-buddy"
 version = "0.1.0"
-description = "Generate single-file HTML documentation from structured JSON — tabbed layout with sidebar navigation, search, and versioning"
+description = "Generate single-file HTML documentation from structured JSON."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
@@ -25,6 +25,8 @@ classifiers = [
 ]
 dependencies = [
     "jsonschema>=4.0.0",
+    "watchdog>=3.0.0",
+    "weasyprint>=60.0",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +39,7 @@ dev = [
 ]
 
 [project.scripts]
-research-docs = "research_docs.cli:main"
+research-buddy = "research_docs.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -51,7 +53,7 @@ research_docs = ["assets/*", "py.typed"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [".claude/", ".venv/"]
+exclude = [".claude/", ".venv/", "tmp/"]
 
 [tool.ruff.lint]
 select = [
@@ -85,5 +87,5 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 show_error_codes = true
-exclude = ["tests/", ".claude/"]
+exclude = ["tests/", ".claude/", "tmp/"]
 mypy_path = ["src"]

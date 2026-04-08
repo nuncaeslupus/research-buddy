@@ -15,21 +15,45 @@ Doc = dict[str, Any]
 
 # ── Constants ───────────────────────────────────────────────────────────────
 
-VALID_TAG_CLASSES = frozenset({
-    "tag-blue",
-    "tag-green",
-    "tag-amber",
-    "tag-red",
-    "tag-teal",
-    "tag-purple",
-    "phase-1",
-    "phase-2",
-    "cloud",
-    "skip",
-    "tag",
-})
+VALID_TAG_CLASSES = frozenset(
+    {
+        "tag-blue",
+        "tag-green",
+        "tag-amber",
+        "tag-red",
+        "tag-teal",
+        "tag-purple",
+        "phase-1",
+        "phase-2",
+        "cloud",
+        "skip",
+        "tag",
+    }
+)
 
 MAX_NOWRAP_COLUMN_LENGTH = 30
+
+# ── State Management ────────────────────────────────────────────────────────
+
+
+class BuildState:
+    """Tracks state during a single build pass, primarily for unique ID generation."""
+
+    def __init__(self) -> None:
+        self.used_ids: set[str] = set()
+
+    def unique_id(self, base: str) -> str:
+        """Generate a unique ID by appending a counter if the base is already taken."""
+        if not base:
+            base = "id"
+        candidate = base
+        counter = 2
+        while candidate in self.used_ids:
+            candidate = f"{base}-{counter}"
+            counter += 1
+        self.used_ids.add(candidate)
+        return candidate
+
 
 # ── Assets ──────────────────────────────────────────────────────────────────
 
@@ -86,6 +110,15 @@ def md(text: str) -> str:
     return t
 
 
+def slugify(text: str) -> str:
+    """Convert a title into a URL-friendly ID."""
+    t = str(text).lower()
+    t = re.sub(r"[^\w\s-]", "", t)
+    t = re.sub(r"[\s_-]+", "-", t)
+    t = t.strip("-")
+    return t or "sec"
+
+
 def md_block(text: str) -> str:
     """Convert a text block that may contain paragraph-separated sections."""
     if not text:
@@ -99,55 +132,71 @@ def md_block(text: str) -> str:
 # ── Block renderers ─────────────────────────────────────────────────────────
 
 
-def r_p(b: Block) -> str:
+def r_p(b: Block, _state: BuildState) -> str:
     style = f' style="{b["style"]}"' if b.get("style") else ""
     return f"<p{style}>{md(b.get('md', ''))}</p>\n"
 
 
-def r_h3(b: Block) -> str:
-    sid = f' id="{b["id"]}"' if b.get("id") else ""
-    badge = f' <span class="tag tag-blue">{b["badge"]}</span>' if b.get("badge") else ""
-    return f"<h3{sid}>{md(b.get('md', ''))}{badge}</h3>\n"
+def r_h3(b: Block, state: BuildState) -> str:
+    sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
+    badge_val = b.get("badge")
+    badge = f' <span class="tag tag-blue">{badge_val}</span>' if badge_val else ""
+    return f'<h3 id="{sid}">{md(b.get("md", ""))}{badge}</h3>\n'
 
 
-def r_h4(b: Block) -> str:
-    sid = f' id="{b["id"]}"' if b.get("id") else ""
-    return f"<h4{sid}>{md(b.get('md', ''))}</h4>\n"
+def r_h4(b: Block, state: BuildState) -> str:
+    sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
+    return f'<h4 id="{sid}">{md(b.get("md", ""))}</h4>\n'
 
 
-def r_heading(b: Block) -> str:
+def r_heading(b: Block, state: BuildState) -> str:
     """Render a 'heading' block: {type, level, content}."""
     level = b.get("level", 3)
     tag = f"h{level}" if level in (3, 4) else "h3"
     text = b.get("content", "") or b.get("md", "")
-    sid = f' id="{b["id"]}"' if b.get("id") else ""
-    return f"<{tag}{sid}>{md(text)}</{tag}>\n"
+    sid = state.unique_id(b.get("id") or slugify(text))
+    return f'<{tag} id="{sid}">{md(text)}</{tag}>\n'
 
 
-def r_paragraph(b: Block) -> str:
+def r_paragraph(b: Block, _state: BuildState) -> str:
     """Render a 'paragraph' block: {type, content}."""
     text = b.get("content", "") or b.get("md", "")
     style = f' style="{b["style"]}"' if b.get("style") else ""
     return f"<p{style}>{md(text)}</p>\n"
 
 
-def r_hr(_b: Block) -> str:
+def r_hr(_b: Block, _state: BuildState) -> str:
     return "<hr>\n"
 
 
-def r_ul(b: Block) -> str:
+def r_ul(b: Block, _state: BuildState) -> str:
     items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
     return f"<ul>\n{items}</ul>\n"
 
 
-def r_ol(b: Block) -> str:
+def r_ol(b: Block, _state: BuildState) -> str:
     items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
     return f"<ol>\n{items}</ol>\n"
 
 
-def r_code(b: Block) -> str:
-    lang = b.get("lang", "")
-    code = b.get("text", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+def r_code(b: Block, _state: BuildState) -> str:
+    lang = b.get("lang") or ""
+    # Accept both "text" and legacy "content"/"md" field names
+    text = b.get("text") or b.get("content") or b.get("md") or ""
+    if not lang:
+        # Require at least two Python-specific signals to avoid mis-classifying
+        # JSON/YAML/shell blocks that happen to contain a bare "# comment"
+        py_signals = sum(
+            [
+                "def " in text,
+                "import " in text,
+                "class " in text,
+                text.lstrip().startswith("# "),
+            ]
+        )
+        if py_signals >= 2:
+            lang = "python"
+    code = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     lang_attr = f' data-lang="{lang}"' if lang else ""
     lang_cls = f' class="language-{lang}"' if lang else ""
     return (
@@ -158,7 +207,7 @@ def r_code(b: Block) -> str:
     )
 
 
-def r_callout(b: Block) -> str:
+def r_callout(b: Block, _state: BuildState) -> str:
     variant = b.get("variant", "blue")
     title = b.get("title", "")
     cls = f"callout {variant}" if variant != "blue" else "callout"
@@ -166,7 +215,7 @@ def r_callout(b: Block) -> str:
     return f'<div class="{cls}">\n{title_html}<p>{md(b.get("md", ""))}</p>\n</div>\n'
 
 
-def r_verdict(b: Block) -> str:
+def r_verdict(b: Block, _state: BuildState) -> str:
     badge = b.get("badge", "reject")
     badge_text = b.get("badge_text", badge.upper())
     label = b.get("label", "")
@@ -191,14 +240,105 @@ def _nowrap_cols(headers: list[str], rows: list[list[str]]) -> list[bool]:
     return [mx < MAX_NOWRAP_COLUMN_LENGTH for mx in maxes]
 
 
-def r_table(b: Block) -> str:
+def _table_col_widths(headers: list[str], ncols: int) -> tuple[dict[int, str], bool]:
+    if not headers or ncols == 0:
+        return {}, False
+    h = " ".join(headers).lower()
+
+    # # | Build | Test condition to pass | Time
+    if "build" in h and "test condition" in h:
+        return {0: "4%", 1: "26%", 3: "10%"}, True
+
+    # # | Build | Activation condition  (Phase 2 table)
+    if "build" in h and "activation condition" in h:
+        return {0: "4%", 1: "20%"}, True
+
+    # Phase / barrier control
+    if "phase" in h and "who controls barriers" in h:
+        return {1: "22%"}, True
+
+    # Problem / root-cause  OR  proposal / rationale
+    if ("problem" in h and "root" in h) or ("proposal" in h and "rationale" in h):
+        return {0: "25%", 1: "25%"}, True
+
+    # Source | Tier | Relevance  (research session citation tables)
+    if h.strip().startswith("source") and "tier" in h and "relevance" in h:
+        return {0: "48%", 1: "8%", 2: "44%"}, True
+
+    # Source | Tier | Adopted claims | Rejected/flagged claims
+    if "source" in h and "tier" in h and "adopted" in h:
+        return {0: "28%", 1: "7%", 2: "32%", 3: "33%"}, True
+
+    # Source | Role in system  (reference role tables)
+    if "source" in h and "role" in h and ncols == 2:
+        return {0: "45%", 1: "55%"}, True
+
+    # Reference | Used for
+    if "reference" in h and "used for" in h:
+        return {0: "42%", 1: "58%"}, True
+
+    # Citation | What it supports
+    if "citation" in h and "supports" in h:
+        return {0: "42%", 1: "58%"}, True
+
+    # Concept (full name) | What it does | Why ...  (Concept Map tables)
+    if "concept" in h and "what it does" in h:
+        return {0: "22%", 1: "39%", 2: "39%"}, True
+
+    # Concept | Status | Session finding  (Tracker tables)
+    if "concept" in h and "status" in h and "session" in h:
+        return {0: "28%", 1: "12%", 2: "60%"}, True
+
+    # Decision | Adopted spec | Rationale
+    if "decision" in h and "adopted spec" in h:
+        return {0: "18%", 1: "42%", 2: "40%"}, True
+
+    # Verdict / rejection tables (Discarded Alternatives etc.)
+    REJECTION_WORDS = (
+        "rejected",
+        "verdict",
+        "alternative",
+        "discarded",
+        "approach",
+        "why",
+        "decision",
+        "status",
+    )
+    if any(w in h for w in REJECTION_WORDS):
+        if ncols == 2:
+            return {0: "35%", 1: "65%"}, True
+        if ncols == 3:
+            return {0: "30%", 1: "18%", 2: "52%"}, True
+        if ncols == 4:
+            return {0: "26%", 1: "14%", 2: "14%", 3: "46%"}, True
+
+    return {}, False
+
+
+def r_table(b: Block, _state: BuildState) -> str:
     headers = b.get("headers", [])
     rows = b.get("rows", [])
+    ncols = len(headers) or (len(rows[0]) if rows else 0)
     nowrap = _nowrap_cols(headers, rows)
+
+    col_widths, use_fixed = _table_col_widths(headers, ncols)
+
+    # <colgroup><col> is more reliable than per-<th> style for fixed layout
+    colgroup = ""
+    if col_widths:
+        cols_html = "".join(
+            f'<col style="width:{col_widths[i]}">' if i in col_widths else "<col>"
+            for i in range(ncols)
+        )
+        colgroup = f"<colgroup>{cols_html}</colgroup>\n"
+
+    table_cls = ' class="t-fixed"' if use_fixed else ""
+
     thead = ""
     if headers:
         ths = "".join(f"<th>{md(h)}</th>" for h in headers)
         thead = f"<thead><tr>{ths}</tr></thead>\n"
+
     tbody_rows = []
     for row in rows:
         cells = []
@@ -207,40 +347,40 @@ def r_table(b: Block) -> str:
             cells.append(f"<td{nw}>{md(cell)}</td>")
         tbody_rows.append(f"<tr>{''.join(cells)}</tr>\n")
     tbody = f"<tbody>\n{''.join(tbody_rows)}</tbody>\n"
-    return f'<div class="table-wrap"><table>\n{thead}{tbody}</table></div>\n'
+
+    return f'<div class="table-wrap"><table{table_cls}>\n{colgroup}{thead}{tbody}</table></div>\n'
 
 
-def r_svg(b: Block) -> str:
+def r_svg(b: Block, _state: BuildState) -> str:
     return f'<div class="diagram-wrap">{b.get("html", "")}</div>\n'
 
 
-def r_usage_banner(b: Block) -> str:
+def r_usage_banner(b: Block, _state: BuildState) -> str:
     title = b.get("title", "")
     items = b.get("items", [])
     items_html = "".join(f"<li>{md(i)}</li>\n" for i in items)
     return f'<div class="usage-banner"><h4>{title}</h4><ul>{items_html}</ul></div>\n'
 
 
-def r_agnostic_banner(b: Block) -> str:
+def r_agnostic_banner(b: Block, _state: BuildState) -> str:
+    title_val = b.get("title", "")
+    md_val = b.get("md", "")
     return (
         f'<div class="agnostic">'
         f'<div class="ico">🌐</div>'
-        f"<div><h4>{b.get('title', '')}</h4>"
-        f"<p>{md(b.get('md', ''))}</p>"
+        f"<div><h4>{title_val}</h4>"
+        f"<p>{md(md_val)}</p>"
         f"</div></div>\n"
     )
 
 
-def r_cc_banner(b: Block) -> str:
-    return (
-        f'<div class="cc-banner">'
-        f"<div><h4>{b.get('title', '')}</h4>"
-        f"<p>{md(b.get('md', ''))}</p>"
-        f"</div></div>\n"
-    )
+def r_cc_banner(b: Block, _state: BuildState) -> str:
+    title_val = b.get("title", "")
+    md_val = b.get("md", "")
+    return f'<div class="cc-banner"><div><h4>{title_val}</h4><p>{md(md_val)}</p></div></div>\n'
 
 
-def r_phase_cards(b: Block) -> str:
+def r_phase_cards(b: Block, _state: BuildState) -> str:
     cards_html = ""
     for card in b.get("cards", []):
         phase = card.get("phase", "p1")
@@ -253,18 +393,33 @@ def r_phase_cards(b: Block) -> str:
     return f'<div class="phase-bar">\n{cards_html}</div>\n'
 
 
-def r_card_grid(b: Block) -> str:
+def r_card_grid(b: Block, _state: BuildState) -> str:
     cols = b.get("cols", 2)
     extra = " three" if cols == 3 else ""
     cards_html = ""
     for card in b.get("cards", []):
+        title_val = card.get("title", "")
+        md_val = card.get("md", "")
         cards_html += (
             f'<div class="card">'
-            f'<div class="card-title">{md(card.get("title", ""))}</div>'
-            f"<p>{md(card.get('md', ''))}</p>"
+            f'<div class="card-title">{md(title_val)}</div>'
+            f"<p>{md(md_val)}</p>"
             f"</div>\n"
         )
     return f'<div class="card-grid{extra}">\n{cards_html}</div>\n'
+
+
+def r_references(b: Block, _state: BuildState) -> str:
+    """Render a 'references' block."""
+    items_html = ""
+    for item in b.get("items", []):
+        ver = item.get("version", "")
+        date = item.get("date", "")
+        text = item.get("text", "")
+        ver_tag = f'<span class="tag tag-blue">{ver}</span> ' if ver else ""
+        date_tag = f'<span class="date">{date}</span> ' if date else ""
+        items_html += f"<li>{ver_tag}{date_tag}{md(text)}</li>\n"
+    return f'<ul class="references">\n{items_html}</ul>\n'
 
 
 BLOCK_RENDERERS: dict[str, Any] = {
@@ -286,15 +441,18 @@ BLOCK_RENDERERS: dict[str, Any] = {
     "cc_banner": r_cc_banner,
     "phase_cards": r_phase_cards,
     "card_grid": r_card_grid,
+    "references": r_references,
 }
 
 
-def render_blocks(blocks: list[Block]) -> str:
+def render_blocks(blocks: list[Block], state: BuildState, include_agent_only: bool = False) -> str:
     out: list[str] = []
     for b in blocks:
+        if not include_agent_only and b.get("agent_only"):
+            continue
         renderer = BLOCK_RENDERERS.get(b.get("type", ""))
         if renderer:
-            out.append(renderer(b))
+            out.append(renderer(b, state))
         else:
             out.append(f"<!-- unknown block type: {b.get('type')} -->\n")
     return "".join(out)
@@ -303,226 +461,69 @@ def render_blocks(blocks: list[Block]) -> str:
 # ── Section rendering ───────────────────────────────────────────────────────
 
 
-def render_section(sec: Doc, tab_id: str, meta: Doc | None = None, section_id: str = "") -> str:
-    sid = sec.get("id", section_id)
-    title = sec.get("title", "")
-    section_label = sec.get("section_label", "")
-    badge = sec.get("badge", "")
+def render_section(
+    title: str,
+    sec: Doc,
+    state: BuildState,
+    nav_list: list[dict[str, Any]],
+    level: int = 2,
+    number: str = "",
+    meta: Doc | None = None,
+) -> str:
+    """Render a section and its subsections recursively.
 
-    title_page_id = (meta or {}).get("title_page_section", "ov-intro")
-    is_title_page = sid == title_page_id
+    Unique IDs are added to nav_list for sidebar generation.
+    """
+    sid = state.unique_id(sec.get("changelog_id") or slugify(title))
+    subtitle = sec.get("subtitle", "")
 
-    label_html = f'<div class="section-label">{section_label}</div>\n' if section_label else ""
-    badge_html = f' <span class="tag tag-blue">{badge}</span>' if badge else ""
+    title_page_title = (meta or {}).get("title_page_section_title", "")
+    is_title_page = level == 2 and title == title_page_title
+
+    h_tag = f"h{level}" if level <= 4 else "h4"
+
+    display_title = md(title)
+    if subtitle:
+        sep = "" if subtitle.startswith("\u2014") or subtitle.startswith("-") else " \u2014 "
+        display_title += f' <span class="subtitle">{sep}{md(subtitle)}</span>'
+
+    if sec.get("current"):
+        display_title += ' <span class="tag tag-green">Current</span>'
+
+    num_html = f'<span class="num">{number}</span> ' if number else ""
 
     if is_title_page:
         doc_title = (meta or {}).get("title", "Documentation")
-        subtitle = (meta or {}).get("subtitle", "")
+        doc_subtitle = (meta or {}).get("subtitle", "")
         ver = (meta or {}).get("version", "")
         date = (meta or {}).get("date", "")
         ver_line = f"<p>v{ver} — {date}</p>\n" if ver else ""
-        sub_line = f'<p class="subtitle">{subtitle}</p>\n' if subtitle else ""
+        sub_line = f'<p class="subtitle">{doc_subtitle}</p>\n' if doc_subtitle else ""
         heading = f"<h1>{doc_title}</h1>\n{sub_line}{ver_line}"
-        open_tag = f'<div id="{sid}" class="title-page">\n{label_html}{heading}'
-        close_tag = "</div>\n"
-    elif sid.startswith("ov-"):
-        h2 = f"<h2>{md(title)}{badge_html}</h2>\n" if title else ""
-        open_tag = f'<div id="{sid}">\n{label_html}{h2}'
+        open_tag = f'<div id="{sid}" class="title-page">\n{heading}'
         close_tag = "</div>\n"
     else:
-        h2 = f"<h2>{md(title)}{badge_html}</h2>\n" if title else ""
-        open_tag = f'<section id="{sid}">\n{label_html}{h2}'
-        close_tag = "</section>\n"
+        h_html = f"<{h_tag}>{num_html}{display_title}</{h_tag}>\n"
+        tag = "section" if level == 2 else "div"
+        open_tag = f'<{tag} id="{sid}" class="level-{level}">\n{h_html}'
+        close_tag = f"</{tag}>\n"
 
-    body = render_blocks(sec.get("blocks", []))
-    return f"{open_tag}{body}{close_tag}<hr>\n"
+    # Add this section to navigation
+    nav_list.append({"id": sid, "num": number, "title": title, "level": level})
 
+    body = render_blocks(sec.get("blocks", []), state)
 
-# ── Sidebar nav ─────────────────────────────────────────────────────────────
+    sub_html_parts = []
+    subsections = sec.get("subsections", {})
+    if subsections:
+        for i, (sub_title, sub_sec) in enumerate(subsections.items(), 1):
+            sub_num = f"{number}.{i}" if number else str(i)
+            sub_content = render_section(
+                sub_title, sub_sec, state, nav_list, level + 1, sub_num, meta
+            )
+            sub_html_parts.append(sub_content)
 
-
-def render_nav(nav_groups: list[Doc], tab_id: str, *, is_active: bool = False) -> str:
-    active_cls = " active" if is_active else ""
-    lines = [f'<nav class="tab-nav{active_cls}" data-for="{tab_id}">\n']
-    for group in nav_groups:
-        label = group.get("label", "")
-        if label:
-            lines.append(f'<div class="nav-s">{label}</div>\n')
-        for item in group.get("items", []):
-            href = item.get("href", "")
-            lbl = item.get("label", "")
-            sub = " sub" if item.get("sub") else ""
-            subsub = " subsub" if item.get("subsub") else ""
-            lines.append(f'<a href="#{href}" class="{(sub + subsub).strip()}">{lbl}</a>\n')
-    lines.append("</nav>\n")
-    return "".join(lines)
-
-
-# ── Changelog ───────────────────────────────────────────────────────────────
-
-
-def _version_sort_key(entry: Doc) -> tuple[int, int]:
-    ver = entry.get("version", "") or entry.get("id", "")
-    m = re.search(r"(\d+)\.(\d+)", ver)
-    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
-
-
-def _ensure_entry_id(entry: Doc) -> str:
-    eid = entry.get("id") or ""
-    if eid:
-        return eid
-    ver = entry.get("version", "")
-    m = re.search(r"(\d+)\.(\d+)", ver)
-    if m:
-        return f"cl-v{m.group(1)}{m.group(2)}"
-    return ""
-
-
-def build_changelog_nav(changelog: Doc) -> list[Doc]:
-    """Auto-generate changelog sidebar nav from entries."""
-    entries = sorted(changelog.get("entries", []), key=_version_sort_key, reverse=True)
-    items: list[Doc] = []
-    for entry in entries:
-        eid = _ensure_entry_id(entry)
-        ver = entry.get("version", "")
-        label = ver.split("—")[0].split("\u2014")[0].strip()
-        if label and not label.startswith("v"):
-            label = f"v{label}"
-        if entry.get("current"):
-            label += " \u2014 Current"
-        items.append({"href": eid, "label": label})
-    groups: list[Doc] = []
-    if changelog.get("protocol_blocks"):
-        groups.append(
-            {"label": "Protocol", "items": [{"href": "cl-protocol", "label": "Update Protocol"}]}
-        )
-    groups.append({"label": "Version History", "items": items})
-    return groups
-
-
-def render_changelog(changelog: Doc, meta: Doc) -> str:
-    entries = sorted(changelog.get("entries", []), key=_version_sort_key, reverse=True)
-    entries_html = ""
-    for entry in entries:
-        current_cls = " current" if entry.get("current") else ""
-        eid = _ensure_entry_id(entry)
-        id_attr = f' id="{eid}"' if eid else ""
-        ver = entry.get("version", "")
-        if ver and not ver.startswith("v"):
-            ver = f"v{ver}"
-
-        paras = ""
-        if entry.get("paragraphs"):
-            paras = "".join(f"<p>{md(p)}</p>\n" for p in entry["paragraphs"])
-        else:
-            title = entry.get("title", "")
-            items = entry.get("items", [])
-            if title:
-                paras += f"<p><strong>{md(title)}</strong></p>\n"
-            if items:
-                paras += "<ul>\n"
-                paras += "".join(f"<li>{md(i)}</li>\n" for i in items)
-                paras += "</ul>\n"
-
-        entries_html += (
-            f'<div class="cl-entry{current_cls}"{id_attr}>\n'
-            f'<div class="cl-version">{ver}</div>\n'
-            f"{paras}</div>\n"
-        )
-
-    proto_html = render_blocks(changelog.get("protocol_blocks", []))
-    doc_title = meta.get("short_title", meta.get("title", "Documentation"))
-    v = meta.get("version", "")
-    return (
-        f'<div id="cl-protocol"><h2>Update Protocol</h2>\n{proto_html}</div>\n<hr>\n'
-        f"{entries_html}"
-        f'<p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">'
-        f"{doc_title} \u00b7 Changelog \u00b7 v{v}</p>\n"
-    )
-
-
-# ── Link validation ─────────────────────────────────────────────────────────
-
-
-def _collect_block_ids(blocks: list[Block]) -> list[str]:
-    ids: list[str] = []
-    for b in blocks:
-        bid = b.get("id")
-        if bid:
-            ids.append(bid)
-    return ids
-
-
-def validate_links(doc: Doc) -> list[str]:
-    """Cross-reference nav hrefs against content IDs. Returns warnings."""
-    tabs = doc["tabs"]
-    sections = doc["sections"]
-    changelog = doc.get("changelog", {})
-
-    all_ids: list[str] = []
-
-    # section-level IDs
-    for sid, sec in sections.items():
-        all_ids.append(sid)
-        all_ids.extend(_collect_block_ids(sec.get("blocks", [])))
-
-    # changelog IDs
-    if changelog:
-        all_ids.append("cl-protocol")
-        for entry in changelog.get("entries", []):
-            eid = _ensure_entry_id(entry)
-            if eid:
-                all_ids.append(eid)
-
-    for tab in tabs:
-        all_ids.append(f"tab-{tab['id']}")
-
-    # duplicate IDs
-    warnings: list[str] = []
-    seen: dict[str, int] = {}
-    for aid in all_ids:
-        seen[aid] = seen.get(aid, 0) + 1
-    for aid, count in seen.items():
-        if count > 1:
-            warnings.append(f"DUPLICATE ID: '{aid}' appears {count} times")
-
-    id_set = set(all_ids)
-
-    # nav hrefs -> content IDs
-    for tab in tabs:
-        tab_id = tab["id"]
-        tab_label = tab["label"]
-        if tab_id == "changelog":
-            nav_groups = build_changelog_nav(changelog)
-        else:
-            nav_groups = tab.get("nav", [])
-
-        for group in nav_groups:
-            for item in group.get("items", []):
-                href = item.get("href", "")
-                label = item.get("label", "")
-                if href and href not in id_set:
-                    warnings.append(
-                        f"BROKEN LINK: [{tab_label}] '{label}' -> #{href} (no matching id)"
-                    )
-
-    # sections referenced in tabs but not defined
-    for tab in tabs:
-        if tab["id"] == "changelog":
-            continue
-        for sid in tab.get("sections", []):
-            if sid not in sections:
-                warnings.append(f"MISSING SECTION: tab '{tab['label']}' references '{sid}'")
-
-    # sections defined but not referenced by any tab
-    referenced: set[str] = set()
-    for tab in tabs:
-        referenced.update(tab.get("sections", []))
-    for sid in sections:
-        if sid not in referenced:
-            warnings.append(f"ORPHAN SECTION: '{sid}' defined but not in any tab")
-
-    return warnings
+    return f"{open_tag}{body}{''.join(sub_html_parts)}{close_tag}"
 
 
 # ── HTML assembly ───────────────────────────────────────────────────────────
@@ -548,10 +549,9 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         doc: Parsed JSON document.
         theme_css: Optional extra CSS appended after the default stylesheet.
     """
+    state = BuildState()
     meta = doc["meta"]
     tabs = doc["tabs"]
-    sections = doc["sections"]
-    changelog = doc.get("changelog", {})
 
     doc_title = meta.get("title", "Documentation")
     short_title = meta.get("short_title", doc_title)
@@ -569,56 +569,65 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         '<div id="tab-bar">\n'
         '<button id="menu-toggle" aria-label="Menu">☰</button>\n'
         + "\n".join(tab_btns)
-        + '\n<div id="search-wrap">'
-        '<input id="search-input" type="search" placeholder="Search\u2026 (Ctrl+F)" '
-        'autocomplete="off">'
-        '<span id="search-count"></span>'
-        "</div>\n</div>\n"
+        + "</div>\n"
     )
 
-    # sidebar
-    nav_html = ""
+    # sidebar & content areas
+    nav_html_parts = []
+    tab_contents: list[str] = []
+
     for i, tab in enumerate(tabs):
         is_active = i == 0
-        if tab["id"] == "changelog":
-            nav_groups = build_changelog_nav(changelog)
-        else:
-            nav_groups = tab.get("nav", [])
-        nav_html += render_nav(nav_groups, tab["id"], is_active=is_active)
+        tab_num = str(i + 1)
+        tid = tab["id"]
+        label = tab["label"]
+        active_cls = " active" if is_active else ""
+
+        # Header ID for the tab itself
+        tab_hdr_id = state.unique_id(f"tab-hdr-{tid}")
+
+        tab_nav_list: list[dict[str, Any]] = []
+
+        # Render sections recursively and collect nav entries
+        tab_body_parts = [f'<h1 id="{tab_hdr_id}">{tab_num}. {label}</h1>\n']
+        sections = tab.get("sections", {})
+        for j, (title, sec) in enumerate(sections.items(), 1):
+            num = f"{tab_num}.{j}"
+            tab_body_parts.append(
+                render_section(title, sec, state, tab_nav_list, level=2, number=num, meta=meta)
+            )
+
+        tab_body_parts.append(
+            f'<p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">'
+            f"{doc_title} \u00b7 {label} \u00b7 v{ver}</p>\n"
+        )
+
+        # Assemble sidebar nav for this tab
+        tab_nav_html = [f'<nav class="tab-nav{active_cls}" data-for="{tid}">\n']
+        tab_nav_html.append(f'<a href="#{tab_hdr_id}">{tab_num}. {label}</a>\n')
+        for entry in tab_nav_list:
+            cls = ""
+            if entry["level"] == 2:
+                cls = ' class="sub"'
+            elif entry["level"] >= 3:
+                cls = ' class="subsub"'
+            tab_nav_html.append(
+                f'<a href="#{entry["id"]}"{cls}>{entry["num"]}. {entry["title"]}</a>\n'
+            )
+        tab_nav_html.append("</nav>\n")
+        nav_html_parts.append("".join(tab_nav_html))
+
+        # Assemble tab content area
+        tab_contents.append(
+            f'<div id="tab-{tid}" class="tab-content{active_cls}" data-tab-label="{label}">\n'
+            f'<div class="content">\n{"".join(tab_body_parts)}</div></div>\n'
+        )
 
     sidebar = (
         '<div id="sidebar">\n'
         f'<div class="sidebar-hdr">{short_title}'
-        f"<span>v{ver} \u00b7 {date}</span></div>\n{nav_html}</div>\n"
+        f"<span>v{ver} \u00b7 {date}</span></div>\n{''.join(nav_html_parts)}</div>\n"
     )
-
-    # tab content areas
-    tab_contents: list[str] = []
-    for i, tab in enumerate(tabs):
-        active = " active" if i == 0 else ""
-        tid = tab["id"]
-        label = tab["label"]
-
-        if tid == "changelog":
-            inner = render_changelog(changelog, meta)
-        else:
-            parts: list[str] = []
-            for sid in tab.get("sections", []):
-                sec = sections.get(sid)
-                if sec:
-                    parts.append(render_section(sec, tid, meta, section_id=sid))
-                else:
-                    parts.append(f"<!-- missing section: {sid} -->\n")
-            parts.append(
-                f'<p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">'
-                f"{doc_title} \u00b7 {label} \u00b7 v{ver}</p>\n"
-            )
-            inner = "".join(parts)
-
-        tab_contents.append(
-            f'<div id="tab-{tid}" class="tab-content{active}" data-tab-label="{label}">\n'
-            f'<div class="content">\n{inner}</div></div>\n'
-        )
 
     body_content = (
         tab_bar
@@ -627,8 +636,6 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         + '<div id="main">\n'
         + "".join(tab_contents)
         + "</div>\n</div>\n"
-        '<div id="breadcrumb"></div>\n'
-        '<button id="back-top" title="Back to top">\u2191</button>\n'
     )
 
     # load assets

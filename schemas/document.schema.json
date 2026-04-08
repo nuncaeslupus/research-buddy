@@ -1,21 +1,30 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://github.com/nuncaeslupus/research-docs-generator/schemas/document.schema.json",
-    "title": "Research Document",
-    "description": "Schema for research-docs-generator input documents",
+    "title": "Research Buddy Document",
+    "description": "Schema for Research Buddy input documents",
     "type": "object",
-    "required": ["meta", "tabs", "sections"],
+    "required": ["meta", "tabs"],
     "properties": {
+        "agent_guidelines": {
+            "type": "object",
+            "properties": {
+                "structure_map": { "type": "string" },
+                "surgical_update_protocol": { "type": "string" },
+                "widget_library": { "type": ["string", "object"] }
+            },
+            "additionalProperties": true
+        },
         "meta": {
             "type": "object",
             "required": ["version", "date"],
             "properties": {
-                "version": { "type": "string", "description": "Document version, e.g. '1.0'" },
-                "date": { "type": "string", "description": "Human-readable date, e.g. 'March 2026'" },
-                "title": { "type": "string", "description": "Full document title (used in HTML <title> and title page)", "default": "Documentation" },
-                "short_title": { "type": "string", "description": "Short title for sidebar header (defaults to title)" },
-                "subtitle": { "type": "string", "description": "Subtitle shown on the title page" },
-                "title_page_section": { "type": "string", "description": "Section ID that gets title-page treatment (default: 'ov-intro')", "default": "ov-intro" },
+                "version": { "type": "string" },
+                "date": { "type": "string" },
+                "title": { "type": "string" },
+                "short_title": { "type": "string" },
+                "subtitle": { "type": "string" },
+                "title_page_section_title": { "type": "string" },
                 "phase": { "type": "string" },
                 "language": { "type": "string", "default": "English" }
             },
@@ -26,61 +35,34 @@
             "minItems": 1,
             "items": { "$ref": "#/$defs/tab" }
         },
-        "sections": {
-            "type": "object",
-            "additionalProperties": { "$ref": "#/$defs/section" }
-        },
         "changelog": { "$ref": "#/$defs/changelog" }
     },
     "additionalProperties": true,
     "$defs": {
         "tab": {
             "type": "object",
-            "required": ["id", "label"],
+            "required": ["id", "label", "sections"],
             "properties": {
                 "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
                 "label": { "type": "string" },
-                "nav": {
-                    "type": "array",
-                    "items": { "$ref": "#/$defs/navGroup" }
-                },
                 "sections": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Ordered list of section IDs to render in this tab"
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/$defs/section" }
                 }
-            }
-        },
-        "navGroup": {
-            "type": "object",
-            "properties": {
-                "label": { "type": "string", "description": "Group heading in the sidebar" },
-                "items": {
-                    "type": "array",
-                    "items": { "$ref": "#/$defs/navItem" }
-                }
-            }
-        },
-        "navItem": {
-            "type": "object",
-            "required": ["href", "label"],
-            "properties": {
-                "href": { "type": "string", "description": "Anchor ID (without #)" },
-                "label": { "type": "string" },
-                "sub": { "type": "boolean", "description": "Indent as sub-item" },
-                "subsub": { "type": "boolean", "description": "Indent as sub-sub-item" }
             }
         },
         "section": {
             "type": "object",
             "properties": {
-                "id": { "type": "string" },
-                "title": { "type": "string" },
-                "section_label": { "type": "string" },
-                "badge": { "type": "string" },
+                "subtitle": { "type": "string" },
+                "agent_instruction": { "type": "string" },
                 "blocks": {
                     "type": "array",
                     "items": { "$ref": "#/$defs/block" }
+                },
+                "subsections": {
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/$defs/section" }
                 }
             }
         },
@@ -94,9 +76,10 @@
                         "p", "h3", "h4", "heading", "paragraph", "hr",
                         "ul", "ol", "code", "callout", "verdict", "table",
                         "svg", "usage_banner", "agnostic_banner", "cc_banner",
-                        "phase_cards", "card_grid"
+                        "phase_cards", "card_grid", "references"
                     ]
-                }
+                },
+                "agent_only": { "type": "boolean" }
             },
             "allOf": [
                 {
@@ -131,7 +114,9 @@
                 },
                 {
                     "if": { "properties": { "type": { "const": "code" } } },
-                    "then": { "properties": { "text": { "type": "string" }, "lang": { "type": "string" } } }
+                    "then": {
+                        "properties": { "text": { "type": "string" }, "lang": { "type": "string" } }
+                    }
                 },
                 {
                     "if": { "properties": { "type": { "const": "callout" } } },
@@ -201,12 +186,33 @@
                             }}
                         }
                     }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "references" } } },
+                    "then": {
+                        "required": ["items"],
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["text"],
+                                    "properties": {
+                                        "text": { "type": "string" },
+                                        "version": { "type": "string" },
+                                        "date": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             ]
         },
         "changelog": {
             "type": "object",
             "properties": {
+                "agent_instruction": { "type": "string" },
                 "entries": {
                     "type": "array",
                     "items": { "$ref": "#/$defs/changelogEntry" }

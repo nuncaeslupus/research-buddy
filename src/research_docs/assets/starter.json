@@ -1,0 +1,290 @@
+{
+  "agent_guidelines": {
+    "customization_note": "This document structure is flexible. Sections and subsections can be added or removed as needed for different projects. Ensure that agent_guidelines and section-specific agent_instructions are updated to reflect how new nodes should be used or filled.",
+    "document_structure": "Tabs > Sections > Subsections > blocks[]. Section titles ARE the dict keys \u2014 use them verbatim. Never regenerate the full document; find the exact key path and update only that node.",
+    "key_locations": {
+      "next_topic": "tabs[id=research] > sections['Open Research Queue'] > blocks[type=table] \u2014 highest-priority OPEN row",
+      "rejection_index": "tabs[id=research] > sections['Discarded Alternatives'] \u2014 ALL verdict.label fields = permanent closed list",
+      "tracker": "tabs[id=research] > sections['Research Tracker'] \u2014 update Status after each session",
+      "theory_specs": "tabs[id=theory] > sections['Theoretical Foundations'] \u2014 one locked spec per subsection",
+      "session_notes": "tabs[id=research] > sections[TOPIC_KEY] \u2014 companion to each theory spec: Sources table, Decisions, Rejected claims",
+      "references": "tabs[id=research] > sections['References'] \u2014 descending version order",
+      "changelog": "tabs[id=changelog] > sections keyed by version \u2014 newest first, current=true on latest"
+    },
+    "research_session_protocol": [
+      {
+        "step": 1,
+        "name": "Rejection preflight",
+        "action": "Read ALL verdict blocks in Discarded Alternatives. If the topic appears \u2192 STOP, approach is closed."
+      },
+      {
+        "step": 2,
+        "name": "Tracker preflight",
+        "action": "Read Research Tracker rows for the topic. Note current Status and open questions."
+      },
+      {
+        "step": 3,
+        "name": "Theory inventory",
+        "action": "Check Theoretical Foundations subsections. If spec exists, read it fully before adding."
+      },
+      {
+        "step": 4,
+        "name": "Research \u2014 source rules",
+        "action": "Tier 1 only as primary evidence: arXiv, NeurIPS, ICML, JMLR, JCF, JFEC, RFS. Tier 2: official docs. No blogs, Medium, Reddit, forums."
+      },
+      {
+        "step": 5,
+        "name": "Second-opinion evaluation",
+        "action": "Check: (a) Has authors + venue + DOI/arXiv ID \u2014 missing = TIER:NEVER. (b) 'Obras citadas'/'Referencias' in English bibliography = AI fingerprint, reject immediately. (c) Spot-check 3+ citations for existence."
+      },
+      {
+        "step": 6,
+        "name": "Lock decisions",
+        "action": "For each open question: one-sentence decision + Tier-1 citation + rejected alternatives (these go to Discarded Alternatives)."
+      },
+      {
+        "step": 7,
+        "name": "Update document",
+        "action": "Surgical updates only. Insert new changelog key at TOP."
+      }
+    ],
+    "widget_library": {
+      "p": "{\"type\":\"p\",\"md\":\"...\"}",
+      "ul": "{\"type\":\"ul\",\"items\":[\"...\"]}",
+      "callout": "{\"type\":\"callout\",\"variant\":\"blue|green|amber|red\",\"title\":\"...\",\"md\":\"...\"}",
+      "verdict": "{\"type\":\"verdict\",\"badge\":\"reject|adopt|defer\",\"label\":\"SHORT_NAME\",\"md\":\"REASON\"}",
+      "table": "{\"type\":\"table\",\"headers\":[\"A\",\"B\"],\"rows\":[[\"a\",\"b\"]]}",
+      "code": "{\"type\":\"code\",\"lang\":\"python|json|yaml|bash\",\"text\":\"...\"}",
+      "hr": "{\"type\":\"hr\"}",
+      "references": "{\"type\":\"references\",\"items\":[{\"version\":\"vX.XX\",\"date\":\"Month YYYY\",\"text\":\"...\"}]}"
+    },
+    "source_tiers": {
+      "tier_1": "arXiv, NeurIPS, ICML, JMLR, JCF, JFEC, RFS, AAAI, ICLR",
+      "tier_2": "Official library documentation, academic textbooks (e.g. Shreve, Gatheral)",
+      "never": "Blogs, Medium, Reddit, forums, PDFs without authors/DOI/venue, AI-generated documents",
+      "ai_fingerprints": [
+        "'Obras citadas' or 'Referencias' in English bibliography",
+        "No authors, no venue, no DOI or arXiv ID",
+        "Citations that cannot be verified or contain hallucinated papers",
+        "Domain-contaminated refs (e.g. medical journals cited for trading)"
+      ]
+    },
+    "failure_modes": [
+      "Adding References rows without descending version order.",
+      "Renaming existing section keys \u2014 this breaks all cross-links.",
+      "Proposing approaches that appear in Discarded Alternatives.",
+      "Using Tier 3+ sources as primary evidence.",
+      "Setting current=true on a new changelog entry without setting previous current=false.",
+      "Updating large sections instead of the specific subsection that changed."
+    ]
+  },
+  "meta": {
+    "version": "1.0",
+    "date": "",
+    "title": "Research Project Title",
+    "subtitle": "Technical Analysis \u00b7 Design \u00b7 Implementation",
+    "title_page_section_title": "Project Objective",
+    "language": "English \u2014 all document content, section text, queue entries, changelog entries, and agent output must be written in English. No exceptions."
+  },
+  "tabs": [
+    {
+      "id": "overview",
+      "label": "Overview",
+      "sections": {
+        "Project Objective": {
+          "subtitle": "Primary goals and project scope",
+          "blocks": [
+            {
+              "type": "usage_banner",
+              "title": "Current Status",
+              "items": [
+                "Primary Goal: Define [Research Topic]",
+                "Current Phase: Discovery"
+              ]
+            },
+            {
+              "type": "p",
+              "md": "Welcome to your AI-ready research project. This document is structured for high-integrity collaboration between human researchers and AI agents."
+            }
+          ]
+        },
+        "Quick Links": {
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "I want to...",
+                "Go to"
+              ],
+              "rows": [
+                [
+                  "Understand the reasoning",
+                  "[Reason Journey \u2197](#reasoning-journey){tab=research}"
+                ],
+                [
+                  "Check rejections",
+                  "[Alternatives \u2197](#discarded-alternatives){tab=research}"
+                ],
+                [
+                  "See the latest updates",
+                  "[Changelog \u2197](#tab-hdr-changelog){tab=changelog}"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "research",
+      "label": "Research",
+      "sections": {
+        "Methodology": {
+          "subtitle": "Standards for sourcing and validating information",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "This section defines the rules for how research is conducted."
+            }
+          ]
+        },
+        "Agent Research Protocol": {
+          "subtitle": "",
+          "blocks": [
+            {
+              "type": "callout",
+              "variant": "red",
+              "title": "Mandatory pre-flight \u2014 complete before writing any output",
+              "md": "All agents conducting research or evaluation share a documented failure pattern: generating well-formatted output without reading the document context first. The following pre-flight sequence is mandatory for every agent in every mode. Output produced without completing it is invalid.\n\n**Before writing a single sentence of analysis:**\n\n1. Extract every `verdict` block label from [Discarded Alternatives](#discarded-alternatives){tab=research}. Any matching concept is an immediate reject.\n2. Extract every row from [Research Tracker](#research-tracker){tab=research} tables. Researched topics are closed.\n3. Verify first-author attribution for every cited paper.\n4. Check Theoretical Foundations sections for architectural overlap.\n5. Apply source tier filters (Research Methodology)."
+            }
+          ]
+        },
+        "Open Research Queue": {
+          "subtitle": "Topics pending evaluation",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": ["Priority", "Topic", "Status"],
+              "rows": [
+                ["1", "Initial Project Setup", "OPEN"]
+              ]
+            }
+          ]
+        },
+        "Reasoning Journey": {
+          "subtitle": "How We Arrived Here",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "Chronological log of major technical decisions."
+            }
+          ]
+        },
+        "Discarded Alternatives": {
+          "subtitle": "The Permanent Record of Rejections",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "Prevents re-introduction of concepts already proven invalid."
+            }
+          ]
+        },
+        "Research Tracker": {
+          "subtitle": "Living Status Board",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "ID",
+                "Topic",
+                "Status",
+                "Version"
+              ],
+              "rows": [
+                [
+                  "T-001",
+                  "Initial Architecture",
+                  "Researched",
+                  "v1.0"
+                ]
+              ]
+            }
+          ]
+        },
+        "References": {
+          "blocks": [
+            {
+              "type": "references",
+              "items": [
+                {
+                  "version": "v1.0",
+                  "date": "2026-04-05",
+                  "text": "Initial project documentation."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "theory",
+      "label": "Theory",
+      "sections": {
+        "Theoretical Foundations": {
+          "subtitle": "Foundational logic and mathematical specifications",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "Core technical specifications and theoretical foundations."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "design",
+      "label": "Design",
+      "sections": {
+        "System Architecture": {
+          "subtitle": "Component interaction and data flow",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "High-level design and component interaction."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "implementation",
+      "label": "Implementation",
+      "sections": {
+        "Build Guide": {
+          "subtitle": "Steps to deploy the current design",
+          "blocks": [
+            {
+              "type": "p",
+              "md": "Steps required to implement the current design."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "changelog",
+      "label": "Changelog",
+      "sections": {
+        "Version History": {
+          "blocks": [
+            {
+              "type": "p",
+              "md": "Initial scaffold created with full agent protocol."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
