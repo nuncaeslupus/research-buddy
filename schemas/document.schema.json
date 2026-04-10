@@ -9,9 +9,47 @@
         "agent_guidelines": {
             "type": "object",
             "properties": {
-                "structure_map": { "type": "string" },
-                "surgical_update_protocol": { "type": "string" },
-                "widget_library": { "type": ["string", "object"] }
+                "generic": {
+                    "type": "object",
+                    "properties": {
+                        "_comment": { "type": "string" },
+                        "customization_note": { "type": "string" },
+                        "document_structure": { "type": "string" },
+                        "research_session_protocol": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["step", "name", "action"],
+                                "properties": {
+                                    "step": { "type": "integer" },
+                                    "name": { "type": "string" },
+                                    "action": { "type": "string" }
+                                }
+                            }
+                        },
+                        "update_targets": { "type": "object", "additionalProperties": { "type": "string" } },
+                        "versioning": {
+                            "type": "object",
+                            "properties": {
+                                "rule": { "type": "string" },
+                                "locations": { "type": "array", "items": { "type": "string" } }
+                            }
+                        },
+                        "widget_library": { "type": "object", "additionalProperties": { "type": "string" } },
+                        "failure_modes": { "type": "array", "items": { "type": "string" } }
+                    },
+                    "additionalProperties": true
+                },
+                "project_specific": {
+                    "type": "object",
+                    "properties": {
+                        "_comment": { "type": "string" },
+                        "customization_note": { "type": "string" },
+                        "key_locations": { "type": "object", "additionalProperties": { "type": "string" } },
+                        "source_tiers": { "type": "object", "additionalProperties": { "type": ["string", "array"] } }
+                    },
+                    "additionalProperties": true
+                }
             },
             "additionalProperties": true
         },
@@ -182,25 +220,53 @@
                             "cols": { "type": "integer", "enum": [2, 3] },
                             "cards": { "type": "array", "items": {
                                 "type": "object",
-                                "properties": { "title": { "type": "string" }, "md": { "type": "string" } }
+                                "properties": {
+                                    "title": { "type": "string" },
+                                    "md": { "type": "string" }
+                                }
                             }}
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "usage_banner" } } },
+                    "then": {
+                        "properties": {
+                            "title": { "type": "string" },
+                            "items": { "type": "array", "items": { "type": "string" } }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "agnostic_banner" } } },
+                    "then": {
+                        "properties": {
+                            "title": { "type": "string" },
+                            "md": { "type": "string" }
+                        }
+                    }
+                },
+                {
+                    "if": { "properties": { "type": { "const": "cc_banner" } } },
+                    "then": {
+                        "properties": {
+                            "title": { "type": "string" },
+                            "md": { "type": "string" }
                         }
                     }
                 },
                 {
                     "if": { "properties": { "type": { "const": "references" } } },
                     "then": {
-                        "required": ["items"],
                         "properties": {
                             "items": {
                                 "type": "array",
                                 "items": {
                                     "type": "object",
-                                    "required": ["text"],
                                     "properties": {
-                                        "text": { "type": "string" },
                                         "version": { "type": "string" },
-                                        "date": { "type": "string" }
+                                        "date": { "type": "string" },
+                                        "text": { "type": "string" }
                                     }
                                 }
                             }
@@ -211,28 +277,22 @@
         },
         "changelog": {
             "type": "object",
+            "required": ["entries"],
             "properties": {
-                "agent_instruction": { "type": "string" },
                 "entries": {
                     "type": "array",
-                    "items": { "$ref": "#/$defs/changelogEntry" }
-                },
-                "protocol_blocks": {
-                    "type": "array",
-                    "items": { "$ref": "#/$defs/block" }
+                    "items": {
+                        "type": "object",
+                        "required": ["version", "date", "blocks"],
+                        "properties": {
+                            "version": { "type": "string" },
+                            "id": { "type": "string" },
+                            "date": { "type": "string" },
+                            "current": { "type": "boolean" },
+                            "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+                        }
+                    }
                 }
-            }
-        },
-        "changelogEntry": {
-            "type": "object",
-            "required": ["version"],
-            "properties": {
-                "id": { "type": "string", "pattern": "^cl-v\\d+$" },
-                "version": { "type": "string" },
-                "current": { "type": "boolean" },
-                "paragraphs": { "type": "array", "items": { "type": "string" } },
-                "title": { "type": "string" },
-                "items": { "type": "array", "items": { "type": "string" } }
             }
         }
     }
