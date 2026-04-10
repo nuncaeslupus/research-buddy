@@ -8,6 +8,7 @@
     "properties": {
         "agent_guidelines": {
             "type": "object",
+            "required": ["generic", "project_specific"],
             "properties": {
                 "generic": {
                     "type": "object",
@@ -258,11 +259,13 @@
                 {
                     "if": { "properties": { "type": { "const": "references" } } },
                     "then": {
+                        "required": ["items"],
                         "properties": {
                             "items": {
                                 "type": "array",
                                 "items": {
                                     "type": "object",
+                                    "required": ["text"],
                                     "properties": {
                                         "version": { "type": "string" },
                                         "date": { "type": "string" },
