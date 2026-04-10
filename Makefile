@@ -1,7 +1,12 @@
-.PHONY: lint format test test-all clean sync
+.PHONY: lint format test test-all clean sync regen-example
 
 sync:
 	uv sync --extra dev
+
+regen-example:
+	rm -rf examples/starter
+	uv run research-buddy init examples/starter --title "Research Buddy Project" --subtitle "Master Class Research"
+	uv run research-buddy build examples/starter
 
 lint:
 	uv run ruff check . && uv run mypy . --explicit-package-bases
@@ -9,7 +14,7 @@ lint:
 format:
 	uv run ruff check --fix --unsafe-fixes . && uv run ruff format .
 
-test:
+test: regen-example
 	uv run pytest tests/ -v
 
 test-all:

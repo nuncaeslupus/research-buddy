@@ -31,4 +31,3 @@ tmp/
 
 # Example generated output
 examples/*/versions/
-examples/*/*.html

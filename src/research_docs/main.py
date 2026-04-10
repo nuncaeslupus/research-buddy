@@ -12,6 +12,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+import argcomplete
+
 from research_docs.build import build_html, find_latest_json
 
 
@@ -259,7 +261,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     print()
     print("Next steps:")
     print(f"  1. Edit {_rel(doc_path)}")
-    print(f"  2. research-docs build {_rel(target)}")
+    print(f"  2. research-buddy build {_rel(target)}")
     print("  3. Open docs.html in a browser")
     return 0
 
@@ -295,6 +297,7 @@ def main() -> None:
     p_init.add_argument("--subtitle", help="Project subtitle")
     p_init.add_argument("--ver", default="1.0", help="Initial version (default: 1.0)")
 
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     handlers = {"build": cmd_build, "validate": cmd_validate, "init": cmd_init}
     sys.exit(handlers[args.command](args))
