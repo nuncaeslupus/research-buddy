@@ -47,3 +47,31 @@ class TestReferenceOrdering:
         )
         issues = validate(starter_doc)
         assert any("REFERENCE ORDER" in i for i in issues)
+
+    def test_month_year_ordering(self, starter_doc: dict) -> None:
+        # Research tab -> Methodology section
+        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+            {
+                "type": "references",
+                "items": [
+                    {"date": "April 2026", "text": "New"},
+                    {"date": "March 2026", "text": "Old"},
+                ],
+            }
+        )
+        issues = validate(starter_doc)
+        assert not any("REFERENCE ORDER" in i for i in issues)
+
+    def test_invalid_month_year_ordering(self, starter_doc: dict) -> None:
+        # Research tab -> Methodology section
+        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+            {
+                "type": "references",
+                "items": [
+                    {"date": "March 2026", "text": "Old"},
+                    {"date": "April 2026", "text": "New"},
+                ],
+            }
+        )
+        issues = validate(starter_doc)
+        assert any("REFERENCE ORDER" in i for i in issues)
