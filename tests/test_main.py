@@ -14,6 +14,8 @@ class _Args:
     def __init__(self, **kwargs: object) -> None:
         self.watch = False
         self.pdf = False
+        self.all = False
+        self.validate_only = False
         self.title = None
         self.subtitle = None
         self.ver = "1.0"
@@ -37,7 +39,7 @@ class TestInit:
 class TestBuild:
     def test_build_from_directory(self, tmp_project: Path) -> None:
         result = cmd_build(
-            _Args(path=str(tmp_project), theme=None, output="docs.html", validate_only=False)
+            _Args(paths=[str(tmp_project)], theme=None, output="docs.html", validate_only=False)
         )
         assert result == 0
         assert (tmp_project / "docs.html").exists()
@@ -45,7 +47,7 @@ class TestBuild:
 
     def test_build_custom_output(self, tmp_project: Path) -> None:
         result = cmd_build(
-            _Args(path=str(tmp_project), theme=None, output="my-docs.html", validate_only=False)
+            _Args(paths=[str(tmp_project)], theme=None, output="my-docs.html", validate_only=False)
         )
         assert result == 0
         assert (tmp_project / "my-docs.html").exists()
@@ -54,7 +56,12 @@ class TestBuild:
         theme = tmp_project / "theme.css"
         theme.write_text(":root { --bg: #ffffff; }")
         result = cmd_build(
-            _Args(path=str(tmp_project), theme=str(theme), output="docs.html", validate_only=False)
+            _Args(
+                paths=[str(tmp_project)],
+                theme=str(theme),
+                output="docs.html",
+                validate_only=False,
+            )
         )
         assert result == 0
         html = (tmp_project / "docs.html").read_text()
@@ -62,7 +69,7 @@ class TestBuild:
 
     def test_validate_only(self, tmp_project: Path) -> None:
         result = cmd_build(
-            _Args(path=str(tmp_project), theme=None, output="docs.html", validate_only=True)
+            _Args(paths=[str(tmp_project)], theme=None, output="docs.html", validate_only=True)
         )
         assert result == 0
         assert not (tmp_project / "docs.html").exists()
@@ -70,7 +77,7 @@ class TestBuild:
 
 class TestValidate:
     def test_valid_project(self, tmp_project: Path) -> None:
-        result = cmd_validate(_Args(path=str(tmp_project)))
+        result = cmd_validate(_Args(paths=[str(tmp_project)]))
         assert result == 0
 
     def test_invalid_project(self, tmp_project: Path) -> None:
@@ -80,5 +87,5 @@ class TestValidate:
         del doc["meta"]
         with open(doc_path, "w") as f:
             json.dump(doc, f)
-        result = cmd_validate(_Args(path=str(tmp_project)))
+        result = cmd_validate(_Args(paths=[str(tmp_project)]))
         assert result == 1

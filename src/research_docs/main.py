@@ -17,10 +17,11 @@ import argcomplete
 from research_docs.build import build_html, find_latest_json
 
 
-def _resolve_source(path: Path) -> tuple[Path, Path]:
+def _resolve_source(path: Path) -> tuple[Path, Path] | None:
     """Given a path (file or dir), return (json_path, project_root).
 
     Project root is the directory containing source/ and versions/.
+    Returns None if no document_v*.json is found.
     """
     if path.is_file():
         # source/document_v1.0.json -> project root is source/..
@@ -32,8 +33,7 @@ def _resolve_source(path: Path) -> tuple[Path, Path]:
     source_dir = path / "source" if (path / "source").is_dir() else path
     latest = find_latest_json(source_dir)
     if not latest:
-        print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
-        sys.exit(1)
+        return None
     project_root = path if (path / "source").is_dir() else path.parent
     return latest, project_root
 
@@ -55,7 +55,7 @@ def perform_build(
 
     issues = validate(doc)
     if issues:
-        print(f"\n\u26a0  {len(issues)} issue(s) found:")
+        print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
         for issue in issues:
             print(f"   {issue}")
         print()
@@ -119,24 +119,20 @@ def perform_build(
 
 
 def cmd_build(args: argparse.Namespace) -> int:
-    """Build HTML from a document JSON."""
-    path = Path(args.path).resolve()
-    json_path, project_root = _resolve_source(path)
-
-    if args.validate_only:
-        with open(json_path, encoding="utf-8") as f:
-            doc = json.load(f)
-        from research_docs.validator import validate
-
-        issues = validate(doc)
-        if issues:
-            print(f"\n\u26a0  {len(issues)} issue(s) found:")
-            for issue in issues:
-                print(f"   {issue}")
-            print()
-        return 1 if issues else 0
+    """Build HTML from document JSON(s)."""
+    paths = [Path(p).resolve() for p in args.paths]
 
     if args.watch:
+        if len(paths) > 1:
+            print("Error: --watch only supports a single path.", file=sys.stderr)
+            return 1
+        path = paths[0]
+        res = _resolve_source(path)
+        if not res:
+            print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+            return 1
+        json_path, project_root = res
+
         try:
             from watchdog.events import FileSystemEvent, FileSystemEventHandler
             from watchdog.observers import Observer
@@ -151,8 +147,10 @@ def cmd_build(args: argparse.Namespace) -> int:
                     ts = datetime.now().strftime("%H:%M:%S")
                     print(f"\n[{ts}] Change detected. Rebuilding...")
                     try:
-                        jp, pr = _resolve_source(path)
-                        perform_build(jp, pr, args.theme, args.output, args.pdf)
+                        res = _resolve_source(path)
+                        if res:
+                            jp, pr = res
+                            perform_build(jp, pr, args.theme, args.output, args.pdf)
                     except Exception as e:
                         print(f"Build failed: {e}")
 
@@ -171,29 +169,86 @@ def cmd_build(args: argparse.Namespace) -> int:
         observer.join()
         return 0
 
-    return perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+    exit_code = 0
+    for path in paths:
+        if args.all:
+            if not path.is_dir():
+                print(f"Error: --all requires a directory path, got {path}", file=sys.stderr)
+                exit_code = 1
+                continue
+
+            source_dir = path / "source" if (path / "source").is_dir() else path
+            json_files = sorted(list(source_dir.glob("document_v*.json")))
+
+            if not json_files:
+                print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
+                exit_code = 1
+                continue
+
+            print(f"\u26a0  Warning: Building {len(json_files)} files from {source_dir}.")
+            print("   Multiple versions of schema could coincide in this directory.")
+
+            for json_path in json_files:
+                project_root = path if (path / "source").is_dir() else path.parent
+                res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+                if res_code != 0:
+                    exit_code = res_code
+        else:
+            res = _resolve_source(path)
+            if not res:
+                print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+                exit_code = 1
+                continue
+            json_path, project_root = res
+
+            if args.validate_only:
+                with open(json_path, encoding="utf-8") as f:
+                    doc = json.load(f)
+                from research_docs.validator import validate
+
+                issues = validate(doc)
+                if issues:
+                    print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
+                    for issue in issues:
+                        print(f"   {issue}")
+                    print()
+                    exit_code = 1
+            else:
+                res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+                if res_code != 0:
+                    exit_code = res_code
+
+    return exit_code
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    """Validate a document without building."""
-    path = Path(args.path).resolve()
-    json_path, _root = _resolve_source(path)
+    """Validate document(s) without building."""
+    exit_code = 0
+    for p in args.paths:
+        path = Path(p).resolve()
+        res = _resolve_source(path)
+        if not res:
+            print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+            exit_code = 1
+            continue
+        json_path, _root = res
 
-    print(f"Validating {json_path.name}\u2026")
-    with open(json_path, encoding="utf-8") as f:
-        doc = json.load(f)
+        print(f"Validating {json_path.name}\u2026")
+        with open(json_path, encoding="utf-8") as f:
+            doc = json.load(f)
 
-    from research_docs.validator import validate
+        from research_docs.validator import validate
 
-    issues = validate(doc)
-    if issues:
-        print(f"\n\u26a0  {len(issues)} issue(s):")
-        for issue in issues:
-            print(f"   {issue}")
-        return 1
+        issues = validate(doc)
+        if issues:
+            print(f"\n\u26a0  {len(issues)} issue(s) in {json_path.name}:")
+            for issue in issues:
+                print(f"   {issue}")
+            exit_code = 1
+        else:
+            print(f"\u2714  {json_path.name}: No issues found.")
 
-    print("\u2714  No issues found.")
-    return 0
+    return exit_code
 
 
 def _load_starter_template() -> dict[str, Any]:
@@ -275,7 +330,10 @@ def main() -> None:
 
     # build
     p_build = sub.add_parser("build", help="Build HTML from document JSON")
-    p_build.add_argument("path", help="JSON file or directory containing source/")
+    p_build.add_argument(
+        "paths", nargs="+", help="JSON file(s) or directory(ies) containing source/"
+    )
+    p_build.add_argument("--all", action="store_true", help="Build all JSON files in the directory")
     p_build.add_argument("--theme", help="CSS file with style overrides")
     p_build.add_argument(
         "--output", default="docs.html", help="Output filename (default: docs.html)"
@@ -288,7 +346,7 @@ def main() -> None:
 
     # validate
     p_val = sub.add_parser("validate", help="Validate document without building")
-    p_val.add_argument("path", help="JSON file or directory containing source/")
+    p_val.add_argument("paths", nargs="+", help="JSON file(s) or directory(ies) containing source/")
 
     # init
     p_init = sub.add_parser("init", help="Scaffold a new documentation project")
