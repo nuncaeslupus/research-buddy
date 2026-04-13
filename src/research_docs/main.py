@@ -147,8 +147,9 @@ def cmd_build(args: argparse.Namespace) -> int:
                     ts = datetime.now().strftime("%H:%M:%S")
                     print(f"\n[{ts}] Change detected. Rebuilding...")
                     try:
-                        jp, pr = _resolve_source(path)  # type: ignore[arg-type]
-                        if jp and pr:
+                        res = _resolve_source(path)
+                        if res:
+                            jp, pr = res
                             perform_build(jp, pr, args.theme, args.output, args.pdf)
                     except Exception as e:
                         print(f"Build failed: {e}")

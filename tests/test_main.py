@@ -56,7 +56,12 @@ class TestBuild:
         theme = tmp_project / "theme.css"
         theme.write_text(":root { --bg: #ffffff; }")
         result = cmd_build(
-            _Args(paths=[str(tmp_project)], theme=str(theme), output="docs.html", validate_only=False)
+            _Args(
+                paths=[str(tmp_project)],
+                theme=str(theme),
+                output="docs.html",
+                validate_only=False,
+            )
         )
         assert result == 0
         html = (tmp_project / "docs.html").read_text()
