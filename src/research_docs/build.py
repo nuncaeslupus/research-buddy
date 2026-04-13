@@ -497,7 +497,7 @@ def render_section(
         doc_subtitle = (meta or {}).get("subtitle", "")
         ver = (meta or {}).get("version", "")
         date = (meta or {}).get("date", "")
-        ver_line = f"<p>v{ver} — {date}</p>\n" if ver else ""
+        ver_line = f"<p><strong>Version:</strong> v{ver} \u2014 {date}</p>\n" if ver else ""
         sub_line = f'<p class="subtitle">{doc_subtitle}</p>\n' if doc_subtitle else ""
         heading = f"<h1>{doc_title}</h1>\n{sub_line}{ver_line}"
         open_tag = f'<div id="{sid}" class="title-page">\n{heading}'
