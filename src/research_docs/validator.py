@@ -101,6 +101,44 @@ def _parse_ver(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in re.findall(r"\d+", v))
 
 
+_MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
+
+
+def _parse_date(d: str) -> tuple[int, ...]:
+    """Parse date string into a sortable tuple.
+    Supports YYYY-MM-DD and 'Month YYYY'.
+    """
+    if not isinstance(d, str):
+        return (0, 0, 0)
+
+    # Try YYYY-MM-DD
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", d)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
+    # Try Month YYYY
+    parts = d.lower().split()
+    if len(parts) == 2 and parts[0] in _MONTHS and parts[1].isdigit():
+        return (int(parts[1]), _MONTHS[parts[0]], 0)
+
+    # Fallback to numeric extraction
+    nums = [int(x) for x in re.findall(r"\d+", d)]
+    return tuple(nums)
+
+
 def _validate_references(doc: Doc) -> list[str]:
     warnings = []
     for tab in doc.get("tabs", []):
@@ -113,15 +151,16 @@ def _validate_references(doc: Doc) -> list[str]:
                         # Check version ordering (should be descending)
                         versions = [i.get("version") for i in items if i.get("version")]
                         if len(versions) > 1:
-                            parsed = [_parse_ver(v) for v in versions]
-                            if parsed != sorted(parsed, reverse=True):
+                            parsed_v = [_parse_ver(v) for v in versions]
+                            if parsed_v != sorted(parsed_v, reverse=True):
                                 warnings.append(
                                     f"REFERENCE ORDER in '{title}': versions not descending"
                                 )
                         # Check date ordering (should be descending)
                         dates = [i.get("date") for i in items if i.get("date")]
                         if len(dates) > 1:
-                            if dates != sorted(dates, reverse=True):
+                            parsed_d = [_parse_date(d) for d in dates]
+                            if parsed_d != sorted(parsed_d, reverse=True):
                                 warnings.append(
                                     f"REFERENCE ORDER in '{title}': dates not descending"
                                 )
