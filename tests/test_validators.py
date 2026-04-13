@@ -75,3 +75,18 @@ class TestReferenceOrdering:
         )
         issues = validate(starter_doc)
         assert any("REFERENCE ORDER" in i for i in issues)
+
+    def test_non_string_date_ordering(self, starter_doc: dict) -> None:
+        # Research tab -> Methodology section
+        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+            {
+                "type": "references",
+                "items": [
+                    {"date": 2026, "text": "Invalid type"},
+                    {"date": "March 2026", "text": "Old"},
+                ],
+            }
+        )
+        # Should not crash, and should fail the descending check since (0,0,0) < (2026,3,0)
+        issues = validate(starter_doc)
+        assert any("REFERENCE ORDER" in i for i in issues)

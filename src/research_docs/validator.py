@@ -101,33 +101,38 @@ def _parse_ver(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in re.findall(r"\d+", v))
 
 
+_MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
+
+
 def _parse_date(d: str) -> tuple[int, ...]:
     """Parse date string into a sortable tuple.
     Supports YYYY-MM-DD and 'Month YYYY'.
     """
+    if not isinstance(d, str):
+        return (0, 0, 0)
+
     # Try YYYY-MM-DD
     m = re.match(r"(\d{4})-(\d{2})-(\d{2})", d)
     if m:
         return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
     # Try Month YYYY
-    months = {
-        "january": 1,
-        "february": 2,
-        "march": 3,
-        "april": 4,
-        "may": 5,
-        "june": 6,
-        "july": 7,
-        "august": 8,
-        "september": 9,
-        "october": 10,
-        "november": 11,
-        "december": 12,
-    }
     parts = d.lower().split()
-    if len(parts) == 2 and parts[0] in months and parts[1].isdigit():
-        return (int(parts[1]), months[parts[0]], 0)
+    if len(parts) == 2 and parts[0] in _MONTHS and parts[1].isdigit():
+        return (int(parts[1]), _MONTHS[parts[0]], 0)
 
     # Fallback to numeric extraction
     nums = [int(x) for x in re.findall(r"\d+", d)]
