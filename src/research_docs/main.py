@@ -170,53 +170,68 @@ def cmd_build(args: argparse.Namespace) -> int:
         return 0
 
     exit_code = 0
+    # Collect all JSON files to build
+    to_build: list[tuple[Path, Path]] = []
     for path in paths:
-        if args.all:
-            if not path.is_dir():
-                print(f"Error: --all requires a directory path, got {path}", file=sys.stderr)
-                exit_code = 1
-                continue
-
-            source_dir = path / "source" if (path / "source").is_dir() else path
-            json_files = sorted(list(source_dir.glob("document_v*.json")))
-
-            if not json_files:
-                print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
-                exit_code = 1
-                continue
-
-            print(f"\u26a0  Warning: Building {len(json_files)} files from {source_dir}.")
-            print("   Multiple versions of schema could coincide in this directory.")
-
-            for json_path in json_files:
-                project_root = path if (path / "source").is_dir() else path.parent
-                res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
-                if res_code != 0:
-                    exit_code = res_code
-        else:
+        if path.is_file():
             res = _resolve_source(path)
-            if not res:
-                print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
-                exit_code = 1
-                continue
-            json_path, project_root = res
-
-            if args.validate_only:
-                with open(json_path, encoding="utf-8") as f:
-                    doc = json.load(f)
-                from research_docs.validator import validate
-
-                issues = validate(doc)
-                if issues:
-                    print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
-                    for issue in issues:
-                        print(f"   {issue}")
-                    print()
-                    exit_code = 1
+            if res:
+                to_build.append(res)
             else:
-                res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
-                if res_code != 0:
-                    exit_code = res_code
+                print(f"Error: {path} is not a valid document JSON.", file=sys.stderr)
+                exit_code = 1
+        elif path.is_dir():
+            if args.all:
+                source_dir = path / "source" if (path / "source").is_dir() else path
+                json_files = sorted(list(source_dir.glob("document_v*.json")))
+                if not json_files:
+                    print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
+                    exit_code = 1
+                else:
+                    project_root = path if (path / "source").is_dir() else path.parent
+                    for jf in json_files:
+                        to_build.append((jf, project_root))
+            else:
+                res = _resolve_source(path)
+                if res:
+                    to_build.append(res)
+                else:
+                    print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+                    exit_code = 1
+        else:
+            print(f"Error: path not found: {path}", file=sys.stderr)
+            exit_code = 1
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_to_build = []
+    for jp, pr in to_build:
+        if jp not in seen:
+            unique_to_build.append((jp, pr))
+            seen.add(jp)
+
+    if not unique_to_build:
+        return exit_code
+
+    if len(unique_to_build) > 1:
+        print(f"\u26a0  Warning: Building {len(unique_to_build)} files.")
+
+    for json_path, project_root in unique_to_build:
+        if args.validate_only:
+            print(f"Validating {json_path.name}\u2026")
+            with open(json_path, encoding="utf-8") as f:
+                doc = json.load(f)
+            from research_docs.validator import validate
+            issues = validate(doc)
+            if issues:
+                print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
+                for issue in issues:
+                    print(f"   {issue}")
+                exit_code = 1
+        else:
+            res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+            if res_code != 0:
+                exit_code = res_code
 
     return exit_code
 
