@@ -260,16 +260,16 @@ code { font-family: var(--mono); }
 <a href="#tab-hdr-overview">1. Overview</a>
 <a href="#research-buddy-project" class="sub">1.1. Research Buddy Project</a>
 <a href="#quick-links" class="sub">1.2. Quick Links</a>
+<a href="#how-to-navigate" class="sub">1.3. How to Navigate</a>
 </nav>
 <nav class="tab-nav" data-for="research">
 <a href="#tab-hdr-research">2. Research</a>
 <a href="#methodology" class="sub">2.1. Methodology</a>
-<a href="#agent-research-protocol" class="sub">2.2. Agent Research Protocol</a>
-<a href="#open-research-queue" class="sub">2.3. Open Research Queue</a>
-<a href="#reasoning-journey" class="sub">2.4. Reasoning Journey</a>
-<a href="#discarded-alternatives" class="sub">2.5. Discarded Alternatives</a>
-<a href="#research-tracker" class="sub">2.6. Research Tracker</a>
-<a href="#references" class="sub">2.7. References</a>
+<a href="#open-research-queue" class="sub">2.2. Open Research Queue</a>
+<a href="#reasoning-journey" class="sub">2.3. Reasoning Journey</a>
+<a href="#discarded-alternatives" class="sub">2.4. Discarded Alternatives</a>
+<a href="#research-tracker" class="sub">2.5. Research Tracker</a>
+<a href="#references" class="sub">2.6. References</a>
 </nav>
 <nav class="tab-nav" data-for="theory">
 <a href="#tab-hdr-theory">3. Theory</a>
@@ -299,7 +299,7 @@ code { font-family: var(--mono); }
 <div class="usage-banner"><h4>Current Status</h4><ul><li>Primary Goal: Define [Research Topic]</li>
 <li>Current Phase: Discovery</li>
 </ul></div>
-<p>Welcome to your AI-ready research project. This document is structured for high-integrity collaboration between human researchers and AI agents.</p>
+<p>Welcome to your AI-ready research project. This document is structured for high-integrity collaboration between human researchers and agents.</p>
 </div>
 <section id="quick-links" class="level-2">
 <h2><span class="num">1.2</span> Quick Links</h2>
@@ -312,6 +312,15 @@ code { font-family: var(--mono); }
 </tbody>
 </table></div>
 </section>
+<section id="how-to-navigate" class="level-2">
+<h2><span class="num">1.3</span> How to Navigate</h2>
+<div class="card-grid">
+<div class="card"><div class="card-title">Research Tab</div><p>New ideas start here. Reasoning history, research tracker, open queue, rejections, and academic sources.</p></div>
+<div class="card"><div class="card-title">Theory Tab</div><p>Deep technical explanations and foundational logic. Cross-links to Research for sources.</p></div>
+<div class="card"><div class="card-title">Design Tab</div><p>Architecture diagrams and component interaction maps.</p></div>
+<div class="card"><div class="card-title">Implementation Tab</div><p>The Agent's workspace. Build order, checklist, and technical specs.</p></div>
+</div>
+</section>
 <p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">Research Buddy Project · Overview · v1.0</p>
 </div></div>
 <div id="tab-research" class="tab-content" data-tab-label="Research">
@@ -319,25 +328,14 @@ code { font-family: var(--mono); }
 <h1 id="tab-hdr-research">2. Research</h1>
 <section id="methodology" class="level-2">
 <h2><span class="num">2.1</span> Methodology <span class="subtitle"> — Standards for sourcing and validating information</span></h2>
-<p>This section defines the rules for how research is conducted.</p>
-</section>
-<section id="agent-research-protocol" class="level-2">
-<h2><span class="num">2.2</span> Agent Research Protocol</h2>
-<div class="callout red">
-<div class="callout-title">Mandatory pre-flight — complete before writing any output</div>
-<p>All agents conducting research or evaluation share a documented failure pattern: generating well-formatted output without reading the document context first. The following pre-flight sequence is mandatory for every agent in every mode. Output produced without completing it is invalid.
-
-<strong>Before writing a single sentence of analysis:</strong>
-
-1. Extract every <code>verdict</code> block label from <a href="#discarded-alternatives" class="xlink" data-tab="research">Discarded Alternatives</a>. Any matching concept is an immediate reject.
-2. Extract every row from <a href="#research-tracker" class="xlink" data-tab="research">Research Tracker</a> tables. Researched topics are closed.
-3. Verify first-author attribution for every cited paper.
-4. Check Theoretical Foundations sections for architectural overlap.
-5. Apply source tier filters (Research Methodology).</p>
-</div>
+<p>This section defines the rules for how research is conducted. Agents must strictly follow the <code>agent_guidelines</code> at the top of the document.</p>
 </section>
 <section id="open-research-queue" class="level-2">
-<h2><span class="num">2.3</span> Open Research Queue <span class="subtitle"> — Topics pending evaluation</span></h2>
+<h2><span class="num">2.2</span> Open Research Queue <span class="subtitle"> — Topics pending evaluation</span></h2>
+<div class="callout">
+<div class="callout-title">Next Topic</div>
+<p>Initial Project Setup</p>
+</div>
 <div class="table-wrap"><table class="t-fixed">
 <colgroup><col style="width:30%"><col style="width:18%"><col style="width:52%"></colgroup>
 <thead><tr><th>Priority</th><th>Topic</th><th>Status</th></tr></thead>
@@ -347,15 +345,15 @@ code { font-family: var(--mono); }
 </table></div>
 </section>
 <section id="reasoning-journey" class="level-2">
-<h2><span class="num">2.4</span> Reasoning Journey <span class="subtitle"> — How We Arrived Here</span></h2>
+<h2><span class="num">2.3</span> Reasoning Journey <span class="subtitle"> — How We Arrived Here</span></h2>
 <p>Chronological log of major technical decisions.</p>
 </section>
 <section id="discarded-alternatives" class="level-2">
-<h2><span class="num">2.5</span> Discarded Alternatives <span class="subtitle"> — The Permanent Record of Rejections</span></h2>
+<h2><span class="num">2.4</span> Discarded Alternatives <span class="subtitle"> — The Permanent Record of Rejections</span></h2>
 <p>Prevents re-introduction of concepts already proven invalid.</p>
 </section>
 <section id="research-tracker" class="level-2">
-<h2><span class="num">2.6</span> Research Tracker <span class="subtitle"> — Living Status Board</span></h2>
+<h2><span class="num">2.5</span> Research Tracker <span class="subtitle"> — Living Status Board</span></h2>
 <div class="table-wrap"><table class="t-fixed">
 <colgroup><col style="width:26%"><col style="width:14%"><col style="width:14%"><col style="width:46%"></colgroup>
 <thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Version</th></tr></thead>
@@ -365,9 +363,9 @@ code { font-family: var(--mono); }
 </table></div>
 </section>
 <section id="references" class="level-2">
-<h2><span class="num">2.7</span> References</h2>
+<h2><span class="num">2.6</span> References</h2>
 <ul class="references">
-<li><span class="tag tag-blue">v1.0</span> <span class="date">2026-04-05</span> Initial project documentation.</li>
+<li><span class="tag tag-blue">v1.0</span> <span class="date">April 2026</span> Initial project documentation.</li>
 </ul>
 </section>
 <p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">Research Buddy Project · Research · v1.0</p>
