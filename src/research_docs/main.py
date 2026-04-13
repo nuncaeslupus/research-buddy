@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 import time
@@ -73,8 +74,6 @@ def perform_build(
     # output paths
     versions_dir = project_root / "versions"
     versions_dir.mkdir(exist_ok=True)
-
-    import re
 
     m = re.search(r"v(\d+)[_.](\d+)", json_path.name)
     if m:
@@ -183,7 +182,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         elif path.is_dir():
             if args.all:
                 source_dir = path / "source" if (path / "source").is_dir() else path
-                json_files = sorted(list(source_dir.glob("document_v*.json")))
+                json_files = sorted(
+                    list(source_dir.glob("document_v*.json")),
+                    key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.name)),
+                )
                 if not json_files:
                     print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
                     exit_code = 1
@@ -216,12 +218,14 @@ def cmd_build(args: argparse.Namespace) -> int:
     if len(unique_to_build) > 1:
         print(f"\u26a0  Warning: Building {len(unique_to_build)} files.")
 
+    if args.validate_only:
+        from research_docs.validator import validate
+
     for json_path, project_root in unique_to_build:
         if args.validate_only:
             print(f"Validating {json_path.name}\u2026")
             with open(json_path, encoding="utf-8") as f:
                 doc = json.load(f)
-            from research_docs.validator import validate
             issues = validate(doc)
             if issues:
                 print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
