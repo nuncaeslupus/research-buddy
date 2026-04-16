@@ -12,15 +12,15 @@ import pytest
 @pytest.fixture
 def starter_doc() -> dict:
     """Return a fresh copy of the default starter document."""
-    from research_docs.main import _load_starter_template
+    from research_buddy.main import _load_starter_template
 
     return _load_starter_template()
 
 
 @pytest.fixture
 def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
-    """Create a temporary project directory with a valid document."""
-    from research_docs.main import _load_starter_template
+    """Create a temporary project directory with a valid versioned document."""
+    from research_buddy.main import _load_starter_template
 
     doc = _load_starter_template()
 
@@ -28,7 +28,8 @@ def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
     source_dir.mkdir()
     (tmp_path / "versions").mkdir()
 
-    doc_path = source_dir / "document_v1.0.json"
+    # Use a versioned filename so find_latest_json picks it up
+    doc_path = source_dir / "test-project_v1.0.json"
     with open(doc_path, "w", encoding="utf-8") as f:
         json.dump(doc, f)
 

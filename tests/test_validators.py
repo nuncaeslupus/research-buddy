@@ -1,14 +1,13 @@
-"""Tests for new semantic validators."""
+"""Tests for semantic validators."""
 
 from __future__ import annotations
 
-from research_docs.validator import validate
+from research_buddy.validator import validate
 
 
 class TestReferenceOrdering:
     def test_valid_references(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -21,8 +20,7 @@ class TestReferenceOrdering:
         assert not any("REFERENCE ORDER" in i for i in issues)
 
     def test_invalid_references_version(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -35,8 +33,7 @@ class TestReferenceOrdering:
         assert any("REFERENCE ORDER" in i for i in issues)
 
     def test_invalid_references_date(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -48,9 +45,8 @@ class TestReferenceOrdering:
         issues = validate(starter_doc)
         assert any("REFERENCE ORDER" in i for i in issues)
 
-    def test_month_year_ordering(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+    def test_month_year_valid(self, starter_doc: dict) -> None:
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -62,9 +58,8 @@ class TestReferenceOrdering:
         issues = validate(starter_doc)
         assert not any("REFERENCE ORDER" in i for i in issues)
 
-    def test_invalid_month_year_ordering(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+    def test_month_year_invalid(self, starter_doc: dict) -> None:
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -76,9 +71,8 @@ class TestReferenceOrdering:
         issues = validate(starter_doc)
         assert any("REFERENCE ORDER" in i for i in issues)
 
-    def test_non_string_date_ordering(self, starter_doc: dict) -> None:
-        # Research tab -> Methodology section
-        starter_doc["tabs"][1]["sections"]["Methodology"]["blocks"].append(
+    def test_non_string_date_does_not_crash(self, starter_doc: dict) -> None:
+        starter_doc["tabs"][1]["sections"]["References"]["blocks"].append(
             {
                 "type": "references",
                 "items": [
@@ -87,6 +81,5 @@ class TestReferenceOrdering:
                 ],
             }
         )
-        # Should not crash, and should fail the descending check since (0,0,0) < (2026,3,0)
         issues = validate(starter_doc)
         assert any("REFERENCE ORDER" in i for i in issues)

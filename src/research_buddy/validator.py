@@ -4,20 +4,19 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
+from importlib import resources
 from typing import Any
 
 import jsonschema
 
-from research_docs.build import slugify
+from research_buddy.build import slugify
 
 Doc = dict[str, Any]
 
-_SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "schemas" / "document.schema.json"
-
 
 def _load_schema() -> Doc:
-    with open(_SCHEMA_PATH, encoding="utf-8") as f:
+    ref = resources.files("research_buddy") / "schema.json"
+    with ref.open("r", encoding="utf-8") as f:
         return json.load(f)  # type: ignore[no-any-return]
 
 
@@ -186,5 +185,24 @@ def validate(doc: Doc) -> list[str]:
 
     # 2. Semantic validations
     warnings.extend(_validate_references(doc))
+
+    # 3. Research Buddy version check
+    meta = doc.get("meta", {})
+    rb_ver = meta.get("research_buddy_version")
+    if rb_ver is None:
+        warnings.append(
+            "[meta.research_buddy_version] Missing — add 'research_buddy_version': '1.0' to meta. "
+            "This field is required for schema and build script version traceability."
+        )
+
+    # 4. Language field check — accept string or {code, label} object
+    lang = meta.get("language")
+    if lang is not None and not isinstance(lang, (str, dict)):
+        warnings.append(
+            "[meta.language] Must be a string (e.g. 'English') or an object "
+            "with at least a 'code' key (e.g. {'code': 'en', 'label': 'English'})."
+        )
+    elif isinstance(lang, dict) and "code" not in lang:
+        warnings.append("[meta.language] Object form must include a 'code' key.")
 
     return warnings

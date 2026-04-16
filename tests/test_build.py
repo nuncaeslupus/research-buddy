@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from research_docs.build import (
+from research_buddy.build import (
     BuildState,
+    find_latest_json,
     md,
     md_block,
     r_callout,
@@ -39,7 +42,6 @@ class TestMarkdownInlining:
 
     def test_tags(self) -> None:
         assert md("[tag:phase-1]P1[/tag]") == '<span class="tag phase-1">P1</span>'
-        # invalid tag class defaults to tag-blue
         assert md("[tag:invalid]X[/tag]") == '<span class="tag tag-blue">X</span>'
 
 
@@ -89,7 +91,7 @@ class TestBlockRenderers:
 class TestSectionRendering:
     def test_recursive_render(self) -> None:
         state = BuildState()
-        nav = []
+        nav: list = []
         sec = {
             "blocks": [{"type": "p", "md": "root"}],
             "subsections": {"Sub": {"blocks": [{"type": "p", "md": "child"}]}},
@@ -99,10 +101,83 @@ class TestSectionRendering:
         assert "root" in html
         assert "child" in html
         assert 'id="sub"' in html
-        # Nav should have 2 entries
         assert len(nav) == 2
         assert nav[0]["title"] == "Top"
         assert nav[1]["title"] == "Sub"
+
+
+class TestFindLatestJson:
+    def test_finds_versioned_file(self, tmp_path: Path) -> None:
+
+        f = tmp_path / "myproject_v1.2.json"
+        f.write_text("{}")
+        result = find_latest_json(tmp_path)
+        assert result == f
+
+    def test_picks_highest_version(self, tmp_path: Path) -> None:
+
+        (tmp_path / "myproject_v1.0.json").write_text("{}")
+        (tmp_path / "myproject_v1.5.json").write_text("{}")
+        (tmp_path / "myproject_v2.1.json").write_text("{}")
+        result = find_latest_json(tmp_path)
+        assert result is not None
+        assert "v2.1" in result.name
+
+    def test_fallback_to_research_document(self, tmp_path: Path) -> None:
+
+        f = tmp_path / "research-document.json"
+        f.write_text("{}")
+        result = find_latest_json(tmp_path)
+        assert result == f
+
+    def test_versioned_takes_priority_over_fallback(self, tmp_path: Path) -> None:
+
+        (tmp_path / "research-document.json").write_text("{}")
+        versioned = tmp_path / "project_v1.0.json"
+        versioned.write_text("{}")
+        result = find_latest_json(tmp_path)
+        assert result == versioned
+
+    def test_no_json_returns_none(self, tmp_path: Path) -> None:
+        result = find_latest_json(tmp_path)
+        assert result is None
+
+    def test_legacy_document_v_pattern(self, tmp_path: Path) -> None:
+        """document_v*.json files (old naming) still work."""
+
+        f = tmp_path / "document_v3.55.json"
+        f.write_text("{}")
+        result = find_latest_json(tmp_path)
+        assert result == f
+
+
+class TestHtmlOutput:
+    def test_footer_present(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        html = build_html(starter_doc)
+        assert "Research Buddy" in html
+        assert "rb-footer" in html
+
+    def test_rb_version_in_footer(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        html = build_html(starter_doc)
+        assert "v1.0" in html
+
+    def test_lang_attribute_from_object(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        starter_doc["meta"]["language"] = {"code": "es", "label": "Español"}
+        html = build_html(starter_doc)
+        assert 'lang="es"' in html
+
+    def test_lang_attribute_from_string(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        starter_doc["meta"]["language"] = "English"
+        html = build_html(starter_doc)
+        assert 'lang="English"' in html or 'lang="' in html
 
 
 def test_slugify() -> None:

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-buddy"
-version = "0.1.0"
-description = "Generate single-file HTML documentation from structured JSON."
+version = "1.0.0"
+description = "Structured AI research collaborator — generates high-fidelity HTML from versioned JSON research documents."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["documentation", "html-generator", "research", "single-file", "tabbed-docs"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -49,7 +49,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-research_docs = ["assets/*", "py.typed"]
+research_buddy = ["css/*", "js/*", "lib/*", "images/*", "*.json"]
 
 [tool.ruff]
 line-length = 100

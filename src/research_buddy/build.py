@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 from importlib import resources
@@ -58,10 +59,28 @@ class BuildState:
 # ── Assets ──────────────────────────────────────────────────────────────────
 
 
-def _load_asset(name: str) -> str:
+def _load_asset(name: str, subdir: str = "") -> str:
     """Load a bundled asset file from the package."""
-    ref = resources.files("research_docs") / "assets" / name
+    if subdir:
+        ref = resources.files("research_buddy") / subdir / name
+    else:
+        ref = resources.files("research_buddy") / name
     return ref.read_text(encoding="utf-8")
+
+
+def _load_binary_asset(name: str, subdir: str = "") -> bytes:
+    """Load a bundled binary asset from the package."""
+    if subdir:
+        ref = resources.files("research_buddy") / subdir / name
+    else:
+        ref = resources.files("research_buddy") / name
+    return ref.read_bytes()
+
+
+def _asset_to_base64(data: bytes, mime: str) -> str:
+    """Convert binary data to base64 data URL."""
+    b64 = base64.b64encode(data).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
 
 
 # ── Inline Markdown → HTML ──────────────────────────────────────────────────
@@ -111,13 +130,12 @@ def md(text: str) -> str:
 
 
 def slugify(text: str) -> str:
-    """Convert a title into a URL-friendly ID.
-    Preserves Unicode word characters to support any language.
-    """
+    """Convert a title into a URL-friendly ID."""
     t = str(text).lower()
     t = re.sub(r"[^\w\s-]", "", t)
     t = re.sub(r"[\s_-]+", "-", t)
-    return t.strip("-") or "sec"
+    t = t.strip("-")
+    return t or "sec"
 
 
 def md_block(text: str) -> str:
@@ -531,16 +549,26 @@ def render_section(
 
 
 def find_latest_json(source_dir: Path) -> Path | None:
-    """Find the highest-versioned document_v*.json in a directory."""
-    candidates = list(source_dir.glob("document_v*.json"))
-    if not candidates:
-        return None
+    """Find the highest-versioned *_vX.Y.json in a directory, or research-document.json fallback.
 
-    def ver_key(p: Path) -> tuple[int, int]:
-        m = re.search(r"v(\d+)[_.](\d+)", p.name)
-        return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+    Matches any file ending in _vX.Y.json (e.g. myproject_v1.2.json, document_v3.0.json).
+    Falls back to research-document.json for unversioned template files.
+    """
+    candidates = [p for p in source_dir.glob("*.json") if re.search(r"_v\d+[_.]\d+\.json$", p.name)]
+    if candidates:
 
-    return sorted(candidates, key=ver_key)[-1]
+        def ver_key(p: Path) -> tuple[int, int]:
+            m = re.search(r"v(\d+)[_.](\d+)", p.name)
+            return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
+        return sorted(candidates, key=ver_key)[-1]
+
+    # Fallback: unversioned template
+    fallback = source_dir / "research-document.json"
+    if fallback.exists():
+        return fallback
+
+    return None
 
 
 def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
@@ -640,24 +668,54 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     )
 
     # load assets
-    css = _load_asset("style.css")
-    js = _load_asset("script.js")
-    hljs_css = _load_asset("highlight-theme.min.css")
-    hljs_js = _load_asset("highlight.min.js")
+    css = _load_asset("style.css", "css")
+    js = _load_asset("script.js", "js")
+    hljs_css = _load_asset("highlight-theme.min.css", "lib")
+    hljs_js = _load_asset("highlight.min.js", "lib")
 
     # inject tab IDs into JS
     tab_ids = json.dumps([tab["id"] for tab in tabs])
     js = re.sub(
         r"/\*TABS_INJECT\*/.*?/\*END_INJECT\*/",
-        lambda _: f"/*TABS_INJECT*/{tab_ids}/*END_INJECT*/",
+        f"/*TABS_INJECT*/{tab_ids}/*END_INJECT*/",
         js,
     )
 
     # theme override
     theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
 
+    # Resolve language code and Research Buddy version
+    lang_meta = meta.get("language", "en")
+    if isinstance(lang_meta, dict):
+        lang_code = lang_meta.get("code", "en")
+    else:
+        lang_code = str(lang_meta).split()[0][:10] if lang_meta else "en"
+
+    rb_version = meta.get("research_buddy_version", "")
+    logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
+    rb_footer_html = (
+        f'<footer class="rb-footer">'
+        f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'
+        f'<span class="rb-powered">Powered by '
+        f'<a href="https://github.com/nuncaeslupus/research-buddy">Research Buddy</a>'
+        f"{(' v' + rb_version) if rb_version else ''}"
+        f"</span></footer>\n"
+    )
+
+    # Footer CSS injected inline
+    footer_css = """
+/* ── Research Buddy footer ── */
+.rb-footer{display:flex;align-items:center;justify-content:center;gap:12px;padding:18px 0 14px;font-size:11px;color:#8090b8;border-top:1px solid #232a3e;margin-top:16px}
+.rb-logo{width:50px;height:auto}
+.rb-powered{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.rb-footer a{color:#8090b8;text-decoration:none}
+.rb-footer a:hover{color:#a0b0d0}
+@media print{.rb-footer{display:none}}
+"""  # noqa: E501
+    theme_block = theme_block + footer_css
+
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{lang_code}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -670,6 +728,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
 </head>
 <body>
 {body_content}
+{rb_footer_html}
 <script>{hljs_js}</script>
 <script defer>
 {js}
