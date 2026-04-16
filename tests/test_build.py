@@ -157,7 +157,7 @@ class TestHtmlOutput:
 
         html = build_html(starter_doc)
         assert "Research Buddy" in html
-        assert "rb-footer" in html
+        assert "rb-powered-by" in html
 
     def test_rb_version_in_footer(self, starter_doc: dict) -> None:
         from research_buddy.build import build_html

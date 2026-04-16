@@ -1,6 +1,8 @@
 # Research Buddy v1.0
 
-> A structured AI research collaborator for any domain. Research Buddy pairs an AI agent with a versioned JSON document to conduct professional, multi-session research on any topic — from machine learning systems and medical research to physical product design, diet planning, patent research, and beyond.
+<img src="src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
+
+A structured AI research collaborator for any domain.
 
 ## How it works
 

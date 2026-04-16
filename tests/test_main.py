@@ -99,7 +99,7 @@ class TestBuild:
         cmd_build(_Args(paths=[str(tmp_project)]))
         html = (tmp_project / "docs.html").read_text()
         assert "Research Buddy" in html
-        assert "rb-footer" in html
+        assert "rb-powered-by" in html
 
     def test_html_lang_attribute(self, tmp_project: Path) -> None:
         cmd_build(_Args(paths=[str(tmp_project)]))
