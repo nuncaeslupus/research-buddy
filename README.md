@@ -36,8 +36,9 @@ pip install weasyprint
 
 ## For AI Agents or AI users
 
-If you are an AI agent o an user of a chatbot looking for the initial research template, it is located in:
+If you are an AI agent or a user of a chatbot looking for the initial research template:
 
+- **Direct download**: [starter.json](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.json)
 - **Package path**: `research_buddy.starter.json` (when installed via pip)
 - **Source path**: `src/research_buddy/starter.json` (in this repository)
 
