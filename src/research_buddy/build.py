@@ -684,7 +684,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
 .rb-powered-by a{color:#8090b8;text-decoration:none}
 .rb-powered-by a:hover{color:#a0b0d0}
 @media print{.rb-powered-by{display:none}}
-"""  # noqa: E501
+"""
 
     body_content = (
         tab_bar
@@ -739,7 +739,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
 .rb-powered-by a{color:#8090b8;text-decoration:none}
 .rb-powered-by a:hover{color:#a0b0d0}
 @media print{.rb-powered-by{display:none}}
-"""  # noqa: E501
+"""
     theme_block = theme_block + footer_css
 
     return f"""<!DOCTYPE html>
