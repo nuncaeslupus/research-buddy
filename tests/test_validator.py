@@ -19,9 +19,7 @@ class TestSchemaValidation:
         assert any("tabs" in e for e in errors)
 
     def test_invalid_block_type(self, starter_doc: dict) -> None:
-        starter_doc["tabs"][1]["sections"]["Reasoning Journey"]["blocks"].append(
-            {"type": "bogus"}
-        )
+        starter_doc["tabs"][1]["sections"]["Reasoning Journey"]["blocks"].append({"type": "bogus"})
         errors = validate(starter_doc)
         assert any("bogus" in e for e in errors)
 
@@ -82,8 +80,14 @@ class TestStarterDocIntegrity:
 
     def test_framework_keys(self, starter_doc: dict) -> None:
         fw = starter_doc["agent_guidelines"]["framework"]
-        for key in ("about", "widget_library", "versioning", "failure_modes",
-                    "html_generation", "second_opinion_review"):
+        for key in (
+            "about",
+            "widget_library",
+            "versioning",
+            "failure_modes",
+            "html_generation",
+            "second_opinion_review",
+        ):
             assert key in fw, f"framework missing key: {key}"
 
     def test_session_protocol_states(self, starter_doc: dict) -> None:
@@ -106,8 +110,13 @@ class TestStarterDocIntegrity:
     def test_research_tab_sections(self, starter_doc: dict) -> None:
         research_tab = next(t for t in starter_doc["tabs"] if t["id"] == "research")
         secs = research_tab["sections"]
-        for key in ("Open Research Queue", "Research Tracker",
-                    "Reasoning Journey", "Discarded Alternatives", "References"):
+        for key in (
+            "Open Research Queue",
+            "Research Tracker",
+            "Reasoning Journey",
+            "Discarded Alternatives",
+            "References",
+        ):
             assert key in secs, f"research tab missing section: {key}"
 
     def test_queue_has_objective_column(self, starter_doc: dict) -> None:
