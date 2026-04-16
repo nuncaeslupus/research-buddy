@@ -695,7 +695,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
     rb_footer_html = (
         f'<footer class="rb-footer">'
-        f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'
+        f'<div class="rb-logo-wrap"><img src="{logo_data}" alt="Research Buddy"></div>'
         f'<span class="rb-powered">Powered by '
         f'<a href="https://github.com/nuncaeslupus/research-buddy">Research Buddy</a>'
         f"{(' v' + rb_version) if rb_version else ''}"
@@ -705,9 +705,10 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     # Footer CSS injected inline
     footer_css = """
 /* ── Research Buddy footer ── */
-.rb-footer{display:flex;align-items:center;justify-content:center;gap:12px;padding:18px 0 14px;font-size:11px;color:#8090b8;border-top:1px solid #232a3e;margin-top:16px}
-.rb-logo{width:50px;height:auto}
-.rb-powered{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.rb-footer{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px;font-size:11px;color:#8090b8;border-top:1px solid #232a3e;margin-top:0;line-height:1.4}
+.rb-logo-wrap{display:flex;align-items:center}
+.rb-logo-wrap img{width:50px;height:auto;max-height:30px;object-fit:contain}
+.rb-powered{display:flex;flex-direction:column;align-items:flex-start}
 .rb-footer a{color:#8090b8;text-decoration:none}
 .rb-footer a:hover{color:#a0b0d0}
 @media print{.rb-footer{display:none}}
