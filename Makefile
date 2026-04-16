@@ -1,12 +1,15 @@
-.PHONY: lint format test test-all clean sync regen-example
+.PHONY: lint format test test-all clean sync regen-example build
 
 sync:
 	uv sync --extra dev
 
+build:
+	rm -rf dist/ && python -m build
+
 regen-example:
-	rm -rf examples/starter
-	uv run research-buddy init examples/starter --title "Research Buddy Project" --subtitle "Master Class Research"
-	uv run research-buddy build examples/starter
+	rm -rf starter-example/
+	uv run research-buddy init starter-example --title "Research Buddy Project" --subtitle "Master Class Research"
+	uv run research-buddy build starter-example
 
 lint:
 	uv run ruff check . && uv run mypy . --explicit-package-bases
@@ -14,7 +17,7 @@ lint:
 format:
 	uv run ruff check --fix --unsafe-fixes . && uv run ruff format .
 
-test: regen-example
+test:
 	uv run pytest tests/ -v
 
 test-all:
@@ -22,4 +25,4 @@ test-all:
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	rm -rf .mypy_cache .ruff_cache .pytest_cache
+	rm -rf .mypy_cache .ruff_cache .pytest_cache dist/

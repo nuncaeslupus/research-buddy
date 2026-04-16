@@ -15,7 +15,7 @@ from typing import Any
 
 import argcomplete
 
-from research_docs.build import build_html, find_latest_json
+from research_buddy.build import build_html, find_latest_json
 
 
 def _resolve_source(path: Path) -> tuple[Path, Path] | None:
@@ -25,7 +25,7 @@ def _resolve_source(path: Path) -> tuple[Path, Path] | None:
     Returns None if no document_v*.json is found.
     """
     if path.is_file():
-        # source/document_v1.0.json -> project root is source/..
+        # Any .json file: project root is parent, or grandparent if inside source/
         if path.parent.name == "source":
             return path, path.parent.parent
         return path, path.parent
@@ -52,7 +52,7 @@ def perform_build(
         doc = json.load(f)
 
     # validate first
-    from research_docs.validator import validate
+    from research_buddy.validator import validate
 
     issues = validate(doc)
     if issues:
@@ -219,7 +219,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         print(f"\u26a0  Warning: Building {len(unique_to_build)} files.")
 
     if args.validate_only:
-        from research_docs.validator import validate
+        from research_buddy.validator import validate
 
     for json_path, project_root in unique_to_build:
         if args.validate_only:
@@ -256,7 +256,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         with open(json_path, encoding="utf-8") as f:
             doc = json.load(f)
 
-        from research_docs.validator import validate
+        from research_buddy.validator import validate
 
         issues = validate(doc)
         if issues:
@@ -272,7 +272,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 def _load_starter_template() -> dict[str, Any]:
     """Load the starter template from package assets."""
-    ref = resources.files("research_docs") / "assets" / "starter.json"
+    ref = resources.files("research_buddy") / "starter.json"
     with ref.open("r", encoding="utf-8") as f:
         return json.load(f)  # type: ignore[no-any-return]
 
@@ -318,7 +318,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     doc["meta"]["date"] = datetime.now(tz=UTC).strftime("%B %Y")
 
-    doc_path = source_dir / f"document_v{doc['meta']['version']}.json"
+    doc_path = source_dir / "research-document.json"
     with open(doc_path, "w", encoding="utf-8") as f:
         json.dump(doc, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -330,13 +330,15 @@ def cmd_init(args: argparse.Namespace) -> int:
             return str(p)
 
     print(f"Created {_rel(target)}/")
-    print(f"  source/{doc_path.name}")
+    rb_ver = doc["meta"].get("research_buddy_version", "?")
+    print(f"  source/research-document.json  (Research Buddy v{rb_ver} template)")
     print("  versions/")
     print()
     print("Next steps:")
-    print(f"  1. Edit {_rel(doc_path)}")
-    print(f"  2. research-buddy build {_rel(target)}")
-    print("  3. Open docs.html in a browser")
+    print(f"  1. Upload {_rel(doc_path)} to your AI assistant")
+    print("  2. The agent will run session_zero and produce [project_name]_v1.0.json")
+    print("  3. research-buddy build [project_name]_v1.0.json")
+    print("  4. Open docs.html in a browser")
     return 0
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from research_docs.validator import validate
+from research_buddy.validator import validate
 
 
 class TestSchemaValidation:
@@ -19,10 +19,45 @@ class TestSchemaValidation:
         assert any("tabs" in e for e in errors)
 
     def test_invalid_block_type(self, starter_doc: dict) -> None:
-        # Research tab -> Reasoning Journey section
         starter_doc["tabs"][1]["sections"]["Reasoning Journey"]["blocks"].append({"type": "bogus"})
         errors = validate(starter_doc)
         assert any("bogus" in e for e in errors)
+
+
+class TestResearchBuddyVersion:
+    def test_valid_starter_has_version(self, starter_doc: dict) -> None:
+        assert starter_doc["meta"].get("research_buddy_version") == "1.0"
+
+    def test_missing_rb_version_warns(self, starter_doc: dict) -> None:
+        del starter_doc["meta"]["research_buddy_version"]
+        issues = validate(starter_doc)
+        assert any("research_buddy_version" in i for i in issues)
+
+    def test_present_rb_version_no_warn(self, starter_doc: dict) -> None:
+        issues = validate(starter_doc)
+        assert not any("research_buddy_version" in i for i in issues)
+
+
+class TestLanguageField:
+    def test_language_as_object(self, starter_doc: dict) -> None:
+        starter_doc["meta"]["language"] = {"code": "en", "label": "English"}
+        issues = validate(starter_doc)
+        assert not any("language" in i.lower() for i in issues)
+
+    def test_language_as_string(self, starter_doc: dict) -> None:
+        starter_doc["meta"]["language"] = "English"
+        issues = validate(starter_doc)
+        assert not any("[meta.language]" in i for i in issues)
+
+    def test_language_object_missing_code(self, starter_doc: dict) -> None:
+        starter_doc["meta"]["language"] = {"label": "English"}
+        issues = validate(starter_doc)
+        assert any("code" in i for i in issues)
+
+    def test_language_invalid_type(self, starter_doc: dict) -> None:
+        starter_doc["meta"]["language"] = 42
+        issues = validate(starter_doc)
+        assert any("language" in i.lower() for i in issues)
 
 
 class TestFullValidation:
@@ -32,36 +67,74 @@ class TestFullValidation:
 
 
 class TestStarterDocIntegrity:
-    def test_starter_sections_and_subtitles(self, starter_doc: dict) -> None:
-        # Check first tab first section
-        overview = starter_doc["tabs"][0]
-        # The first section title should match meta.title in init,
-        # but in raw STARTER_DOCUMENT it is "Project Objective"
-        first_title = next(iter(overview["sections"].keys()))
-        assert overview["sections"][first_title]["subtitle"] == "Primary goals and project scope"
+    def test_three_required_top_level_keys(self, starter_doc: dict) -> None:
+        assert "agent_guidelines" in starter_doc
+        assert "meta" in starter_doc
+        assert "tabs" in starter_doc
 
-        # Check research tab sections
-        research = starter_doc["tabs"][1]
-        assert "Methodology" in research["sections"]
-        assert research["sections"]["Methodology"]["subtitle"] == (
-            "Standards for sourcing and validating information"
-        )
+    def test_agent_guidelines_structure(self, starter_doc: dict) -> None:
+        ag = starter_doc["agent_guidelines"]
+        assert "framework" in ag
+        assert "session_protocol" in ag
+        assert "project_specific" in ag
 
-        assert "Reasoning Journey" in research["sections"]
-        assert research["sections"]["Reasoning Journey"]["subtitle"] == "How We Arrived Here"
+    def test_framework_keys(self, starter_doc: dict) -> None:
+        fw = starter_doc["agent_guidelines"]["framework"]
+        for key in (
+            "about",
+            "widget_library",
+            "versioning",
+            "failure_modes",
+            "html_generation",
+            "second_opinion_review",
+        ):
+            assert key in fw, f"framework missing key: {key}"
 
-        assert "Research Tracker" in research["sections"]
-        assert research["sections"]["Research Tracker"]["subtitle"] == "Living Status Board"
+    def test_session_protocol_states(self, starter_doc: dict) -> None:
+        sp = starter_doc["agent_guidelines"]["session_protocol"]
+        assert "detect_state" in sp
+        assert "session_zero" in sp
+        assert "standard_session" in sp
+        assert "queue_empty" in sp
 
-        # Check design tab
-        design = starter_doc["tabs"][3]
-        assert "System Architecture" in design["sections"]
-        assert (
-            design["sections"]["System Architecture"]["subtitle"]
-            == "Component interaction and data flow"
-        )
+    def test_second_opinion_what_it_is(self, starter_doc: dict) -> None:
+        so = starter_doc["agent_guidelines"]["framework"]["second_opinion_review"]
+        assert "what_it_is" in so
+        # Must explicitly state agent does not generate opinions itself
+        assert "never" in so["what_it_is"].lower() or "CRITICAL" in so["what_it_is"]
 
-        # Check implementation tab
-        impl = starter_doc["tabs"][4]
-        assert "Build Guide" in impl["sections"]
-        assert impl["sections"]["Build Guide"]["subtitle"] == "Steps to deploy the current design"
+    def test_overview_tab_present(self, starter_doc: dict) -> None:
+        tab_ids = [t["id"] for t in starter_doc["tabs"]]
+        assert "overview" in tab_ids
+
+    def test_research_tab_sections(self, starter_doc: dict) -> None:
+        research_tab = next(t for t in starter_doc["tabs"] if t["id"] == "research")
+        secs = research_tab["sections"]
+        for key in (
+            "Open Research Queue",
+            "Research Tracker",
+            "Reasoning Journey",
+            "Discarded Alternatives",
+            "References",
+        ):
+            assert key in secs, f"research tab missing section: {key}"
+
+    def test_queue_has_objective_column(self, starter_doc: dict) -> None:
+        research_tab = next(t for t in starter_doc["tabs"] if t["id"] == "research")
+        queue_blocks = research_tab["sections"]["Open Research Queue"]["blocks"]
+        table_block = next(b for b in queue_blocks if b["type"] == "table")
+        assert "Objective / Key Question" in table_block["headers"]
+
+    def test_changelog_tab_present(self, starter_doc: dict) -> None:
+        tab_ids = [t["id"] for t in starter_doc["tabs"]]
+        assert "changelog" in tab_ids
+
+    def test_ui_strings_present(self, starter_doc: dict) -> None:
+        ui = starter_doc["meta"].get("ui_strings", {})
+        for key in ("status_open", "status_done", "next_topic_label"):
+            assert key in ui, f"ui_strings missing: {key}"
+
+    def test_failure_modes_include_invented_opinions(self, starter_doc: dict) -> None:
+        modes = starter_doc["agent_guidelines"]["framework"]["failure_modes"]
+        text = " ".join(modes).lower()
+        assert "invent" in text or "fictional" in text or "role-play" in text
