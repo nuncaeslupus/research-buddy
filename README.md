@@ -15,11 +15,13 @@ The AI agent reads `agent_guidelines` embedded in the JSON and behaves as a Rese
 ## Install
 
 ### For users (pip)
+
 ```bash
 pip install research-buddy
 ```
 
 ### For development
+
 ```bash
 uv sync
 # or:
@@ -27,15 +29,19 @@ pip install -e .
 ```
 
 For PDF export (optional):
+
 ```bash
 pip install weasyprint
 ```
 
-## For AI Agents
+## For AI Agents or AI users
 
-If you are an AI agent looking for the initial research template, it is located in:
+If you are an AI agent o an user of a chatbot looking for the initial research template, it is located in:
+
 - **Package path**: `research_buddy.starter.json` (when installed via pip)
 - **Source path**: `src/research_buddy/starter.json` (in this repository)
+
+Download this file and attach it into an AI chatbot session to start researching. The AI agent will know what to do.
 
 ### Generating HTML
 
@@ -93,12 +99,12 @@ Every session follows the same high-integrity workflow:
 
 ## File naming
 
-| File | Purpose |
-|---|---|
-| `research-document.json` | Unversioned template — never modified after init |
-| `[project_name]_v1.0.json` | First project file, produced by session_zero |
-| `[project_name]_v1.1.json` | After first research session |
-| `[project_name]_vX.Y.json` | Each subsequent session bumps MINOR |
+| File                         | Purpose                                           |
+| ---------------------------- | ------------------------------------------------- |
+| `research-document.json`   | Unversioned template — never modified after init |
+| `[project_name]_v1.0.json` | First project file, produced by session_zero      |
+| `[project_name]_v1.1.json` | After first research session                      |
+| `[project_name]_vX.Y.json` | Each subsequent session bumps MINOR               |
 
 The builder picks up any `*_vX.Y.json` file automatically. It falls back to `research-document.json` for the unversioned template.
 
@@ -162,20 +168,20 @@ The JSON schema is bundled with the package. For reference, see `src/research_bu
 
 ### Block types
 
-| Type | Key fields |
-|---|---|
-| `p` | `md` |
-| `h3`, `h4` | `md`, `id`, `badge` |
-| `code` | `text`, `lang` |
-| `callout` | `md`, `variant` (blue\|green\|amber\|red\|purple), `title` |
-| `verdict` | `badge` (adopt\|reject\|defer\|pending), `label`, `md` |
-| `table` | `headers[]`, `rows[][]` |
-| `ul`, `ol` | `items[]` |
-| `card_grid` | `cols` (2\|3), `cards[{title, md}]` |
-| `phase_cards` | `cards[{phase, title, items[]}]` |
-| `usage_banner` | `title`, `items[]` |
-| `references` | `items[{version, date, text}]` |
-| `svg` | `html` (raw SVG string) |
+| Type             | Key fields                                                       |
+| ---------------- | ---------------------------------------------------------------- |
+| `p`            | `md`                                                           |
+| `h3`, `h4`   | `md`, `id`, `badge`                                        |
+| `code`         | `text`, `lang`                                               |
+| `callout`      | `md`, `variant` (blue\|green\|amber\|red\|purple), `title` |
+| `verdict`      | `badge` (adopt\|reject\|defer\|pending), `label`, `md`     |
+| `table`        | `headers[]`, `rows[][]`                                      |
+| `ul`, `ol`   | `items[]`                                                      |
+| `card_grid`    | `cols` (2\|3), `cards[{title, md}]`                          |
+| `phase_cards`  | `cards[{phase, title, items[]}]`                               |
+| `usage_banner` | `title`, `items[]`                                           |
+| `references`   | `items[{version, date, text}]`                                 |
+| `svg`          | `html` (raw SVG string)                                        |
 
 ### Schema compatibility
 
