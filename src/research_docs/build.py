@@ -111,12 +111,13 @@ def md(text: str) -> str:
 
 
 def slugify(text: str) -> str:
-    """Convert a title into a URL-friendly ID."""
+    """Convert a title into a URL-friendly ID.
+    Preserves Unicode word characters to support any language.
+    """
     t = str(text).lower()
     t = re.sub(r"[^\w\s-]", "", t)
     t = re.sub(r"[\s_-]+", "-", t)
-    t = t.strip("-")
-    return t or "sec"
+    return t.strip("-") or "sec"
 
 
 def md_block(text: str) -> str:
@@ -648,7 +649,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     tab_ids = json.dumps([tab["id"] for tab in tabs])
     js = re.sub(
         r"/\*TABS_INJECT\*/.*?/\*END_INJECT\*/",
-        f"/*TABS_INJECT*/{tab_ids}/*END_INJECT*/",
+        lambda _: f"/*TABS_INJECT*/{tab_ids}/*END_INJECT*/",
         js,
     )
 

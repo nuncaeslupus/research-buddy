@@ -82,7 +82,7 @@
             "type": "object",
             "required": ["id", "label", "sections"],
             "properties": {
-                "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+                "id": { "type": "string", "pattern": "^\\S+$" },
                 "label": { "type": "string" },
                 "sections": {
                     "type": "object",
