@@ -1,5 +1,7 @@
 # Research Buddy v1.0
 
+<img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
+
 A structured AI research collaborator for any domain.
 
 ## How it works
