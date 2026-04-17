@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-buddy"
-version = "1.0.1"
+version = "1.0.2"
 description = "Structured AI research collaborator — generates high-fidelity HTML from versioned JSON research documents."
 readme = "README.md"
 license = {text = "MIT"}
@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-research-buddy = "research_docs.main:main"
+research-buddy = "research_buddy.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
