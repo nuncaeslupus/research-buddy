@@ -8,9 +8,9 @@ A structured AI research collaborator for any domain.
 
 The AI agent reads `agent_guidelines` embedded in the JSON and behaves as a Research Buddy for the full lifetime of the project. Every session produces an updated, versioned JSON file — the source of truth — and optionally a rendered HTML document for reading.
 
-**Session zero** (first session with a new document): the agent introduces itself, asks 5 questions to understand the project, does discovery research, and proposes the initial structure — tabs, source tiers, queue items, and methodology rules tailored to your domain. Output: `[project_name]_v1.0.json`.
+**Session zero** (first session with a new document): the agent introduces itself, asks 5 questions to understand the project, does discovery research, and proposes the initial structure — tabs, source tiers, queue items, and methodology rules tailored to your domain. Output: `[file_name]_v1.0.json`.
 
-**Subsequent sessions**: upload the latest JSON, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in ≤3 turns.
+**Subsequent sessions**: upload the latest JSON, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in exactly 2 turns.
 
 ## Install
 
@@ -70,7 +70,7 @@ The JSON file is always the source of truth — never the HTML.
 research-buddy init my-project/
 
 # Upload my-project/source/research-document.json to your AI assistant
-# The agent runs session_zero and produces [project_name]_v1.0.json
+# The agent runs session_zero and produces [file_name]_v1.0.json
 
 # Build HTML from the versioned output
 research-buddy build my-project_v1.0.json
@@ -82,32 +82,46 @@ research-buddy build my-project/
 research-buddy build my-project/ --watch
 
 # Open the result
-open docs.html
+open [file_name].html
 ```
 
 ## Research protocol
 
-Every session follows the same high-integrity workflow:
+Every session follows a strict, high-integrity 2-turn workflow:
 
-1. **Preflight checks** — silent scan of rejected alternatives and tracker status.
-2. **Research** — agent uses domain-appropriate Tier 1 sources with inline citations.
-3. **Second-opinion brief** — printed at the end of Turn 1, ready to copy to other AI tools or human experts.
-4. **Second-opinion review** — user submits research from ChatGPT, Gemini, Grok, human experts, or papers. The agent evaluates, labels each source (`Gemini-1`, `Human-1`, etc.), and integrates or discards findings with explicit rationale. The agent never generates second opinions itself.
-5. **Confirmation gate** — agent presents all proposed decisions and waits for go-ahead before writing.
-6. **Atomic write** — all update targets in a single operation, including version bump, queue update, and blue callout pointing to the next topic.
+1. **Turn 1: Research & External Prompt**
+   - Agent performs discovery research using domain-appropriate Tier 1 sources with inline citations.
+   - Agent prints findings, proposed decisions, and a **prompt for other researchers**.
+   - **CRITICAL**: The agent then STOPS and waits for the user to provide results from other researchers (other AI agents, human experts, etc.).
+2. **Turn 2: Review & Finalize**
+   - User submits findings from other researchers.
+   - Agent evaluates, labels (`Gemini-1`, `Human-1`, etc.), and compares them with its own research.
+   - Agent performs an **atomic write** to the JSON file, bumps the version, and generates the final HTML (e.g., `my-research_v2.3.html` and `my-research.html`).
+   - Any requests to add new research topics during these turns are integrated into the final JSON.
 
 **Failure modes are explicit**: the document includes a failure_modes list that agents use to self-check before and after every action.
 
 ## File naming
 
+The script uses `meta.file_name` from your JSON to name the outputs.
+
 | File                         | Purpose                                           |
 | ---------------------------- | ------------------------------------------------- |
-| `research-document.json`   | Unversioned template — never modified after init |
-| `[project_name]_v1.0.json` | First project file, produced by session_zero      |
-| `[project_name]_v1.1.json` | After first research session                      |
-| `[project_name]_vX.Y.json` | Each subsequent session bumps MINOR               |
+| `research-document.json`     | Unversioned template — never modified after init |
+| `[file_name]_v1.0.json`      | First project file, produced by session_zero      |
+| `[file_name]_v1.1.json`      | After first research session                      |
+| `[file_name]_vX.Y.html`      | Versioned HTML build                              |
+| `[file_name].html`           | Latest stable HTML build                          |
 
-The builder picks up any `*_vX.Y.json` file automatically. It falls back to `research-document.json` for the unversioned template.
+## Batch Processing
+
+You can process multiple JSON files in order. This is useful for projects with many versions:
+
+```bash
+# Processes files in the given order. The final [file_name].html 
+# will be generated from the last file in the list.
+research-buddy build v1.0.json v1.1.json v1.2.json
+```
 
 ## Commands
 
@@ -125,10 +139,11 @@ Build HTML from document JSON(s). Accepts files, directories, or both.
 
 ```
 research-buddy build my-project/                    # latest version in source/
-research-buddy build myproject_v1.5.json            # specific file
+research-buddy build my-research_v1.5.json          # specific file
+research-buddy build a.json b.json                  # batch process IN ORDER
 research-buddy build my-project/ --watch            # rebuild on change
 research-buddy build my-project/ --pdf              # + PDF export (requires weasyprint)
-research-buddy build my-project/ --output report.html
+research-buddy build my-project/ --output master.html # custom output name/path
 research-buddy build my-project/ --validate-only    # check only, no HTML output
 ```
 
@@ -144,17 +159,8 @@ my-project/
 │   └── research-document.json    # Template (agent uploads this for session_zero)
 ├── versions/                     # Versioned HTML builds
 │   └── v1.0.html
-├── docs.html                     # Latest stable build (copy of most recent version)
+├── [file_name].html              # Latest stable build (copy of most recent version)
 └── theme.css                     # Optional CSS overrides
-```
-
-After session_zero, the AI produces `myproject_v1.0.json`. Place it in `source/` and build:
-
-```
-my-project/
-└── source/
-    ├── research-document.json    # Original template
-    └── myproject_v1.0.json       # First project output from agent
 ```
 
 ## Multi-language support

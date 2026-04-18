@@ -26,7 +26,7 @@ class TestSchemaValidation:
 
 class TestResearchBuddyVersion:
     def test_valid_starter_has_version(self, starter_doc: dict) -> None:
-        assert starter_doc["meta"].get("research_buddy_version") == "1.0"
+        assert starter_doc["meta"].get("research_buddy_version") == "1.0.3"
 
     def test_missing_rb_version_warns(self, starter_doc: dict) -> None:
         del starter_doc["meta"]["research_buddy_version"]
