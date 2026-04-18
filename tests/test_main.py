@@ -17,6 +17,7 @@ class _Args:
         self.pdf = False
         self.all = False
         self.validate_only = False
+        self.no_versioning = False
         self.title = None
         self.subtitle = None
         self.ver = "1.0"
@@ -72,7 +73,7 @@ class TestBuild:
             doc = json.load(f)
         base = doc.get("meta", {}).get("file_name")
         if not base:
-            base = re.sub(r"_v\d+[_.]\d+$", "", doc_path.stem)
+            base = re.sub(r"_v\d+(\.\d+)*$", "", doc_path.stem)
         return base
 
     def test_build_from_versioned_file(self, tmp_project: Path) -> None:
@@ -90,7 +91,7 @@ class TestBuild:
         assert (tmp_project / f"{base}.html").exists()
 
     def test_build_custom_output(self, tmp_project: Path) -> None:
-        out_path = tmp_project / "my-docs.html"
+        out_path = tmp_project / "my-research.html"
         result = cmd_build(_Args(paths=[str(tmp_project)], output=str(out_path)))
         assert result == 0
         assert out_path.exists()

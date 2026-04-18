@@ -1,13 +1,19 @@
-.PHONY: lint format test test-all clean sync regen-example build
+.PHONY: lint format test test-all clean sync regen-example build publish version-sync
 
 sync:
 	uv sync --extra dev
 
 build:
-	rm -rf dist/ && python -m build
+	rm -rf dist/ && uv run python -m build
+
+publish: build
+	uv run twine upload dist/*
+
+version-sync:
+	uv run scripts/sync_version.py
 
 regen-example:
-	uv run research-buddy build src/research_buddy/starter.json --output $(CURDIR)/starter-example/starter.html
+	uv run research-buddy build src/research_buddy/starter.json --output starter-example/starter.html --no-versioning
 
 lint:
 	uv run ruff check . && uv run mypy . --explicit-package-bases
