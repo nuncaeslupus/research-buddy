@@ -33,7 +33,8 @@
                     "meta.date",
                     "changelog tab: add new entry at TOP, set current=true, set previous entry to current=false"
                 ],
-                "file_naming": "Template file name: starter.json (no version number). After session_zero: rename output to [meta.file_name]_v1.0.json. Subsequent sessions: [meta.file_name]_v1.1.json, [meta.file_name]_v1.2.json, etc. The template is never overwritten."
+                "file_naming": "Template file name: starter.json (no version number). After session_zero: rename output to [meta.file_name]_v1.0.json. Subsequent sessions: [meta.file_name]_v1.1.json, [meta.file_name]_v1.2.json, etc. The template is never overwritten.",
+                "tool_version_compatibility": "meta.research_buddy_version records which Research Buddy CLI version last wrote the document. The CLI compares it to its own version on every build/validate. Rules (MAJOR.MINOR.PATCH): MAJOR mismatch = schema likely incompatible, the CLI emits an error-level warning and the user must either pin the matching major via `pip install 'research-buddy==MAJOR.*'` OR ask the agent to migrate the document to the current major. MINOR difference (same MAJOR): tool older than doc warns the user to upgrade; tool newer than doc is an info note and the agent bumps meta.research_buddy_version on the next write. PATCH-only difference is silent — patches are always backwards-compatible. Practical consequence: on EVERY write, set meta.research_buddy_version to the tool version the user is running (ask if unclear). On session start, if the user reports a MAJOR warning from validate/build output, prioritize migrating the document before doing any new research."
             },
             "update_targets": {
                 "_note": "All paths reference project_specific.key_locations. Execute all applicable targets in a single atomic write per session.",
