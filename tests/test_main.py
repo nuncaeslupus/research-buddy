@@ -168,6 +168,23 @@ class TestBuild:
         assert (tmp_project / "versions" / f"{base}_v1.0.html").exists()
         assert (tmp_project / "versions" / f"{base}_v2.0.html").exists()
 
+    def test_build_all_with_generic_naming(self, tmp_project: Path) -> None:
+        """`--all` must pick up any *_v*.json, not just files named document_v*.json."""
+        source = tmp_project / "source"
+        v1_path = next(source.glob("*_v*.json"))
+        v2_path = source / "test-project_v2.0.json"
+        with open(v1_path) as f:
+            doc = json.load(f)
+        doc["meta"]["version"] = "2.0"
+        with open(v2_path, "w") as f:
+            json.dump(doc, f)
+
+        base = self._get_base_name(v1_path)
+        result = cmd_build(_Args(paths=[str(tmp_project)], all=True))
+        assert result == 0
+        assert (tmp_project / "versions" / f"{base}_v1.0.html").exists()
+        assert (tmp_project / "versions" / f"{base}_v2.0.html").exists()
+
 
 class TestValidate:
     def test_valid_project(self, tmp_project: Path) -> None:

@@ -177,7 +177,24 @@ class TestHtmlOutput:
 
         starter_doc["meta"]["language"] = "English"
         html = build_html(starter_doc)
-        assert 'lang="English"' in html or 'lang="' in html
+        # Human-readable names are mapped to BCP-47 codes (English → "en").
+        assert 'lang="en"' in html
+
+    def test_lang_attribute_from_bcp47_string(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        starter_doc["meta"]["language"] = "pt-BR"
+        html = build_html(starter_doc)
+        # Short BCP-47-ish tags are passed through (lower-cased).
+        assert 'lang="pt-br"' in html
+
+    def test_lang_attribute_unknown_name_fallback(self, starter_doc: dict) -> None:
+        from research_buddy.build import build_html
+
+        starter_doc["meta"]["language"] = "Klingon"
+        html = build_html(starter_doc)
+        # Unknown names fall back to the first token truncated to 10 chars.
+        assert 'lang="Klingon"' in html
 
 
 def test_slugify() -> None:

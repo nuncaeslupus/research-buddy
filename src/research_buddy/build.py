@@ -34,6 +34,47 @@ VALID_TAG_CLASSES = frozenset(
 
 MAX_NOWRAP_COLUMN_LENGTH = 30
 
+# Mapping of human-readable language names to BCP-47 codes, for documents that use
+# `meta.language` as a plain string (e.g. "English") instead of the preferred
+# {"code": "en", "label": "English"} form. Falls back to a best-effort slug.
+_LANGUAGE_NAME_TO_CODE = {
+    "english": "en",
+    "spanish": "es",
+    "español": "es",
+    "castellano": "es",
+    "french": "fr",
+    "français": "fr",
+    "german": "de",
+    "deutsch": "de",
+    "italian": "it",
+    "italiano": "it",
+    "portuguese": "pt",
+    "português": "pt",
+    "chinese": "zh",
+    "中文": "zh",
+    "japanese": "ja",
+    "日本語": "ja",
+    "korean": "ko",
+    "한국어": "ko",
+    "arabic": "ar",
+    "العربية": "ar",
+    "russian": "ru",
+    "русский": "ru",
+    "dutch": "nl",
+    "nederlands": "nl",
+    "polish": "pl",
+    "polski": "pl",
+}
+
+_RB_FOOTER_CSS = """
+/* ── Research Buddy footer ── */
+.rb-powered-by{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;font-size:12px;color:#8090b8;clear:both}
+.rb-logo{width:100px;height:auto}
+.rb-powered-by a{color:#8090b8;text-decoration:none}
+.rb-powered-by a:hover{color:#a0b0d0}
+@media print{.rb-powered-by{display:none}}
+"""
+
 # ── State Management ────────────────────────────────────────────────────────
 
 
@@ -571,6 +612,41 @@ def find_latest_json(source_dir: Path) -> Path | None:
     return None
 
 
+def _resolve_lang_code(meta: Doc) -> str:
+    """Return an HTML lang attribute value (BCP-47-ish) from meta.language.
+
+    Accepts three shapes:
+      - {"code": "es", "label": "Español"} — preferred, returns "es".
+      - "en", "es-419" — already a BCP-47 short tag, returned as-is (lower-cased).
+      - "English", "Spanish" — human-readable, mapped via `_LANGUAGE_NAME_TO_CODE`;
+        unknown names fall back to the first whitespace-delimited token, truncated.
+    """
+    lang_meta = meta.get("language", "en")
+    if isinstance(lang_meta, dict):
+        return str(lang_meta.get("code") or "en")
+    if not lang_meta:
+        return "en"
+    raw = str(lang_meta).strip()
+    if re.fullmatch(r"[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*", raw):
+        return raw.lower()[:10]
+    return _LANGUAGE_NAME_TO_CODE.get(raw.lower(), raw.split()[0][:10])
+
+
+def _build_rb_footer_html(meta: Doc) -> str:
+    """Render the inline "Powered by Research Buddy" footer div."""
+    rb_version = meta.get("research_buddy_version", "")
+    logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
+    ver_suffix = f" v{rb_version}" if rb_version else ""
+    return (
+        f'<div class="rb-powered-by">'
+        f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'
+        f"<span>Powered by "
+        f'<a href="https://github.com/nuncaeslupus/research-buddy">Research Buddy</a>'
+        f"{ver_suffix}"
+        f"</span></div>\n"
+    )
+
+
 def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     """Build the complete single-file HTML from a document dict.
 
@@ -658,33 +734,8 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         f"<span>v{ver} \u00b7 {date}</span></div>\n{''.join(nav_html_parts)}</div>\n"
     )
 
-    # Resolve language code and Research Buddy version
-    lang_meta = meta.get("language", "en")
-    if isinstance(lang_meta, dict):
-        lang_code = lang_meta.get("code", "en")
-    else:
-        lang_code = str(lang_meta).split()[0][:10] if lang_meta else "en"
-
-    rb_version = meta.get("research_buddy_version", "")
-    logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
-    rb_footer_html = (
-        f'<div class="rb-powered-by">'
-        f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'
-        f"<span>Powered by "
-        f'<a href="https://github.com/nuncaeslupus/research-buddy">Research Buddy</a>'
-        f"{(' v' + rb_version) if rb_version else ''}"
-        f"</span></div>\n"
-    )
-
-    # Footer CSS injected inline
-    footer_css = """
-/* ── Research Buddy footer ── */
-.rb-powered-by{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;font-size:12px;color:#8090b8;clear:both}
-.rb-logo{width:100px;height:auto}
-.rb-powered-by a{color:#8090b8;text-decoration:none}
-.rb-powered-by a:hover{color:#a0b0d0}
-@media print{.rb-powered-by{display:none}}
-"""
+    lang_code = _resolve_lang_code(meta)
+    rb_footer_html = _build_rb_footer_html(meta)
 
     body_content = (
         tab_bar
@@ -710,37 +761,9 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         js,
     )
 
-    # theme override
+    # theme override + mandatory footer CSS
     theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
-
-    # Resolve language code and Research Buddy version
-    lang_meta = meta.get("language", "en")
-    if isinstance(lang_meta, dict):
-        lang_code = lang_meta.get("code", "en")
-    else:
-        lang_code = str(lang_meta).split()[0][:10] if lang_meta else "en"
-
-    rb_version = meta.get("research_buddy_version", "")
-    logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
-    rb_footer_html = (
-        f'<div class="rb-powered-by">'
-        f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'
-        f"<span>Powered by "
-        f'<a href="https://github.com/nuncaeslupus/research-buddy">Research Buddy</a>'
-        f"{(' v' + rb_version) if rb_version else ''}"
-        f"</span></div>\n"
-    )
-
-    # Footer CSS injected inline
-    footer_css = """
-/* ── Research Buddy footer ── */
-.rb-powered-by{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;font-size:12px;color:#8090b8;clear:both}
-.rb-logo{width:100px;height:auto}
-.rb-powered-by a{color:#8090b8;text-decoration:none}
-.rb-powered-by a:hover{color:#a0b0d0}
-@media print{.rb-powered-by{display:none}}
-"""
-    theme_block = theme_block + footer_css
+    theme_block += _RB_FOOTER_CSS
 
     return f"""<!DOCTYPE html>
 <html lang="{lang_code}">
