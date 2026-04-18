@@ -18,7 +18,7 @@ check-version-sync:
 regen-example:
 	uv run research-buddy build src/research_buddy/starter.json --output starter-example/starter.html --no-versioning
 
-lint:
+lint: check-version-sync
 	uv run ruff check . && uv run mypy . --explicit-package-bases
 
 format:

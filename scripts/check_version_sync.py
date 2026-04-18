@@ -12,15 +12,20 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 
 def _pyproject_version() -> str:
-    content = Path("pyproject.toml").read_text(encoding="utf-8")
-    m = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
-    if not m:
-        raise SystemExit("Could not find version in pyproject.toml")
-    return m.group(1)
+    # tomllib is in the stdlib from 3.11+ (this project already requires 3.11);
+    # parsing the TOML properly avoids false positives from regex-matching a
+    # `version =` line that happens to live inside a [tool.*] table.
+    with Path("pyproject.toml").open("rb") as f:
+        data = tomllib.load(f)
+    try:
+        return str(data["project"]["version"])
+    except KeyError as exc:
+        raise SystemExit(f"Could not find project.version in pyproject.toml: {exc}") from exc
 
 
 def _init_version() -> str:
@@ -41,9 +46,10 @@ def _starter_version() -> str:
 
 def _readme_version() -> str:
     content = Path("README.md").read_text(encoding="utf-8")
-    m = re.search(r"^# Research Buddy v(\d+\.\d+\.\d+)", content, re.MULTILINE)
+    # \S+ covers pre-release/build suffixes (e.g. "1.2.0-rc1", "1.2.0+build.5").
+    m = re.search(r"^# Research Buddy v(\S+)", content, re.MULTILINE)
     if not m:
-        raise SystemExit("Could not find '# Research Buddy vX.Y.Z' heading in README.md")
+        raise SystemExit("Could not find '# Research Buddy v...' heading in README.md")
     return m.group(1)
 
 
