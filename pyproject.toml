@@ -26,11 +26,13 @@ classifiers = [
 dependencies = [
     "jsonschema>=4.0.0",
     "watchdog>=3.0.0",
-    "weasyprint>=60.0",
     "argcomplete>=3.0.0",
 ]
 
 [project.optional-dependencies]
+pdf = [
+    "weasyprint>=60.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -39,6 +41,7 @@ dev = [
     "types-jsonschema>=4.0.0",
     "twine>=4.0.0",
     "build>=1.0.0",
+    "weasyprint>=60.0",
 ]
 
 [project.scripts]

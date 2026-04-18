@@ -1116,7 +1116,6 @@ dependencies = [
     { name = "argcomplete" },
     { name = "jsonschema" },
     { name = "watchdog" },
-    { name = "weasyprint" },
 ]
 
 [package.optional-dependencies]
@@ -1128,6 +1127,10 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
     { name = "types-jsonschema" },
+    { name = "weasyprint" },
+]
+pdf = [
+    { name = "weasyprint" },
 ]
 
 [package.metadata]
@@ -1142,9 +1145,10 @@ requires-dist = [
     { name = "twine", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "types-jsonschema", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "watchdog", specifier = ">=3.0.0" },
-    { name = "weasyprint", specifier = ">=60.0" },
+    { name = "weasyprint", marker = "extra == 'dev'", specifier = ">=60.0" },
+    { name = "weasyprint", marker = "extra == 'pdf'", specifier = ">=60.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["pdf", "dev"]
 
 [[package]]
 name = "rfc3986"

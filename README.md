@@ -20,18 +20,19 @@ The AI agent reads `agent_guidelines` embedded in the JSON and behaves as a Rese
 pip install research-buddy
 ```
 
+PDF export is an optional extra (weasyprint is a large install with system-level
+dependencies, so it's not pulled in by default):
+
+```bash
+pip install "research-buddy[pdf]"
+```
+
 ### For development
 
 ```bash
-uv sync
+uv sync --extra dev
 # or:
-pip install -e .
-```
-
-For PDF export (optional):
-
-```bash
-pip install weasyprint
+pip install -e ".[dev]"
 ```
 
 ## For AI Agents or AI users
