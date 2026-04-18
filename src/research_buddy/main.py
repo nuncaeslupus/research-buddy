@@ -45,6 +45,7 @@ def perform_build(
     theme: str | None = None,
     output: str | None = None,
     pdf: bool = False,
+    no_versioning: bool = False,
 ) -> int:
     """Run a single build pass."""
     print(f"Reading {json_path.name}\u2026")
@@ -72,35 +73,40 @@ def perform_build(
     html = build_html(doc, theme_css=theme_css)
 
     # output paths
-    versions_dir = project_root / "versions"
-    versions_dir.mkdir(exist_ok=True)
-
     meta = doc.get("meta", {})
     base_name = meta.get("file_name")
     if not base_name:
         # fallback: strip version/ext from filename (supports _v1.0, _v1.0.3, etc.)
         base_name = re.sub(r"_v\d+(\.\d+)*$", "", json_path.stem)
 
-    version = meta.get("version", "1.0")
-    versioned_name = f"{base_name}_v{version}.html"
-
-    versioned_path = versions_dir / versioned_name
-
     if output:
         stable_path = Path(output).resolve()
     else:
         stable_path = project_root / f"{base_name}.html"
 
-    with open(versioned_path, "w", encoding="utf-8") as f:
-        f.write(html)
+    if not no_versioning:
+        versions_dir = project_root / "versions"
+        versions_dir.mkdir(exist_ok=True)
 
-    # ensure parent dir for stable path exists if it was absolute/external
-    stable_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(versioned_path, stable_path)
+        version = meta.get("version", "1.0")
+        versioned_name = f"{base_name}_v{version}.html"
+        versioned_path = versions_dir / versioned_name
+
+        with open(versioned_path, "w", encoding="utf-8") as f:
+            f.write(html)
+
+        # copy to stable path
+        stable_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(versioned_path, stable_path)
+        print(f"Written \u2192 versions/{versioned_name}")
+    else:
+        # Just write to stable path
+        stable_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(stable_path, "w", encoding="utf-8") as f:
+            f.write(html)
 
     size_kb = len(html.encode()) / 1024
-    print(f"Written \u2192 versions/{versioned_name}  ({size_kb:.0f} KB)")
-    print(f"Copied  \u2192 {stable_path}")
+    print(f"Written \u2192 {stable_path} ({size_kb:.0f} KB)")
 
     if pdf:
         try:
@@ -153,12 +159,16 @@ def cmd_build(args: argparse.Namespace) -> int:
                         res = _resolve_source(path)
                         if res:
                             jp, pr = res
-                            perform_build(jp, pr, args.theme, args.output, args.pdf)
+                            perform_build(
+                                jp, pr, args.theme, args.output, args.pdf, args.no_versioning
+                            )
                     except Exception as e:
                         print(f"Build failed: {e}")
 
         # Initial build
-        perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+        perform_build(
+            json_path, project_root, args.theme, args.output, args.pdf, args.no_versioning
+        )
 
         print(f"\nWatching {path} for changes... (Ctrl+C to stop)")
         observer = Observer()
@@ -237,7 +247,9 @@ def cmd_build(args: argparse.Namespace) -> int:
                     print(f"   {issue}")
                 exit_code = 1
         else:
-            res_code = perform_build(json_path, project_root, args.theme, args.output, args.pdf)
+            res_code = perform_build(
+                json_path, project_root, args.theme, args.output, args.pdf, args.no_versioning
+            )
             if res_code != 0:
                 exit_code = res_code
 
@@ -366,6 +378,9 @@ def main() -> None:
         "--output", help="Output filename or path (default: {meta.file_name}.html)"
     )
     p_build.add_argument("--validate-only", action="store_true", help="Validate without building")
+    p_build.add_argument(
+        "--no-versioning", action="store_true", help="Skip creating versioned HTML in versions/"
+    )
     p_build.add_argument(
         "--watch", action="store_true", help="Watch for changes and rebuild automatically"
     )
