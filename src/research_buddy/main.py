@@ -75,23 +75,32 @@ def perform_build(
     versions_dir = project_root / "versions"
     versions_dir.mkdir(exist_ok=True)
 
-    m = re.search(r"v(\d+)[_.](\d+)", json_path.name)
-    if m:
-        versioned_name = f"v{m.group(1)}.{m.group(2)}.html"
-    else:
-        versioned_name = "output.html"
+    meta = doc.get("meta", {})
+    base_name = meta.get("file_name")
+    if not base_name:
+        # fallback: strip version/ext from filename (supports _v1.0, _v1.0.3, etc.)
+        base_name = re.sub(r"_v\d+(\.\d+)*$", "", json_path.stem)
+
+    version = meta.get("version", "1.0")
+    versioned_name = f"{base_name}_v{version}.html"
 
     versioned_path = versions_dir / versioned_name
-    output_name = output or "docs.html"
-    stable_path = project_root / output_name
+
+    if output:
+        stable_path = Path(output).resolve()
+    else:
+        stable_path = project_root / f"{base_name}.html"
 
     with open(versioned_path, "w", encoding="utf-8") as f:
         f.write(html)
+
+    # ensure parent dir for stable path exists if it was absolute/external
+    stable_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(versioned_path, stable_path)
 
     size_kb = len(html.encode()) / 1024
     print(f"Written \u2192 versions/{versioned_name}  ({size_kb:.0f} KB)")
-    print(f"Copied  \u2192 {output_name}")
+    print(f"Copied  \u2192 {stable_path}")
 
     if pdf:
         try:
@@ -100,16 +109,11 @@ def perform_build(
             print("Error: weasyprint not installed. Run 'pip install weasyprint'.", file=sys.stderr)
             return 1
 
-        pdf_name = output_name.replace(".html", ".pdf")
-        if pdf_name == output_name:
-            pdf_name += ".pdf"
-        pdf_path = project_root / pdf_name
-        print(f"Generating PDF \u2192 {pdf_name}\u2026")
+        pdf_path = stable_path.with_suffix(".pdf")
+        print(f"Generating PDF \u2192 {pdf_path.name}\u2026")
         try:
-            # WeasyPrint needs the base_url to find assets if they were external,
-            # but here they are inlined in the HTML by build_html.
             HTML(string=html).write_pdf(pdf_path)
-            print(f"Written \u2192 {pdf_name}")
+            print(f"Written \u2192 {pdf_path}")
         except Exception as e:
             print(f"PDF generation failed: {e}")
             return 1
@@ -336,9 +340,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     print()
     print("Next steps:")
     print(f"  1. Upload {_rel(doc_path)} to your AI assistant")
-    print("  2. The agent will run session_zero and produce [project_name]_v1.0.json")
-    print("  3. research-buddy build [project_name]_v1.0.json")
-    print("  4. Open docs.html in a browser")
+    print("  2. The agent will run session_zero and produce [meta.file_name]_v1.0.json")
+    print("  3. research-buddy build [meta.file_name]_v1.0.json")
+    print("  4. Open [meta.file_name].html in a browser")
     return 0
 
 
@@ -350,14 +354,16 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     # build
-    p_build = sub.add_parser("build", help="Build HTML from document JSON")
+    p_build = sub.add_parser("build", help="Build HTML from document JSON(s) in order")
     p_build.add_argument(
-        "paths", nargs="+", help="JSON file(s) or directory(ies) containing source/"
+        "paths",
+        nargs="+",
+        help="JSON file(s) or directory(ies) containing source/. Processed IN ORDER.",
     )
     p_build.add_argument("--all", action="store_true", help="Build all JSON files in the directory")
     p_build.add_argument("--theme", help="CSS file with style overrides")
     p_build.add_argument(
-        "--output", default="docs.html", help="Output filename (default: docs.html)"
+        "--output", help="Output filename or path (default: {meta.file_name}.html)"
     )
     p_build.add_argument("--validate-only", action="store_true", help="Validate without building")
     p_build.add_argument(

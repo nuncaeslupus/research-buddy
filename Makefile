@@ -7,9 +7,7 @@ build:
 	rm -rf dist/ && python -m build
 
 regen-example:
-	rm -rf starter-example/
-	uv run research-buddy init starter-example --title "Research Buddy Project" --subtitle "Master Class Research"
-	uv run research-buddy build starter-example
+	uv run research-buddy build src/research_buddy/starter.json --output $(CURDIR)/starter-example/starter.html
 
 lint:
 	uv run ruff check . && uv run mypy . --explicit-package-bases
