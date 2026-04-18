@@ -16,13 +16,14 @@ from typing import Any
 import argcomplete
 
 from research_buddy.build import build_html, find_latest_json
+from research_buddy.validator import validate
 
 
 def _resolve_source(path: Path) -> tuple[Path, Path] | None:
     """Given a path (file or dir), return (json_path, project_root).
 
     Project root is the directory containing source/ and versions/.
-    Returns None if no document_v*.json is found.
+    Returns None if no versioned document (*_v*.json) is found.
     """
     if path.is_file():
         # Any .json file: project root is parent, or grandparent if inside source/
@@ -51,9 +52,6 @@ def perform_build(
     print(f"Reading {json_path.name}\u2026")
     with open(json_path, encoding="utf-8") as f:
         doc = json.load(f)
-
-    # validate first
-    from research_buddy.validator import validate
 
     issues = validate(doc)
     if issues:
@@ -138,7 +136,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         path = paths[0]
         res = _resolve_source(path)
         if not res:
-            print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+            print(f"Error: no versioned document (*_v*.json) found for {path}", file=sys.stderr)
             return 1
         json_path, project_root = res
 
@@ -196,12 +194,26 @@ def cmd_build(args: argparse.Namespace) -> int:
         elif path.is_dir():
             if args.all:
                 source_dir = path / "source" if (path / "source").is_dir() else path
+
+                def _version_key(p: Path) -> tuple[int, int]:
+                    # Match only the _vMAJOR.MINOR suffix so project names that contain
+                    # digits (e.g. "2024_report_v1.0.json") still sort by version.
+                    m = re.search(r"_v(\d+)[_.](\d+)\.json$", p.name)
+                    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
                 json_files = sorted(
-                    list(source_dir.glob("document_v*.json")),
-                    key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.name)),
+                    [
+                        p
+                        for p in source_dir.glob("*.json")
+                        if re.search(r"_v\d+[_.]\d+\.json$", p.name)
+                    ],
+                    key=_version_key,
                 )
                 if not json_files:
-                    print(f"Error: no document_v*.json found in {source_dir}", file=sys.stderr)
+                    print(
+                        f"Error: no versioned documents (*_v*.json) found in {source_dir}",
+                        file=sys.stderr,
+                    )
                     exit_code = 1
                 else:
                     project_root = path if (path / "source").is_dir() else path.parent
@@ -212,7 +224,10 @@ def cmd_build(args: argparse.Namespace) -> int:
                 if res:
                     to_build.append(res)
                 else:
-                    print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+                    print(
+                        f"Error: no versioned document (*_v*.json) found for {path}",
+                        file=sys.stderr,
+                    )
                     exit_code = 1
         else:
             print(f"Error: path not found: {path}", file=sys.stderr)
@@ -231,9 +246,6 @@ def cmd_build(args: argparse.Namespace) -> int:
 
     if len(unique_to_build) > 1:
         print(f"\u26a0  Warning: Building {len(unique_to_build)} files.")
-
-    if args.validate_only:
-        from research_buddy.validator import validate
 
     for json_path, project_root in unique_to_build:
         if args.validate_only:
@@ -263,7 +275,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         path = Path(p).resolve()
         res = _resolve_source(path)
         if not res:
-            print(f"Error: no document_v*.json found for {path}", file=sys.stderr)
+            print(f"Error: no versioned document (*_v*.json) found for {path}", file=sys.stderr)
             exit_code = 1
             continue
         json_path, _root = res
@@ -271,8 +283,6 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print(f"Validating {json_path.name}\u2026")
         with open(json_path, encoding="utf-8") as f:
             doc = json.load(f)
-
-        from research_buddy.validator import validate
 
         issues = validate(doc)
         if issues:
