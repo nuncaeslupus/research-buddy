@@ -172,7 +172,10 @@ UI labels (`"OPEN"`, `"✦ Researched"`, `"Next Topic"`, etc.) are stored in `me
 
 ## Document format
 
-The JSON schema is bundled with the package. For reference, see `src/research_buddy/schema.json` or install the package and run `research-buddy validate --help`.
+The JSON schema is bundled with the package. For reference, see
+[`src/research_buddy/schema.json`](./src/research_buddy/schema.json) in the
+repository, or the matching path inside the installed wheel
+(`research_buddy/schema.json`).
 
 ### Block types
 
@@ -206,11 +209,11 @@ make test      # Run full test suite
 
 ## Examples
 
-The `starter-example/` directory contains a pre-built HTML output from the starter template. Regenerate it with:
+The `starter-example/` directory contains a pre-built HTML output from the starter
+template. Regenerate it with:
 
 ```bash
-pip install research-buddy
-research-buddy build --help
+make regen-example
 ```
 
 ## License

@@ -28,6 +28,3 @@ htmlcov/
 # Local
 .env
 tmp/
-
-# Example generated output
-examples/*/versions/

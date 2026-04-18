@@ -6,6 +6,7 @@ Source of truth: pyproject.toml
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 
@@ -56,8 +57,8 @@ def main() -> None:
         update_readme(version)
         print("Done!")
     except Exception as e:
-        print(f"Error: {e}")
-        exit(1)
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
