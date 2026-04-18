@@ -225,14 +225,11 @@ def _check_version_compatibility(doc_ver: str, tool_ver: str) -> list[str]:
             f"Recommendation: `pip install --upgrade research-buddy`."
         ]
 
-    if t_min > d_min:
-        return [
-            f"[meta.research_buddy_version] INFO: document is on v{doc_ver}; tool is "
-            f"v{tool_ver}. No action required — this is fully backwards-compatible. "
-            f"The agent will bump `meta.research_buddy_version` automatically on the next write."
-        ]
-
-    # Same MAJOR.MINOR: patch difference only, or exact match. No warning.
+    # Tool MINOR newer than doc MINOR (or equal) with same MAJOR: silent.
+    # The document is fully backwards-compatible. The agent will bump
+    # meta.research_buddy_version on the next write. Emitting a warning here
+    # would cause `research-buddy validate` to exit non-zero for docs that
+    # require no action — confusing for CI pipelines.
     return []
 
 

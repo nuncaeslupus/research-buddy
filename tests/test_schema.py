@@ -82,7 +82,13 @@ class TestVersionCompatibility:
         issues = validate(starter_doc)
         assert any("pip install --upgrade" in i for i in issues)
 
-    def test_tool_minor_newer_than_doc_is_info(self, starter_doc: dict) -> None:
+    def test_tool_minor_newer_than_doc_is_silent(self, starter_doc: dict) -> None:
+        """Older-doc / newer-tool must emit no warning.
+
+        The CLI returns a non-zero exit code whenever validate() returns a non-empty
+        list, so "No action required" has to literally mean "no message". The agent
+        will bump meta.research_buddy_version on the next write.
+        """
         from research_buddy import __version__
         from research_buddy.validator import _parse_semver
 
@@ -93,7 +99,7 @@ class TestVersionCompatibility:
             return
         starter_doc["meta"]["research_buddy_version"] = f"{tool[0]}.{tool[1] - 1}.0"
         issues = validate(starter_doc)
-        assert any("backwards-compatible" in i for i in issues)
+        assert not any("research_buddy_version" in i for i in issues)
 
     def test_unparseable_doc_version(self, starter_doc: dict) -> None:
         starter_doc["meta"]["research_buddy_version"] = "banana"
