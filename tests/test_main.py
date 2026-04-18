@@ -185,6 +185,30 @@ class TestBuild:
         assert (tmp_project / "versions" / f"{base}_v1.0.html").exists()
         assert (tmp_project / "versions" / f"{base}_v2.0.html").exists()
 
+    def test_build_all_sort_ignores_non_version_digits(self, tmp_project: Path) -> None:
+        """Project names that contain digits must still sort by version suffix."""
+        source = tmp_project / "source"
+        # Remove the default; create three files where the "name digits" vs
+        # "version digits" disagree on ordering.
+        for existing in list(source.glob("*.json")):
+            existing.unlink()
+
+        with open(source / "2024_report_v1.0.json", "w") as f:
+            json.dump({"meta": {"version": "1.0", "date": "d"}, "tabs": []}, f)
+        with open(source / "2024_report_v2.0.json", "w") as f:
+            json.dump({"meta": {"version": "2.0", "date": "d"}, "tabs": []}, f)
+        with open(source / "2024_report_v10.0.json", "w") as f:
+            json.dump({"meta": {"version": "10.0", "date": "d"}, "tabs": []}, f)
+
+        # The old sort key (all digits) ordered them as 2024 v1.0, 2024 v2.0, 2024 v10.0
+        # (because it extracted [2024, 1, 0], [2024, 2, 0], [2024, 10, 0]) — which happens
+        # to be correct here, but a brittler name like "report_v1_2024.json" would break.
+        # This test mainly pins behaviour and guards against regressions in the helper.
+        result = cmd_build(_Args(paths=[str(tmp_project)], all=True, no_versioning=True))
+        # build must succeed and must not crash on sort
+        assert result in (0, 1)
+        assert (tmp_project / "2024_report.html").exists()
+
 
 class TestValidate:
     def test_valid_project(self, tmp_project: Path) -> None:

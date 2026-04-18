@@ -194,13 +194,20 @@ def cmd_build(args: argparse.Namespace) -> int:
         elif path.is_dir():
             if args.all:
                 source_dir = path / "source" if (path / "source").is_dir() else path
+
+                def _version_key(p: Path) -> tuple[int, int]:
+                    # Match only the _vMAJOR.MINOR suffix so project names that contain
+                    # digits (e.g. "2024_report_v1.0.json") still sort by version.
+                    m = re.search(r"_v(\d+)[_.](\d+)\.json$", p.name)
+                    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
                 json_files = sorted(
                     [
                         p
                         for p in source_dir.glob("*.json")
                         if re.search(r"_v\d+[_.]\d+\.json$", p.name)
                     ],
-                    key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.name)),
+                    key=_version_key,
                 )
                 if not json_files:
                     print(

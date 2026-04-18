@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import functools
 import json
 import re
 from importlib import resources
@@ -629,13 +630,15 @@ def _resolve_lang_code(meta: Doc) -> str:
     raw = str(lang_meta).strip()
     if re.fullmatch(r"[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*", raw):
         return raw.lower()[:10]
-    return _LANGUAGE_NAME_TO_CODE.get(raw.lower(), raw.split()[0][:10])
+    # Whitespace-only strings produce empty split(); fall back to "en" to stay BCP-47-ish.
+    tokens = raw.split() or ["en"]
+    return _LANGUAGE_NAME_TO_CODE.get(raw.lower(), tokens[0][:10])
 
 
 def _build_rb_footer_html(meta: Doc) -> str:
     """Render the inline "Powered by Research Buddy" footer div."""
     rb_version = meta.get("research_buddy_version", "")
-    logo_data = _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
+    logo_data = _rb_logo_data_url()
     ver_suffix = f" v{rb_version}" if rb_version else ""
     return (
         f'<div class="rb-powered-by">'
@@ -645,6 +648,12 @@ def _build_rb_footer_html(meta: Doc) -> str:
         f"{ver_suffix}"
         f"</span></div>\n"
     )
+
+
+@functools.lru_cache(maxsize=1)
+def _rb_logo_data_url() -> str:
+    """Load and base64-encode the Research Buddy logo exactly once per process."""
+    return _asset_to_base64(_load_binary_asset("research-buddy.png", "images"), "image/png")
 
 
 def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
