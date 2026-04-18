@@ -26,7 +26,9 @@ class TestSchemaValidation:
 
 class TestResearchBuddyVersion:
     def test_valid_starter_has_version(self, starter_doc: dict) -> None:
-        assert starter_doc["meta"].get("research_buddy_version") == "1.0.3"
+        from research_buddy import __version__
+
+        assert starter_doc["meta"].get("research_buddy_version") == __version__
 
     def test_missing_rb_version_warns(self, starter_doc: dict) -> None:
         del starter_doc["meta"]["research_buddy_version"]
@@ -36,6 +38,67 @@ class TestResearchBuddyVersion:
     def test_present_rb_version_no_warn(self, starter_doc: dict) -> None:
         issues = validate(starter_doc)
         assert not any("research_buddy_version" in i for i in issues)
+
+
+class TestVersionCompatibility:
+    """Doc↔tool compatibility rules per MAJOR.MINOR.PATCH semver."""
+
+    def test_exact_match_silent(self, starter_doc: dict) -> None:
+        from research_buddy import __version__
+
+        starter_doc["meta"]["research_buddy_version"] = __version__
+        issues = validate(starter_doc)
+        assert not any("VERSION MISMATCH" in i or "INFO" in i for i in issues)
+
+    def test_patch_difference_silent(self, starter_doc: dict) -> None:
+        from research_buddy import __version__
+        from research_buddy.validator import _parse_semver
+
+        tool = _parse_semver(__version__)
+        assert tool is not None
+        # Pin same major.minor, different patch
+        starter_doc["meta"]["research_buddy_version"] = f"{tool[0]}.{tool[1]}.99"
+        issues = validate(starter_doc)
+        assert not any("MISMATCH" in i or "INFO" in i or "upgrade" in i.lower() for i in issues)
+
+    def test_major_mismatch_is_hard_warning(self, starter_doc: dict) -> None:
+        from research_buddy import __version__
+        from research_buddy.validator import _parse_semver
+
+        tool = _parse_semver(__version__)
+        assert tool is not None
+        starter_doc["meta"]["research_buddy_version"] = f"{tool[0] + 1}.0.0"
+        issues = validate(starter_doc)
+        assert any("VERSION MISMATCH" in i for i in issues)
+
+    def test_tool_minor_older_than_doc_warns(self, starter_doc: dict) -> None:
+        from research_buddy import __version__
+        from research_buddy.validator import _parse_semver
+
+        tool = _parse_semver(__version__)
+        assert tool is not None
+        # Doc is on a newer minor than the tool
+        starter_doc["meta"]["research_buddy_version"] = f"{tool[0]}.{tool[1] + 1}.0"
+        issues = validate(starter_doc)
+        assert any("pip install --upgrade" in i for i in issues)
+
+    def test_tool_minor_newer_than_doc_is_info(self, starter_doc: dict) -> None:
+        from research_buddy import __version__
+        from research_buddy.validator import _parse_semver
+
+        tool = _parse_semver(__version__)
+        assert tool is not None
+        if tool[1] == 0:
+            # Can't go lower than minor=0 on the doc side; skip under this tool version.
+            return
+        starter_doc["meta"]["research_buddy_version"] = f"{tool[0]}.{tool[1] - 1}.0"
+        issues = validate(starter_doc)
+        assert any("backwards-compatible" in i for i in issues)
+
+    def test_unparseable_doc_version(self, starter_doc: dict) -> None:
+        starter_doc["meta"]["research_buddy_version"] = "banana"
+        issues = validate(starter_doc)
+        assert any("Unrecognized version format" in i for i in issues)
 
 
 class TestLanguageField:

@@ -9,6 +9,7 @@ from typing import Any
 
 import jsonschema
 
+from research_buddy import __version__ as TOOL_VERSION
 from research_buddy.build import slugify
 
 Doc = dict[str, Any]
@@ -67,6 +68,14 @@ def _collect_block_ids(blocks: list[dict[str, Any]]) -> list[str]:
     return ids
 
 
+def _walk_section_ids(secs: dict[str, Any], ids: list[str]) -> None:
+    """Recursively collect slugified titles + block IDs from a section tree."""
+    for title, sec in secs.items():
+        ids.append(slugify(title))
+        ids.extend(_collect_block_ids(sec.get("blocks", [])))
+        _walk_section_ids(sec.get("subsections", {}), ids)
+
+
 def _collect_all_ids(doc: Doc) -> list[str]:
     """Gather every ID that will be generated in the HTML."""
     ids: list[str] = []
@@ -78,14 +87,7 @@ def _collect_all_ids(doc: Doc) -> list[str]:
 
     # Tab sections
     for tab in doc.get("tabs", []):
-
-        def _walk(secs: dict[str, Any]) -> None:
-            for title, sec in secs.items():
-                ids.append(slugify(title))
-                ids.extend(_collect_block_ids(sec.get("blocks", [])))
-                _walk(sec.get("subsections", {}))
-
-        _walk(tab.get("sections", {}))
+        _walk_section_ids(tab.get("sections", {}), ids)
 
     # Changelog (legacy structure check if still present)
     cl = doc.get("changelog")
@@ -139,34 +141,99 @@ def _parse_date(d: str) -> tuple[int, ...]:
 
 
 def _validate_references(doc: Doc) -> list[str]:
-    warnings = []
+    warnings: list[str] = []
     for tab in doc.get("tabs", []):
-
-        def _walk(secs: dict[str, Any]) -> None:
-            for title, sec in secs.items():
-                for b in sec.get("blocks", []):
-                    if b.get("type") == "references":
-                        items = b.get("items", [])
-                        # Check version ordering (should be descending)
-                        versions = [i.get("version") for i in items if i.get("version")]
-                        if len(versions) > 1:
-                            parsed_v = [_parse_ver(v) for v in versions]
-                            if parsed_v != sorted(parsed_v, reverse=True):
-                                warnings.append(
-                                    f"REFERENCE ORDER in '{title}': versions not descending"
-                                )
-                        # Check date ordering (should be descending)
-                        dates = [i.get("date") for i in items if i.get("date")]
-                        if len(dates) > 1:
-                            parsed_d = [_parse_date(d) for d in dates]
-                            if parsed_d != sorted(parsed_d, reverse=True):
-                                warnings.append(
-                                    f"REFERENCE ORDER in '{title}': dates not descending"
-                                )
-                _walk(sec.get("subsections", {}))
-
-        _walk(tab.get("sections", {}))
+        _walk_references(tab.get("sections", {}), warnings)
     return warnings
+
+
+def _walk_references(secs: dict[str, Any], warnings: list[str]) -> None:
+    """Recursively scan sections for `references` blocks and check ordering."""
+    for title, sec in secs.items():
+        for b in sec.get("blocks", []):
+            if b.get("type") == "references":
+                items = b.get("items", [])
+                # Check version ordering (should be descending)
+                versions = [i.get("version") for i in items if i.get("version")]
+                if len(versions) > 1:
+                    parsed_v = [_parse_ver(v) for v in versions]
+                    if parsed_v != sorted(parsed_v, reverse=True):
+                        warnings.append(f"REFERENCE ORDER in '{title}': versions not descending")
+                # Check date ordering (should be descending)
+                dates = [i.get("date") for i in items if i.get("date")]
+                if len(dates) > 1:
+                    parsed_d = [_parse_date(d) for d in dates]
+                    if parsed_d != sorted(parsed_d, reverse=True):
+                        warnings.append(f"REFERENCE ORDER in '{title}': dates not descending")
+        _walk_references(sec.get("subsections", {}), warnings)
+
+
+def _parse_semver(v: str) -> tuple[int, int, int] | None:
+    """Parse "1.0", "1.0.3", "v1.0.3" → (major, minor, patch). Missing parts → 0.
+
+    Returns None if the string contains no digits at all.
+    """
+    if not isinstance(v, str):
+        return None
+    m = re.search(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", v)
+    if not m:
+        return None
+    return (int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0))
+
+
+def _check_version_compatibility(doc_ver: str, tool_ver: str) -> list[str]:
+    """Compare the document's `research_buddy_version` against the installed tool.
+
+    Rules (MAJOR.MINOR.PATCH):
+      - MAJOR mismatch → hard warning: schema is NOT guaranteed compatible.
+      - Same MAJOR, tool MINOR < doc MINOR → warning: tool may silently drop newer features.
+      - Same MAJOR, tool MINOR > doc MINOR → info: fully backwards-compatible.
+      - PATCH-only difference → silent (patches are always compatible).
+    """
+    doc = _parse_semver(doc_ver)
+    tool = _parse_semver(tool_ver)
+    if doc is None:
+        return [
+            f"[meta.research_buddy_version] Unrecognized version format: {doc_ver!r}. "
+            "Expected something like '1.0' or '1.0.3'."
+        ]
+    if tool is None:
+        # The tool itself has a malformed version — not the user's problem; skip.
+        return []
+
+    d_maj, d_min, _d_patch = doc
+    t_maj, t_min, _t_patch = tool
+
+    if d_maj != t_maj:
+        return [
+            f"[meta.research_buddy_version] VERSION MISMATCH: document was written with "
+            f"research-buddy v{doc_ver}, but you are running v{tool_ver}. "
+            f"Major version differs — schema and build output may be incompatible. "
+            f"Build will proceed but the HTML may be wrong or missing content. "
+            f"Fix: (a) pin the matching major with "
+            f"`pip install 'research-buddy=={d_maj}.*'`, OR "
+            f"(b) open the document in an AI session and say "
+            f"'Migrate to research-buddy v{tool_ver}' so the agent updates the structure. "
+            f"See CHANGELOG.md for what changed between majors."
+        ]
+
+    if t_min < d_min:
+        return [
+            f"[meta.research_buddy_version] Document was last updated with research-buddy "
+            f"v{doc_ver}; you are on v{tool_ver} (tool MINOR is older). "
+            f"The document may use features this tool version does not render correctly. "
+            f"Recommendation: `pip install --upgrade research-buddy`."
+        ]
+
+    if t_min > d_min:
+        return [
+            f"[meta.research_buddy_version] INFO: document is on v{doc_ver}; tool is "
+            f"v{tool_ver}. No action required — this is fully backwards-compatible. "
+            f"The agent will bump `meta.research_buddy_version` automatically on the next write."
+        ]
+
+    # Same MAJOR.MINOR: patch difference only, or exact match. No warning.
+    return []
 
 
 def validate(doc: Doc) -> list[str]:
@@ -186,14 +253,17 @@ def validate(doc: Doc) -> list[str]:
     # 2. Semantic validations
     warnings.extend(_validate_references(doc))
 
-    # 3. Research Buddy version check
+    # 3. Research Buddy version check — presence + doc/tool compatibility
     meta = doc.get("meta", {})
     rb_ver = meta.get("research_buddy_version")
     if rb_ver is None:
         warnings.append(
-            "[meta.research_buddy_version] Missing — add 'research_buddy_version': '1.0' to meta. "
-            "This field is required for schema and build script version traceability."
+            "[meta.research_buddy_version] Missing — add 'research_buddy_version': "
+            f"'{TOOL_VERSION}' to meta. This field is required for schema and build "
+            "script version traceability."
         )
+    else:
+        warnings.extend(_check_version_compatibility(str(rb_ver), TOOL_VERSION))
 
     # 4. Language field check — accept string or {code, label} object
     lang = meta.get("language")

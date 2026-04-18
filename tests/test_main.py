@@ -46,12 +46,14 @@ class TestInit:
         assert "agent_guidelines" in doc
 
     def test_created_file_has_rb_version(self, tmp_path: Path) -> None:
+        from research_buddy import __version__
+
         target = tmp_path / "docs"
         cmd_init(_Args(path=str(target)))
         doc_path = target / "source" / "research-document.json"
         with open(doc_path) as f:
             doc = json.load(f)
-        assert doc["meta"].get("research_buddy_version") == "1.0.3"
+        assert doc["meta"].get("research_buddy_version") == __version__
 
     def test_refuses_existing(self, tmp_project: Path) -> None:
         result = cmd_init(_Args(path=str(tmp_project)))
