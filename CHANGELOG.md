@@ -4,6 +4,34 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] — 2026-04-19
+
+Docs and release-infrastructure patch. No code changes.
+
+### Fixed
+
+- **README**: the "Version compatibility (tool ↔ document)" section described
+  in the 1.1.0 CHANGELOG was actually missing from the published README (the
+  commit adding it landed 4 minutes after its PR merged and never made it to
+  main). 1.1.1 ships the real section with the full MAJOR/MINOR/PATCH
+  severity table and the "What if my document is on an older version?"
+  subsection.
+
+### Added
+
+- **Automated release pipeline** (`.github/workflows/release.yml`). Pushing
+  a `v*` tag now runs: `check-version-sync` + tag/pyproject match →
+  `make build` + `twine check` → PyPI upload via trusted publishing (OIDC,
+  no stored token) → GitHub release with CHANGELOG body and attached wheel +
+  sdist.
+- **`RELEASE.md`** runbook: one-time PyPI trusted-publisher setup, the
+  bump/tag/push flow, failure recovery, and the PATCH/MINOR/MAJOR rubric.
+
+### Upgrading from 1.1.0
+
+No action required. `pip install --upgrade research-buddy` fetches the new
+wheel; the PyPI project page now renders the corrected README.
+
 ## [1.1.0] — 2026-04-19
 
 ### Added
