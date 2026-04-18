@@ -19,6 +19,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy . --explicit-package-bases
+      - name: Verify version strings in sync
+        run: make check-version-sync
 
   test:
     runs-on: ubuntu-latest
