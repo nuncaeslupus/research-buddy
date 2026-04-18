@@ -198,6 +198,35 @@ repository, or the matching path inside the installed wheel
 
 `meta.research_buddy_version` is required in all documents. The validator warns if it is missing. When this version changes, schema or build script behaviour may change — always use the template that matches your installed version.
 
+## Version compatibility (tool ↔ document)
+
+Research Buddy uses **MAJOR.MINOR.PATCH** semver. Every `research-buddy build`
+and `research-buddy validate` compares the installed CLI version against
+`meta.research_buddy_version` and reacts like this:
+
+| Comparison                                  | Severity | What happens                                                                                                                                                                                                                    |
+| ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Exact match                                 | silent   | Nothing to worry about.                                                                                                                                                                                                         |
+| Only PATCH differs (e.g. 1.0.3 vs 1.0)      | silent   | Patches are strictly backwards-compatible. Treated as equivalent.                                                                                                                                                               |
+| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `meta.research_buddy_version` on the next write. Nothing is printed; exit code stays 0.                                                                    |
+| Tool MINOR **older** than doc (same MAJOR)  | warning  | Doc may use features your tool does not render correctly. Run `pip install --upgrade research-buddy`.                                                                                                                           |
+| MAJOR differs                               | error    | Schema is not guaranteed to match. Either install the matching major (`pip install 'research-buddy==1.*'`) or start an AI session and say *"Migrate to research-buddy vX.Y"* so the agent updates the document structure. |
+
+**Algorithmic rule:** for compatibility, the validator compares `MAJOR.MINOR`
+only. Patch-level differences are ignored — `1.0.3` and `1.0` behave the same.
+
+### What if my document is on an older version?
+
+If you're upgrading the CLI to a newer minor (e.g. tool `1.1.0`, doc `1.0.3`)
+there is nothing to do: your build continues to produce HTML as before. The
+agent bumps `meta.research_buddy_version` the next time it writes to the
+document.
+
+If you're moving across a major boundary, the CLI will tell you, point at
+CHANGELOG.md, and give you a copy-pasteable command to pin the matching major
+(if you want to keep your current doc as-is) or an instruction to hand to the
+agent (if you want to migrate).
+
 ## Development
 
 ```bash
