@@ -112,7 +112,11 @@ def perform_build(
         try:
             from weasyprint import HTML  # type: ignore[import-untyped]
         except ImportError:
-            print("Error: weasyprint not installed. Run 'pip install weasyprint'.", file=sys.stderr)
+            print(
+                "Error: weasyprint not installed. "
+                "Run 'pip install \"research-buddy[pdf]\"' to enable PDF export.",
+                file=sys.stderr,
+            )
             return 1
 
         pdf_path = stable_path.with_suffix(".pdf")
