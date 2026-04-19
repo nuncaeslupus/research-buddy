@@ -34,7 +34,7 @@ both protect the refactors.
       survivor count. Acts as a quality check on the coverage raised
       in #6: high line-coverage with weak assertions still lets
       mutants survive. The `mutmut-report` skill at
-      `.claude/skills/mutmut-report/` analyses the run and groups
+      `.claude/skills/mutmut-report/` analyzes the run and groups
       survivors into real-gap / equivalent / untestable. Fix the real
       gaps, accept the rest.
 - [ ] **8. Coverage threshold in CI.** Add `--cov-fail-under=85` to
