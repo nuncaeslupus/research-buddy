@@ -11,13 +11,13 @@ Run the analysis script, then report findings.
 
 ## Step 1 — Run the script
 
+Run from the project root so `mutmut results` can find the `mutants/`
+directory. Pass any user flags (e.g. `--module validate`, `--max 30`)
+through as `$ARGUMENTS`:
+
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel) && cd ${ARGUMENTS:-"."} && python "$PROJECT_ROOT/.claude/skills/mutmut-report/analyze_mutmut.py"
+PROJECT_ROOT=$(git rev-parse --show-toplevel) && cd "$PROJECT_ROOT" && python "$PROJECT_ROOT/.claude/skills/mutmut-report/analyze_mutmut.py" $ARGUMENTS
 ```
-
-Any extra flags in `$ARGUMENTS` (e.g. `--module validate`) are passed through automatically since the `cd` only consumes the first token and the rest go to the script.
-
-Actually: parse `$ARGUMENTS` yourself — the first token is the directory, remaining tokens are script flags.
 
 ## Step 2 — Present results
 
