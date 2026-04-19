@@ -19,7 +19,7 @@ def run_cmd(cmd: list[str]) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error running {' '.join(cmd)}: {result.stderr}", file=sys.stderr)
-        return ""
+        sys.exit(1)
     return result.stdout
 
 
@@ -31,7 +31,10 @@ def find_mutmut(venv_hint: str | None) -> str:
     for c in candidates:
         if Path(c).exists():
             return c
-    return shutil.which("mutmut") or "mutmut"
+    if resolved := shutil.which("mutmut"):
+        return resolved
+    print("ERROR: mutmut executable not found in PATH.", file=sys.stderr)
+    sys.exit(1)
 
 
 def get_survivors(mutmut_bin: str) -> list[str]:
