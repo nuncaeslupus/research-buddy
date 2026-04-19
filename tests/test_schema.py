@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from research_buddy.validator import validate
+from jsonschema import Draft202012Validator
+
+from research_buddy.validator import _load_schema, validate
+
+
+class TestSchemaIntegrity:
+    """The bundled schema.json must itself be a valid Draft 2020-12 schema."""
+
+    def test_schema_is_valid_draft_2020_12(self) -> None:
+        Draft202012Validator.check_schema(_load_schema())
 
 
 class TestSchemaValidation:
