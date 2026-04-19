@@ -95,7 +95,7 @@
             },
             "synthesis_matrix": {
                 "_comment": "For topics where multiple sources make overlapping or conflicting claims, build an explicit evidence table before adopting any decision.",
-                "format": "Claim × Source matrix: each row = one concrete claim; each column = one Tier-1/2 source; cell = SUPPORTS | CONTRADICTS | SILENT. Adopt only claims with ≥2 independent SUPPORTS and zero CONTRADICTS from Tier-1 sources.",
+                "format": "Claim × Source matrix: each row = one concrete claim; each column = one Tier-1/2 source; cell = SUPPORTS | CONTRADICTS | SILENT. Adopt only claims with ≥2 independent SUPPORTS from Tier-1 sources and zero CONTRADICTS from Tier-1 sources.",
                 "when_required": "Any topic where >3 sources are consulted, or where sources appear to contradict each other. Always required for quantitative thresholds.",
                 "pre_registration_rule": "Before running any experiment, write down in the session notes: (a) the hypothesis being tested, (b) the specific metric and threshold that would constitute a PASS, (c) the specific metric and threshold that would constitute a FAIL/REJECT. This prevents unconscious p-hacking and must be written BEFORE seeing results."
             }
