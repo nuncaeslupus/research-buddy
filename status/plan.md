@@ -22,11 +22,13 @@ both protect the refactors.
       (weekly) and `github-actions` (weekly). Groups minor+patch so
       we don't drown in noise.
       *Shipped in PR [#26].*
-- [ ] **4. Python 3.13 in CI.** Add `3.13` to the `test` job's matrix
+- [x] **4. Python 3.13 in CI.** Add `3.13` to the `test` job's matrix
       in `.github/workflows/ci.yml`. Lint job stays on 3.12.
-- [ ] **5. Schema self-test.** One pytest in `tests/test_schema.py`
+      *Shipped in PR [#36].*
+- [x] **5. Schema self-test.** One pytest in `tests/test_schema.py`
       that loads `schema.json` and validates it against the Draft
       2020-12 meta-schema. Catches typos in the schema itself.
+      *Shipped in PR [#40].*
 - [ ] **6. Raise coverage.** `main.py` (64% → ≥85%) and `validator.py`
       (63% → ≥85%). Target the untested branches: `--watch`, `--pdf`,
       `--all`, batch mode, validator error paths, version-compat
@@ -78,3 +80,5 @@ both protect the refactors.
 
 [#24]: https://github.com/nuncaeslupus/research-buddy/pull/24
 [#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
+[#36]: https://github.com/nuncaeslupus/research-buddy/pull/36
+[#40]: https://github.com/nuncaeslupus/research-buddy/pull/40
