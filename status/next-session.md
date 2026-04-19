@@ -22,24 +22,24 @@
   `session_zero.note`. Smoke-tested end-to-end on a scaffolded +
   drifted project.
 - **Triaged review feedback on three docs/feature PRs**:
-  - #38 — accepted all 3 Gemini comments: comma-joined `key_diffs` in
+  - [#38] — accepted all 3 Gemini comments: comma-joined `key_diffs` in
     CLI output, newline-separated `format_note` entries, and an
     `isinstance` guard in `_compute_key_diffs` so a malformed
     non-dict framework doesn't crash the diff.
-  - #37 — accepted: moved the step #3 shipped-note to its own
+  - [#37] — accepted: moved the step #3 shipped-note to its own
     indented line, matching the style of steps #1 and #2.
-  - #35 — accepted link refs for #29–#31; pushed back on two with
-    evidence. The "plan.md still stale" concern was moot because #37
+  - [#35] — accepted link refs for [#29]–[#31]; pushed back on two with
+    evidence. The "plan.md still stale" concern was moot because [#37]
     ships it in parallel. The "ruff format supports TOML since 0.4.0"
-    claim is the same one Gemini raised on #24 and was rejected with
+    claim is the same one Gemini raised on [#24] and was rejected with
     evidence then; verified again against the pinned `ruff 0.15.9` —
     `format --extension` still only maps `python`, `ipynb`, `pyi`.
 - **Drained the Dependabot queue**: merged all 7 open bumps in one
   pass — [#27] `actions/checkout` 4→6, [#28] `actions/download-artifact`
   4→8, [#29] `astral-sh/setup-uv` 5→7, [#30] `actions/setup-python`
   5→6, [#31] `actions/upload-artifact` 4→7, [#32] python-minor-patch
-  group, [#33] `types-jsonschema` patch. Dependabot auto-rebased #28
-  and #29 when the first wave hit conflicts; the retry succeeded.
+  group, [#33] `types-jsonschema` patch. Dependabot auto-rebased [#28]
+  and [#29] when the first wave hit conflicts; the retry succeeded.
 - **Zero open PRs** at session end. `main` CI green after every merge.
 
 ### Next steps
