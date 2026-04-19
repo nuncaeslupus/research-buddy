@@ -1,5 +1,62 @@
 # Next session
 
+## Session 2026-04-19 (session 3)
+
+### What was done
+
+- **Shipped roadmap step #2 — pre-commit hooks.** PR [#24] merged.
+  `.pre-commit-config.yaml` with four local (`uv run`) hooks mirroring
+  the CI lint job: `ruff check`, `ruff format --check`, `mypy`,
+  `check-version-sync`. Added `pre-commit>=3.5.0` to the `dev` extra and
+  documented `pre-commit install` in `CLAUDE.md`. Rejected a Gemini
+  review (toml in ruff-format's `types_or`) with verification evidence —
+  `ruff format` is Python-only.
+- **Shipped a small skills-cleanup PR** on the same day. PR [#25]
+  merged. Tightened `analyze_mutmut.py` (`run_cmd` exits on non-zero
+  return instead of silently emptying survivors; `find_mutmut` uses
+  `shutil.which` and exits with a clear error if not found). Applied all
+  three Gemini review comments after verifying they were correct. Also
+  reverted an incorrect SKILL.md rewording I made — `git rev-parse
+  --show-toplevel` resolves to the caller's repo, so the cd-elsewhere
+  recipe I wrote did not work.
+- **Shipped roadmap step #3 — Dependabot.** PR [#26] merged.
+  `.github/dependabot.yml` with two weekly ecosystems: `uv` (Dependabot's
+  native uv ecosystem, GA 2026-03-10) and `github-actions`. Minor + patch
+  bumps grouped per ecosystem; majors get individual PRs. Config fired
+  immediately — five bump PRs opened on merge ([#28]–[#32]). Rejected a
+  second Gemini review (add `pre-commit` ecosystem) because our config
+  is all `repo: local`, which Dependabot explicitly skips.
+
+### Next steps
+
+1. **Triage the Dependabot PR queue** that opened on #26 merge:
+   [#28]–[#32]. Quick pass: approve the github-actions majors
+   individually, let the python-minor-patch group ride as one PR. CI on
+   each must stay green.
+2. **Roadmap step #4 — Python 3.13 in CI.** Branch
+   `ci/python-3.13`. Add `"3.13"` to the `test` job matrix in
+   `.github/workflows/ci.yml`; lint job stays on 3.12. Small config-only
+   PR.
+3. After #4, continue with step #5 (schema self-test) then step #6
+   (coverage raise) per `status/plan.md`.
+4. **In-flight user work**: branch `chore/skills-subtree` has a commit
+   removing `.claude/skills/` in preparation for a git-subtree import.
+   That's independent of the roadmap — resume at the user's direction.
+5. Upstream-proposals implementation ([#22]) still queued as a separate
+   work stream; no change from session 2.
+
+### Blockers
+
+- None.
+
+[#24]: https://github.com/nuncaeslupus/research-buddy/pull/24
+[#25]: https://github.com/nuncaeslupus/research-buddy/pull/25
+[#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
+[#28]: https://github.com/nuncaeslupus/research-buddy/pull/28
+[#32]: https://github.com/nuncaeslupus/research-buddy/pull/32
+
+---
+
 ## Session 2026-04-19 (session 2)
 
 ### What was done
