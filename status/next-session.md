@@ -53,6 +53,9 @@
 [#25]: https://github.com/nuncaeslupus/research-buddy/pull/25
 [#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
 [#28]: https://github.com/nuncaeslupus/research-buddy/pull/28
+[#29]: https://github.com/nuncaeslupus/research-buddy/pull/29
+[#30]: https://github.com/nuncaeslupus/research-buddy/pull/30
+[#31]: https://github.com/nuncaeslupus/research-buddy/pull/31
 [#32]: https://github.com/nuncaeslupus/research-buddy/pull/32
 
 ---
