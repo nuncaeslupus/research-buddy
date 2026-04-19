@@ -1,0 +1,37 @@
+# Pre-commit hooks mirror the lint job in .github/workflows/ci.yml so that
+# anything passing locally will pass CI. All tools are invoked through `uv run`,
+# so their versions come from uv.lock — no drift between pre-commit, Makefile,
+# and CI.
+#
+# Install once per clone:    uv run pre-commit install
+# Run across the whole repo: uv run pre-commit run --all-files
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check .
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi, toml]
+
+      - id: ruff-format
+        name: ruff format --check
+        entry: uv run ruff format --check .
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy . --explicit-package-bases
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+
+      - id: check-version-sync
+        name: check-version-sync
+        entry: uv run scripts/check_version_sync.py
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|src/research_buddy/__init__\.py|src/research_buddy/starter\.json|README\.md)$

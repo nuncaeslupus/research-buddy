@@ -42,6 +42,7 @@ dev = [
     "twine>=4.0.0",
     "build>=1.0.0",
     "weasyprint>=60.0",
+    "pre-commit>=3.5.0",
 ]
 
 [project.scripts]
