@@ -13,7 +13,7 @@ Invoke when creating commits, branches, or pull requests.
 ## Branch Naming
 
 - Main branch: `main`
-- Feature branches: `feat/<short-description>`
+- Feature branches: `feat/<short-description>` (e.g., `feat/django-stack`)
 - Fix branches: `fix/<short-description>`
 
 ## Commit Format (Conventional Commits)
@@ -28,25 +28,29 @@ Invoke when creating commits, branches, or pull requests.
 
 ### Scope
 
-- `feat(build): add custom theme support`
-- `fix(schema): validate changelog entry ids`
-- `test(cli): add init command tests`
-- `docs: update README`
+Module or domain name:
+
+- `feat(generator): add new field type support`
+- `test(templates): add boundary tests`
+- `fix(parser): handle missing optional fields`
+- `docs: update next-session.md`
+- `chore: update uv.lock`
 
 ### Rules
 
-- Imperative mood ("add", "fix", not "added", "fixes")
+- Imperative mood in description ("add", "fix", "implement", not "added", "fixes")
 - No period at end
 - First line under 72 characters
 - Body (optional) separated by blank line, explains "why" not "what"
+- Always append the right agent, e.g.: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
 
 ## Pre-Commit Checklist
 
-Before every commit:
+Before every commit, run:
 
 ```bash
-make format
-make lint
+make format   # ruff auto-fix + ruff format
+make lint     # ruff check + mypy
 ```
 
 Both must pass before committing.
