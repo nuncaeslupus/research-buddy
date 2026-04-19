@@ -146,8 +146,7 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   `make check-version-sync` is part of the lint job.
 - `tmp/`, `.vscode/`, `dist/` are gitignored. `starter-example/` is committed
   so users can view the example without installing the package.
-- `.claude/skills/` is imported from a shared repo via `git subtree` (remote
-  name `shared-skills`). `make update-skills` pulls the latest. Project-specific
-  skills can be dropped alongside the shared ones — subtree won't touch them.
-  After a fresh clone the remote must be added once:
-  `git remote add shared-skills <url-or-path-to-my-skills-repo>`.
+- `.claude/skills/` is imported from a shared repo via `git subtree` from
+  `https://github.com/nuncaeslupus/my-skills.git`. `make update-skills` pulls
+  the latest. Project-specific skills can be dropped alongside the shared ones
+  — subtree won't touch them.
