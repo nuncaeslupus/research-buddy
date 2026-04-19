@@ -30,7 +30,7 @@ def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
 
     # Use a versioned filename so find_latest_json picks it up
     doc_path = source_dir / "test-project_v1.0.json"
-    with open(doc_path, "w", encoding="utf-8") as f:
+    with doc_path.open("w", encoding="utf-8") as f:
         json.dump(doc, f)
 
     yield tmp_path

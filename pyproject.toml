@@ -69,6 +69,9 @@ select = [
     "I",   # isort
     "UP",  # pyupgrade
     "RUF", # ruff-specific
+    "B",   # flake8-bugbear (real bug patterns)
+    "SIM", # flake8-simplify (cleaner equivalents)
+    "PTH", # flake8-use-pathlib (prefer pathlib over os.path)
 ]
 
 [tool.pytest.ini_options]
