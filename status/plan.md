@@ -9,9 +9,11 @@ both protect the refactors.
 
 ## Queue
 
-- [ ] **1. Stricter ruff ruleset.** Add `B` (bugbear), `SIM` (simplify),
+- [x] **1. Stricter ruff ruleset.** Add `B` (bugbear), `SIM` (simplify),
       `PTH` (force pathlib) to `[tool.ruff.lint].select` in
       `pyproject.toml`. Fix whatever the expanded lint surfaces.
+      *Shipped: 21 violations fixed (20 PTH123, 1 SIM108). All tests
+      green.*
 - [ ] **2. Pre-commit hooks.** `.pre-commit-config.yaml` running
       `ruff check`, `ruff format`, `mypy`, and `make check-version-sync`
       on every commit. Document `pre-commit install` in `CLAUDE.md`.

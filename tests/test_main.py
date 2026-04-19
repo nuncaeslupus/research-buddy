@@ -39,7 +39,7 @@ class TestInit:
         target = tmp_path / "docs"
         cmd_init(_Args(path=str(target)))
         doc_path = target / "source" / "research-document.json"
-        with open(doc_path) as f:
+        with doc_path.open() as f:
             doc = json.load(f)
         assert "meta" in doc
         assert "tabs" in doc
@@ -51,7 +51,7 @@ class TestInit:
         target = tmp_path / "docs"
         cmd_init(_Args(path=str(target)))
         doc_path = target / "source" / "research-document.json"
-        with open(doc_path) as f:
+        with doc_path.open() as f:
             doc = json.load(f)
         assert doc["meta"].get("research_buddy_version") == __version__
 
@@ -64,14 +64,14 @@ class TestInit:
         result = cmd_init(_Args(path=str(target), title="My Project"))
         assert result == 0
         doc_path = target / "source" / "research-document.json"
-        with open(doc_path) as f:
+        with doc_path.open() as f:
             doc = json.load(f)
         assert doc["meta"]["title"] == "My Project"
 
 
 class TestBuild:
     def _get_base_name(self, doc_path: Path) -> str:
-        with open(doc_path) as f:
+        with doc_path.open() as f:
             doc = json.load(f)
         base = doc.get("meta", {}).get("file_name")
         if not base:
@@ -158,10 +158,10 @@ class TestBuild:
     def test_build_batch_files(self, tmp_project: Path) -> None:
         v1_path = next((tmp_project / "source").glob("*_v*.json"))
         v2_path = tmp_project / "source" / "test-project_v2.0.json"
-        with open(v1_path) as f:
+        with v1_path.open() as f:
             doc = json.load(f)
         doc["meta"]["version"] = "2.0"
-        with open(v2_path, "w") as f:
+        with v2_path.open("w") as f:
             json.dump(doc, f)
 
         base = self._get_base_name(v1_path)
@@ -175,10 +175,10 @@ class TestBuild:
         source = tmp_project / "source"
         v1_path = next(source.glob("*_v*.json"))
         v2_path = source / "test-project_v2.0.json"
-        with open(v1_path) as f:
+        with v1_path.open() as f:
             doc = json.load(f)
         doc["meta"]["version"] = "2.0"
-        with open(v2_path, "w") as f:
+        with v2_path.open("w") as f:
             json.dump(doc, f)
 
         base = self._get_base_name(v1_path)
@@ -195,11 +195,11 @@ class TestBuild:
         for existing in list(source.glob("*.json")):
             existing.unlink()
 
-        with open(source / "2024_report_v1.0.json", "w") as f:
+        with (source / "2024_report_v1.0.json").open("w") as f:
             json.dump({"meta": {"version": "1.0", "date": "d"}, "tabs": []}, f)
-        with open(source / "2024_report_v2.0.json", "w") as f:
+        with (source / "2024_report_v2.0.json").open("w") as f:
             json.dump({"meta": {"version": "2.0", "date": "d"}, "tabs": []}, f)
-        with open(source / "2024_report_v10.0.json", "w") as f:
+        with (source / "2024_report_v10.0.json").open("w") as f:
             json.dump({"meta": {"version": "10.0", "date": "d"}, "tabs": []}, f)
 
         # The old sort key (all digits) ordered them as 2024 v1.0, 2024 v2.0, 2024 v10.0
@@ -219,10 +219,10 @@ class TestValidate:
 
     def test_invalid_project(self, tmp_project: Path) -> None:
         doc_path = next((tmp_project / "source").glob("*_v*.json"))
-        with open(doc_path) as f:
+        with doc_path.open() as f:
             doc = json.load(f)
         del doc["meta"]
-        with open(doc_path, "w") as f:
+        with doc_path.open("w") as f:
             json.dump(doc, f)
         result = cmd_validate(_Args(paths=[str(tmp_project)]))
         assert result == 1

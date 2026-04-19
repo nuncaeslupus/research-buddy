@@ -50,7 +50,7 @@ def perform_build(
 ) -> int:
     """Run a single build pass."""
     print(f"Reading {json_path.name}\u2026")
-    with open(json_path, encoding="utf-8") as f:
+    with json_path.open(encoding="utf-8") as f:
         doc = json.load(f)
 
     issues = validate(doc)
@@ -77,10 +77,7 @@ def perform_build(
         # fallback: strip version/ext from filename (supports _v1.0, _v1.0.3, etc.)
         base_name = re.sub(r"_v\d+(\.\d+)*$", "", json_path.stem)
 
-    if output:
-        stable_path = Path(output).resolve()
-    else:
-        stable_path = project_root / f"{base_name}.html"
+    stable_path = Path(output).resolve() if output else project_root / f"{base_name}.html"
 
     if not no_versioning:
         versions_dir = project_root / "versions"
@@ -90,7 +87,7 @@ def perform_build(
         versioned_name = f"{base_name}_v{version}.html"
         versioned_path = versions_dir / versioned_name
 
-        with open(versioned_path, "w", encoding="utf-8") as f:
+        with versioned_path.open("w", encoding="utf-8") as f:
             f.write(html)
 
         # copy to stable path
@@ -100,7 +97,7 @@ def perform_build(
     else:
         # Just write to stable path
         stable_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(stable_path, "w", encoding="utf-8") as f:
+        with stable_path.open("w", encoding="utf-8") as f:
             f.write(html)
 
     size_kb = len(html.encode()) / 1024
@@ -254,7 +251,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     for json_path, project_root in unique_to_build:
         if args.validate_only:
             print(f"Validating {json_path.name}\u2026")
-            with open(json_path, encoding="utf-8") as f:
+            with json_path.open(encoding="utf-8") as f:
                 doc = json.load(f)
             issues = validate(doc)
             if issues:
@@ -285,7 +282,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         json_path, _root = res
 
         print(f"Validating {json_path.name}\u2026")
-        with open(json_path, encoding="utf-8") as f:
+        with json_path.open(encoding="utf-8") as f:
             doc = json.load(f)
 
         issues = validate(doc)
@@ -349,7 +346,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     doc["meta"]["date"] = datetime.now(tz=UTC).strftime("%B %Y")
 
     doc_path = source_dir / "research-document.json"
-    with open(doc_path, "w", encoding="utf-8") as f:
+    with doc_path.open("w", encoding="utf-8") as f:
         json.dump(doc, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
