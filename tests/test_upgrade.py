@@ -118,6 +118,16 @@ class TestUpgradeDoc:
             == starter_doc["agent_guidelines"]["framework"]
         )
 
+    def test_tolerates_non_dict_framework(self, starter_doc: dict) -> None:
+        # A malformed doc where framework is a string, not a dict, must not crash.
+        doc = copy.deepcopy(starter_doc)
+        doc["agent_guidelines"]["framework"] = "legacy string"
+
+        upgraded, _, diffs = upgrade_doc(doc, starter_doc, __version__)
+
+        assert isinstance(upgraded["agent_guidelines"]["framework"], dict)
+        assert diffs["framework_removed"] == []
+
 
 class TestStampFormatNote:
     def test_appends_dated_entry(self) -> None:
@@ -133,6 +143,11 @@ class TestStampFormatNote:
         doc: dict = {"meta": {"version": "1.2", "format_note": "prior entry."}}
         stamp_format_note(doc, "9.9.9")
         assert doc["meta"]["format_note"].startswith("prior entry.")
+
+    def test_entries_separated_by_newline(self) -> None:
+        doc: dict = {"meta": {"version": "1.2", "format_note": "prior entry."}}
+        stamp_format_note(doc, "9.9.9")
+        assert "\n" in doc["meta"]["format_note"]
 
 
 class TestUpgradeCli:

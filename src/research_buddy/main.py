@@ -342,7 +342,9 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         for line in changes:
             print(f"  {line}")
 
-        diff_lines = [f"    {label}: {keys}" for label, keys in key_diffs.items() if keys]
+        diff_lines = [
+            f"    {label}: {', '.join(keys)}" for label, keys in key_diffs.items() if keys
+        ]
         if diff_lines:
             print("  Framework / session_protocol key changes:")
             for line in diff_lines:

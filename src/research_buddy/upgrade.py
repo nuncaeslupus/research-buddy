@@ -78,25 +78,31 @@ def upgrade_doc(
 def stamp_format_note(doc: Doc, installed_version: str) -> str:
     """Append a dated migration entry to `meta.format_note`.
 
-    Mutates `doc`. Returns the appended entry for logging.
+    Mutates `doc`. Returns the appended entry for logging. Multiple entries
+    accumulate on separate lines so the history stays readable.
     """
     meta = doc.setdefault("meta", {})
     version = meta.get("version", "?")
     today = date.today().isoformat()
     entry = (
-        f" v{version} ({today} template refresh): agent_guidelines.framework "
+        f"v{version} ({today} template refresh): agent_guidelines.framework "
         f"and agent_guidelines.session_protocol refreshed from research-buddy "
         f"{installed_version} starter.json. project_specific unchanged."
     )
-    meta["format_note"] = (meta.get("format_note", "") or "").rstrip() + entry
+    existing = (meta.get("format_note", "") or "").rstrip()
+    meta["format_note"] = f"{existing}\n{entry}" if existing else entry
     return entry
 
 
 def _compute_key_diffs(old_ag: Doc, new_ag: Doc) -> dict[str, list[str]]:
-    old_fr = set((old_ag.get("framework") or {}).keys())
-    new_fr = set((new_ag.get("framework") or {}).keys())
-    old_sp = set((old_ag.get("session_protocol") or {}).keys())
-    new_sp = set((new_ag.get("session_protocol") or {}).keys())
+    def _keys(d: Doc, key: str) -> set[str]:
+        val = d.get(key)
+        return set(val.keys()) if isinstance(val, dict) else set()
+
+    old_fr = _keys(old_ag, "framework")
+    new_fr = _keys(new_ag, "framework")
+    old_sp = _keys(old_ag, "session_protocol")
+    new_sp = _keys(new_ag, "session_protocol")
     return {
         "framework_added": sorted(new_fr - old_fr),
         "framework_removed": sorted(old_fr - new_fr),
