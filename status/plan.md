@@ -56,7 +56,7 @@ both protect the refactors.
   living in `templates/`. Benefits: fewer HTML-escaping bugs,
   designer-friendly, easier to diff. Cost: new runtime dep, template
   discovery via `importlib.resources`, and a meaningful rewrite of
-  every renderer. Schedule after #9 — the renderer split is a
+  every renderer. Schedule after #10 — the renderer split is a
   prerequisite.
 
 - **Mobile-friendly tab bar.** Symptom: when a document has many
