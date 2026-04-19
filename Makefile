@@ -35,4 +35,5 @@ clean:
 	rm -rf .mypy_cache .ruff_cache .pytest_cache dist/
 
 update-skills:
+	@git remote get-url shared-skills >/dev/null 2>&1 || git remote add shared-skills https://github.com/nuncaeslupus/my-skills.git
 	git subtree pull --prefix .claude/skills shared-skills main --squash

@@ -147,7 +147,6 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
 - `tmp/`, `.vscode/`, `dist/` are gitignored. `starter-example/` is committed
   so users can view the example without installing the package.
 - `.claude/skills/` is imported from a shared repo via `git subtree` (remote
-  name `shared-skills`). `make update-skills` pulls the latest. Project-specific
-  skills can be dropped alongside the shared ones — subtree won't touch them.
-  After a fresh clone the remote must be added once:
-  `git remote add shared-skills <url-or-path-to-my-skills-repo>`.
+  name `shared-skills`). `make update-skills` pulls the latest and
+  auto-registers the remote on fresh clones. Project-specific skills can be
+  dropped alongside the shared ones — subtree won't touch them.
