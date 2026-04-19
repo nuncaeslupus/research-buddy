@@ -165,8 +165,37 @@ class TestStarterDocIntegrity:
             "failure_modes",
             "html_generation",
             "second_opinion_review",
+            "source_discovery",
+            "synthesis_matrix",
         ):
             assert key in fw, f"framework missing key: {key}"
+
+    def test_source_discovery_shape(self, starter_doc: dict) -> None:
+        sd = starter_doc["agent_guidelines"]["framework"]["source_discovery"]
+        for key in (
+            "multi_database_principle",
+            "author_verification",
+            "preprint_caution",
+            "paywalled_access",
+        ):
+            assert key in sd, f"source_discovery missing key: {key}"
+        assert isinstance(sd["paywalled_access"], list)
+        assert len(sd["paywalled_access"]) >= 1
+
+    def test_synthesis_matrix_shape(self, starter_doc: dict) -> None:
+        sm = starter_doc["agent_guidelines"]["framework"]["synthesis_matrix"]
+        for key in ("format", "when_required", "pre_registration_rule"):
+            assert key in sm, f"synthesis_matrix missing key: {key}"
+
+    def test_pre_update_confirmation_gate(self, starter_doc: dict) -> None:
+        ss = starter_doc["agent_guidelines"]["session_protocol"]["standard_session"]
+        assert "pre_update_confirmation" in ss
+        gate = ss["pre_update_confirmation"]
+        assert isinstance(gate.get("steps"), list) and len(gate["steps"]) >= 1
+        assert "invariant" in gate
+        # Turn 2 must reference the gate so the invariant is hard to miss.
+        turn_2 = " ".join(ss["turn_2_review_and_write"])
+        assert "pre_update_confirmation" in turn_2
 
     def test_session_protocol_states(self, starter_doc: dict) -> None:
         sp = starter_doc["agent_guidelines"]["session_protocol"]
