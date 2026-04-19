@@ -6,8 +6,8 @@
 
 - **Resolved the queued upstream-proposals item.** Read the three
   reference files in `ai-trading-system` (draft issue body,
-  `scripts/upgrade_research_buddy.py` reference impl, `docs/dev/
-  research-buddy-upgrade.md` runbook) to size the work.
+  `scripts/upgrade_research_buddy.py` reference impl,
+  `docs/dev/research-buddy-upgrade.md` runbook) to size the work.
 - **Posted tracking issue [#22]** on research-buddy: combined proposal
   for a `research-buddy upgrade` CLI and three methodology sections in
   `starter.json` (`synthesis_matrix`, generic `source_discovery` subset,
