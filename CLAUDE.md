@@ -2,6 +2,23 @@
 
 Short project map for future sessions. If something below is wrong, trust the code, fix this file.
 
+## Read first: `status/`
+
+At the start of every session, read both files in `status/` for context:
+
+- `status/plan.md` — improvement roadmap (numbered steps, in order, with
+  shipped items checked off) plus a "Future improvements" backlog. Slow-
+  changing, strategic. Check here to see what the next step is and why the
+  ordering was chosen.
+- `status/next-session.md` — append-only session log. Each entry: what was
+  done, next steps, blockers. Tactical, updated at the end of each session.
+  Check here for the most recent context (PR numbers, decisions, stale
+  items flagged in earlier sessions).
+
+Update `next-session.md` at the end of a session when meaningful work shipped
+or the next steps changed. Update `plan.md` only when the roadmap itself
+changes (step completed, new step inserted, ordering revised).
+
 ## What this repo is
 
 `research-buddy` — a CLI that turns a versioned JSON research document into a
