@@ -8,6 +8,7 @@ Usage:
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
@@ -16,7 +17,10 @@ from pathlib import Path
 
 def run_cmd(cmd: list[str]) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout + result.stderr
+    if result.returncode != 0:
+        print(f"Error running {' '.join(cmd)}: {result.stderr}", file=sys.stderr)
+        sys.exit(1)
+    return result.stdout
 
 
 def find_mutmut(venv_hint: str | None) -> str:
@@ -27,19 +31,15 @@ def find_mutmut(venv_hint: str | None) -> str:
     for c in candidates:
         if Path(c).exists():
             return c
-    result = subprocess.run(["which", "mutmut"], capture_output=True, text=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    return "mutmut"
+    if resolved := shutil.which("mutmut"):
+        return resolved
+    print("ERROR: mutmut executable not found in PATH.", file=sys.stderr)
+    sys.exit(1)
 
 
 def get_survivors(mutmut_bin: str) -> list[str]:
     output = run_cmd([mutmut_bin, "results"])
-    return [
-        line.split(":")[0].strip()
-        for line in output.splitlines()
-        if ": survived" in line
-    ]
+    return [line.split(":")[0].strip() for line in output.splitlines() if ": survived" in line]
 
 
 def get_diff(mutmut_bin: str, mutant_id: str) -> str:
@@ -50,24 +50,19 @@ def classify(diff: str) -> tuple[str, str]:
     """Return (category, reason). Category: EQUIVALENT | REAL_GAP | UNTESTABLE."""
     lines = diff.splitlines()
     removed = [
-        line[1:].strip()
-        for line in lines
-        if line.startswith("-") and not line.startswith("---")
+        line[1:].strip() for line in lines if line.startswith("-") and not line.startswith("---")
     ]
     added = [
-        line[1:].strip()
-        for line in lines
-        if line.startswith("+") and not line.startswith("+++")
+        line[1:].strip() for line in lines if line.startswith("+") and not line.startswith("+++")
     ]
     rem = " ".join(removed)
     add = " ".join(added)
 
     # Sort key: only affects display order
-    if re.search(r"key=lambda \w+: \w+\.path", rem):
-        if re.search(r"key=None|key=lambda \w+: None", add) or (
-            "key=" not in add and "sorted(" in add
-        ):
-            return "EQUIVALENT", "Sort key mutation — only affects error display order"
+    if re.search(r"key=lambda \w+: \w+\.path", rem) and (
+        re.search(r"key=None|key=lambda \w+: None", add) or ("key=" not in add and "sorted(" in add)
+    ):
+        return "EQUIVALENT", "Sort key mutation — only affects error display order"
 
     # cast() is a type annotation no-op at runtime
     if "cast(" in rem and "cast(None," in add:
@@ -95,14 +90,13 @@ def classify(diff: str) -> tuple[str, str]:
         )
 
     # .get("key", False/True/None) default changed to another falsy value — equivalent
+    # False → None: both falsy, any() behaves identically
     m_false = re.search(r'\.get\(["\']([^"\']+)["\'],\s*False\)', rem)
-    if m_false:
-        # False → None: both falsy, any() behaves identically
-        if re.search(r'\.get\(["\'][^"\']+["\'],?\s*(?:None)?\s*\)', add):
-            return "EQUIVALENT", (
-                f'.get("{m_false.group(1)}", False) → None/missing — '
-                "both falsy, any() behaves identically"
-            )
+    if m_false and re.search(r'\.get\(["\'][^"\']+["\'],?\s*(?:None)?\s*\)', add):
+        return "EQUIVALENT", (
+            f'.get("{m_false.group(1)}", False) → None/missing — '
+            "both falsy, any() behaves identically"
+        )
 
     # .get("key", True/False) default changed to a different value
     m = re.search(r'\.get\(["\']([^"\']+)["\'],\s*(True|False)\)', rem)
@@ -159,9 +153,7 @@ def parse_id(mutant_id: str) -> tuple[str, str, str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analyze mutmut survivors")
     parser.add_argument("--venv", help="Path to virtualenv (auto-detected if omitted)")
-    parser.add_argument(
-        "--module", help="Only report on modules matching this substring"
-    )
+    parser.add_argument("--module", help="Only report on modules matching this substring")
     parser.add_argument(
         "--max",
         type=int,
