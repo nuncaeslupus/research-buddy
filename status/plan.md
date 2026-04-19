@@ -20,7 +20,8 @@ both protect the refactors.
       *Shipped in PR [#24].*
 - [x] **3. Dependabot.** `.github/dependabot.yml` covering `pip`
       (weekly) and `github-actions` (weekly). Groups minor+patch so
-      we don't drown in noise. *Shipped in PR [#26].*
+      we don't drown in noise.
+      *Shipped in PR [#26].*
 - [ ] **4. Python 3.13 in CI.** Add `3.13` to the `test` job's matrix
       in `.github/workflows/ci.yml`. Lint job stays on 3.12.
 - [ ] **5. Schema self-test.** One pytest in `tests/test_schema.py`
