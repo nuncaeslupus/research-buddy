@@ -29,14 +29,22 @@ both protect the refactors.
       (63% → ≥85%). Target the untested branches: `--watch`, `--pdf`,
       `--all`, batch mode, validator error paths, version-compat
       tiers.
-- [ ] **7. Coverage threshold in CI.** Add `--cov-fail-under=85` to
+- [ ] **7. Mutation-testing baseline.** Install `mutmut`, configure
+      it against `src/research_buddy/`, and capture a baseline
+      survivor count. Acts as a quality check on the coverage raised
+      in #6: high line-coverage with weak assertions still lets
+      mutants survive. The `mutmut-report` skill at
+      `.claude/skills/mutmut-report/` analyses the run and groups
+      survivors into real-gap / equivalent / untestable. Fix the real
+      gaps, accept the rest.
+- [ ] **8. Coverage threshold in CI.** Add `--cov-fail-under=85` to
       pytest and wire `pytest-cov` into the CI test job. Optional:
       codecov upload + badge in README.
-- [ ] **8. Split `main.py` (421 lines).** Extract `cli.py`
+- [ ] **9. Split `main.py` (421 lines).** Extract `cli.py`
       (argparse wiring) + `commands/{build,init,validate}.py`. Keep
       `main.py` as a thin shim re-exporting `main` for the console
       script.
-- [ ] **9. Split `build.py` (796 lines).** Create a `renderers/`
+- [ ] **10. Split `build.py` (796 lines).** Create a `renderers/`
       package with one module per block type and a dispatch registry
       (`RENDERERS: dict[str, Callable[[Block, BuildState], str]]`).
       `build.py` keeps only `build_html`, helpers, and constants.
