@@ -11,13 +11,13 @@ Run the analysis script, then report findings.
 
 ## Step 1 — Run the script
 
-Run from the project root so `mutmut results` can find the `mutants/`
-directory. Pass any user flags (e.g. `--module validate`, `--max 30`)
-through as `$ARGUMENTS`:
+Invoke from the project directory that owns the `mutants/` workspace (i.e. the one where `mutmut run` was executed). `$ARGUMENTS` is forwarded verbatim to the script — pass flags like `--module validate`, `--max 20`, or `--venv .venv`.
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel) && cd "$PROJECT_ROOT" && python "$PROJECT_ROOT/.claude/skills/mutmut-report/analyze_mutmut.py" $ARGUMENTS
+PROJECT_ROOT=$(git rev-parse --show-toplevel) && python "$PROJECT_ROOT/.claude/skills/mutmut-report/analyze_mutmut.py" $ARGUMENTS
 ```
+
+If the target project is a different checkout, `cd` to it first, then run the command above — `$PROJECT_ROOT` still resolves via this repo because the script is launched by absolute path.
 
 ## Step 2 — Present results
 
