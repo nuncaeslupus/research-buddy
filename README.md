@@ -246,7 +246,7 @@ make sync           # Install dev dependencies
 make lint           # ruff + mypy
 make format         # Auto-fix + format
 make test           # Run full test suite
-make update-skills  # Pull latest shared Claude skills (auto-registers the remote on fresh clones)
+make update-skills  # Pull latest shared Claude skills
 ```
 
 ## Examples
