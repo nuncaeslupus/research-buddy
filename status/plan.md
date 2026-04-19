@@ -14,12 +14,14 @@ both protect the refactors.
       `pyproject.toml`. Fix whatever the expanded lint surfaces.
       *Shipped: 21 violations fixed (20 PTH123, 1 SIM108). All tests
       green.*
-- [ ] **2. Pre-commit hooks.** `.pre-commit-config.yaml` running
+- [x] **2. Pre-commit hooks.** `.pre-commit-config.yaml` running
       `ruff check`, `ruff format`, `mypy`, and `make check-version-sync`
       on every commit. Document `pre-commit install` in `CLAUDE.md`.
-- [ ] **3. Dependabot.** `.github/dependabot.yml` covering `pip`
+      *Shipped in PR [#24].*
+- [x] **3. Dependabot.** `.github/dependabot.yml` covering `pip`
       (weekly) and `github-actions` (weekly). Groups minor+patch so
       we don't drown in noise.
+      *Shipped in PR [#26].*
 - [ ] **4. Python 3.13 in CI.** Add `3.13` to the `test` job's matrix
       in `.github/workflows/ci.yml`. Lint job stays on 3.12.
 - [ ] **5. Schema self-test.** One pytest in `tests/test_schema.py`
@@ -73,3 +75,6 @@ both protect the refactors.
   (ReportLab or similar) that treats PDF as a first-class output,
   not a side effect of HTML. (a) is cheaper and probably good
   enough; (b) is a bigger investment.
+
+[#24]: https://github.com/nuncaeslupus/research-buddy/pull/24
+[#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
