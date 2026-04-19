@@ -1,0 +1,31 @@
+# See:
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# The `uv` ecosystem is Dependabot's native support for uv — it keeps
+# `uv.lock` in sync with constraints declared in `pyproject.toml`. Both
+# ecosystems group minor+patch bumps into a single PR so the review queue
+# stays small; major bumps get their own PRs since they are more likely to
+# introduce breaking changes and deserve individual review.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore(ci)"
