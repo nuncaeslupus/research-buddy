@@ -1,5 +1,79 @@
 # Next session
 
+## Session 2026-04-19 (session 4)
+
+### What was done
+
+- **Shipped roadmap step #4 — Python 3.13 in CI** (PR [#36]). Added
+  `"3.13"` to the `test` job matrix and mirrored the support with a
+  `Programming Language :: Python :: 3.13` classifier in
+  `pyproject.toml`. Lint job stays on 3.12.
+- **Shipped `status/` read-first convention** (PR [#37]): new section
+  at the top of project `CLAUDE.md` telling every future session to
+  read `plan.md` + `next-session.md` before doing anything else, plus
+  the promised mark-as-done on steps #2 and #3 in the roadmap.
+- **Shipped `research-buddy upgrade` CLI** (PR [#38], closes half of
+  [#22]). Pure logic lives in new `src/research_buddy/upgrade.py`; CLI
+  handler in `main.py`; 21 tests in `tests/test_upgrade.py`. Dry-run
+  default (exit 1 on changes), `--apply` writes atomically and runs
+  `validate()`; **idempotent no-op** skips the write and the
+  `meta.format_note` stamp when the doc is structurally unchanged.
+  Preserves `agent_guidelines.project_specific` and
+  `session_zero.note`. Smoke-tested end-to-end on a scaffolded +
+  drifted project.
+- **Triaged review feedback on three docs/feature PRs**:
+  - #38 — accepted all 3 Gemini comments: comma-joined `key_diffs` in
+    CLI output, newline-separated `format_note` entries, and an
+    `isinstance` guard in `_compute_key_diffs` so a malformed
+    non-dict framework doesn't crash the diff.
+  - #37 — accepted: moved the step #3 shipped-note to its own
+    indented line, matching the style of steps #1 and #2.
+  - #35 — accepted link refs for #29–#31; pushed back on two with
+    evidence. The "plan.md still stale" concern was moot because #37
+    ships it in parallel. The "ruff format supports TOML since 0.4.0"
+    claim is the same one Gemini raised on #24 and was rejected with
+    evidence then; verified again against the pinned `ruff 0.15.9` —
+    `format --extension` still only maps `python`, `ipynb`, `pyi`.
+- **Drained the Dependabot queue**: merged all 7 open bumps in one
+  pass — [#27] `actions/checkout` 4→6, [#28] `actions/download-artifact`
+  4→8, [#29] `astral-sh/setup-uv` 5→7, [#30] `actions/setup-python`
+  5→6, [#31] `actions/upload-artifact` 4→7, [#32] python-minor-patch
+  group, [#33] `types-jsonschema` patch. Dependabot auto-rebased #28
+  and #29 when the first wave hit conflicts; the retry succeeded.
+- **Zero open PRs** at session end. `main` CI green after every merge.
+
+### Next steps
+
+1. **Second half of [#22]** — three methodology sections into
+   `starter.json`: `synthesis_matrix`, the generic subset of
+   `source_discovery` (multi-database principle, author verification,
+   preprint caution, paywalled access), and an explicit
+   pre-update confirmation gate in `standard_session.preflight_sequence`.
+   Reference text lives in `ai-trading-system/tmp/research-buddy-upstream-issue-draft.md`.
+   This is a template-content change — bumps `meta.research_buddy_version`,
+   so it needs a `make version-sync` + `make regen-example` pass, and
+   the `research-buddy upgrade` CLI shipped in #38 is what downstream
+   projects will use to adopt it.
+2. **Roadmap step #5 — schema self-test**. One pytest in
+   `tests/test_schema.py` that loads `schema.json` and validates it
+   against the Draft 2020-12 meta-schema. Catches typos in the schema
+   itself.
+3. Ongoing: keep an eye on new Dependabot PRs (majors individually,
+   python-minor-patch group as one, CI must stay green on each).
+
+### Blockers
+
+- None.
+
+[#27]: https://github.com/nuncaeslupus/research-buddy/pull/27
+[#33]: https://github.com/nuncaeslupus/research-buddy/pull/33
+[#35]: https://github.com/nuncaeslupus/research-buddy/pull/35
+[#36]: https://github.com/nuncaeslupus/research-buddy/pull/36
+[#37]: https://github.com/nuncaeslupus/research-buddy/pull/37
+[#38]: https://github.com/nuncaeslupus/research-buddy/pull/38
+
+---
+
 ## Session 2026-04-19 (session 3)
 
 ### What was done
