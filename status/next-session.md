@@ -1,5 +1,64 @@
 # Next session
 
+## Session 2026-04-19 (session 5)
+
+### What was done
+
+- **Shipped roadmap step #5 — schema self-test** (PR [#40]). Added
+  `TestSchemaIntegrity::test_schema_is_valid_draft_2020_12` to
+  `tests/test_schema.py` — loads the bundled `schema.json` and runs
+  `jsonschema.Draft202012Validator.check_schema()`. Catches typos /
+  invalid keywords in the schema itself. Gemini review on the PR
+  suggested reusing `validator._load_schema()` instead of duplicating
+  the 3-line file-load snippet — accepted (commit b5a53a9), dropped
+  unused `json` and `importlib.resources` imports.
+- **Shipped the second half of [#22] — three methodology sections
+  into `starter.json`** (PR [#41]; closes #22). Added
+  `framework.source_discovery` (multi-database principle, author
+  verification, preprint caution, paywalled-access recipes),
+  `framework.synthesis_matrix` (Claim × Source evidence table +
+  pre-registration rule), and `standard_session.pre_update_confirmation`
+  (explicit 4-step gate before atomic writes; `turn_2_review_and_write`
+  now references it by name). Version bumped **1.1.1 → 1.2.0**;
+  `make version-sync` + `make regen-example` applied. Three new tests
+  in `TestStarterDocIntegrity`; 113 pass total. Gemini suggested
+  tightening the synthesis_matrix adoption rule to reject Tier-2
+  contradictions too; **partial accept** (commit b1b8ff6) — clarified
+  the SUPPORTS tier (≥2 from Tier-1, explicit) but kept the
+  CONTRADICTS Tier-1-only asymmetry intentional, since the original
+  text is battle-tested downstream and prevents a single Tier-2
+  textbook from vetoing strong Tier-1 evidence.
+- **Zero open PRs** at session end. `main` CI green after every merge.
+
+### Next steps
+
+1. **Roadmap step #6 — raise coverage**. `main.py` 64% → ≥85%,
+   `validator.py` 63% → ≥85%. Target the untested branches:
+   `--watch`, `--pdf`, `--all`, batch mode, validator error paths,
+   version-compat tiers. This is a coverage-adding PR; actual gains
+   in meaningful-mutation survival will be measured by step #7
+   (`mutmut`).
+2. **Roadmap step #7 — mutation-testing baseline**. Install `mutmut`,
+   configure against `src/research_buddy/`, capture baseline survivor
+   count. Use the `mutmut-report` skill at `.claude/skills/mutmut-report/`
+   to triage survivors into real-gap / equivalent / untestable.
+3. **Roadmap step #8 — coverage threshold in CI**. Add
+   `--cov-fail-under=85` to pytest and wire `pytest-cov` into the CI
+   test job. Optional: codecov upload + README badge.
+4. After the coverage trio, steps #9 (split `main.py`) and #10
+   (split `build.py` via a `renderers/` package).
+5. Ongoing: keep an eye on new Dependabot PRs (majors individually,
+   python-minor-patch group as one, CI must stay green on each).
+
+### Blockers
+
+- None.
+
+[#40]: https://github.com/nuncaeslupus/research-buddy/pull/40
+[#41]: https://github.com/nuncaeslupus/research-buddy/pull/41
+
+---
+
 ## Session 2026-04-19 (session 4)
 
 ### What was done
