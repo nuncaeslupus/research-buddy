@@ -44,6 +44,21 @@ Makefile          # make sync | lint | format | test | regen-example | build | p
 Don't call `ruff` / `mypy` / `pytest` directly unless debugging — Make targets
 keep things consistent with CI.
 
+## Pre-commit hooks
+
+After a fresh clone, install the git hooks once:
+
+```
+uv run pre-commit install
+```
+
+From then on every `git commit` runs `ruff check`, `ruff format --check`,
+`mypy`, and `make check-version-sync` — the same four steps as the CI lint
+job. Config lives in `.pre-commit-config.yaml`; all hooks invoke tools via
+`uv run` so their versions come from `uv.lock` (no drift vs. CI).
+
+To run the full battery on-demand: `uv run pre-commit run --all-files`.
+
 ## Versions
 
 Four places hold the version, one source of truth:
