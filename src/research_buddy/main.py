@@ -1,4 +1,4 @@
-"""CLI entry point — research-docs build|init|validate."""
+"""CLI entry point — research-docs build|init|validate|upgrade."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from typing import Any
 import argcomplete
 
 from research_buddy.build import build_html, find_latest_json
+from research_buddy.upgrade import stamp_format_note, upgrade_doc
 from research_buddy.validator import validate
 
 
@@ -304,6 +305,75 @@ def _load_starter_template() -> dict[str, Any]:
         return json.load(f)  # type: ignore[no-any-return]
 
 
+def cmd_upgrade(args: argparse.Namespace) -> int:
+    """Refresh project JSON(s) against the installed starter template."""
+    from research_buddy import __version__
+
+    try:
+        starter = _load_starter_template()
+    except Exception as e:
+        print(f"Error loading starter template: {e}", file=sys.stderr)
+        return 2
+
+    exit_code = 0
+    for p in args.paths:
+        path = Path(p).resolve()
+        res = _resolve_source(path)
+        if not res:
+            print(
+                f"Error: no versioned document (*_v*.json) found for {path}",
+                file=sys.stderr,
+            )
+            exit_code = 2
+            continue
+        json_path, _root = res
+
+        print(f"── {json_path.name} ──")
+        with json_path.open(encoding="utf-8") as f:
+            doc = json.load(f)
+
+        upgraded, changes, key_diffs = upgrade_doc(doc, starter, __version__)
+
+        if doc == upgraded:
+            print("  Already in sync with starter.json.")
+            print()
+            continue
+
+        for line in changes:
+            print(f"  {line}")
+
+        diff_lines = [f"    {label}: {keys}" for label, keys in key_diffs.items() if keys]
+        if diff_lines:
+            print("  Framework / session_protocol key changes:")
+            for line in diff_lines:
+                print(line)
+
+        if not args.apply:
+            print("  (dry-run — pass --apply to write)")
+            print()
+            exit_code = 1
+            continue
+
+        stamp_format_note(upgraded, __version__)
+        tmp = json_path.with_suffix(json_path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(upgraded, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        tmp.replace(json_path)
+        print(f"  → wrote {json_path}")
+
+        if not args.no_validate:
+            issues = validate(upgraded)
+            if issues:
+                print(f"  \u26a0  {len(issues)} issue(s) after upgrade:")
+                for issue in issues:
+                    print(f"     {issue}")
+                exit_code = 2
+        print()
+
+    return exit_code
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     """Scaffold a new documentation project."""
     target = Path(args.path).resolve()
@@ -408,9 +478,35 @@ def main() -> None:
     p_init.add_argument("--subtitle", help="Project subtitle")
     p_init.add_argument("--ver", default="1.0", help="Initial version (default: 1.0)")
 
+    # upgrade
+    p_up = sub.add_parser(
+        "upgrade",
+        help="Refresh agent_guidelines from the installed starter template",
+    )
+    p_up.add_argument(
+        "paths",
+        nargs="+",
+        help="JSON file(s) or directory(ies) containing source/",
+    )
+    p_up.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write changes to disk (default is dry-run)",
+    )
+    p_up.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip `research-buddy validate` after applying",
+    )
+
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
-    handlers = {"build": cmd_build, "validate": cmd_validate, "init": cmd_init}
+    handlers = {
+        "build": cmd_build,
+        "validate": cmd_validate,
+        "init": cmd_init,
+        "upgrade": cmd_upgrade,
+    }
     sys.exit(handlers[args.command](args))
 
 
