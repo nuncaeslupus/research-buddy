@@ -152,6 +152,18 @@ research-buddy build my-project/ --validate-only    # check only, no HTML output
 
 Validate JSON schema + semantic rules (reference ordering, required fields, language format, `research_buddy_version` presence).
 
+### `research-buddy upgrade <path...>`
+
+Re-sync a project JSON against the installed `starter.json`: replaces `agent_guidelines.framework` and `agent_guidelines.session_protocol` wholesale, preserves `session_zero.note` so initialized projects do not re-run session zero, leaves `agent_guidelines.project_specific` untouched, and bumps `meta.research_buddy_version`. Appends a dated migration entry to `meta.format_note` only when something actually changed.
+
+```
+research-buddy upgrade my-project/                # dry-run (exit 1 if changes needed)
+research-buddy upgrade my-project/ --apply        # write + validate (exit 0 on clean apply)
+research-buddy upgrade my-project/ --apply --no-validate
+```
+
+Exit codes: `0` clean (no changes or applied), `1` dry-run found changes, `2` error (bad path, validation failed, starter missing).
+
 ## Project layout
 
 ```

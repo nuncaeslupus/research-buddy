@@ -30,8 +30,9 @@ the JSON; this tool renders it. The JSON is the source of truth.
 
 ```
 src/research_buddy/
-  main.py         # argparse CLI: build | validate | init
+  main.py         # argparse CLI: build | validate | init | upgrade
   build.py        # JSON → HTML (block renderers, table widths, lang resolution)
+  upgrade.py      # Template refresh: re-sync agent_guidelines from starter.json
   validator.py    # jsonschema + reference ordering + doc/tool version compat
   schema.json     # Draft 2020-12 schema, bundled in the wheel
   starter.json    # Session-zero template, bundled in the wheel
