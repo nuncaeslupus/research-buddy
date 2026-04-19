@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from jsonschema import Draft202012Validator
 
 from research_buddy.validator import _load_schema, validate
@@ -167,6 +169,7 @@ class TestStarterDocIntegrity:
             "second_opinion_review",
             "source_discovery",
             "synthesis_matrix",
+            "turn_markers",
         ):
             assert key in fw, f"framework missing key: {key}"
 
@@ -193,9 +196,64 @@ class TestStarterDocIntegrity:
         gate = ss["pre_update_confirmation"]
         assert isinstance(gate.get("steps"), list) and len(gate["steps"]) >= 1
         assert "invariant" in gate
+        # The approval-test language must be present so implicit approval is recognised.
+        steps_joined = " ".join(gate["steps"]).lower()
+        assert "approval test" in steps_joined, (
+            "gate must document the approval test that enables implicit approval"
+        )
+        # The invariant must no longer forbid implicit approval.
+        assert "approval test" in gate["invariant"].lower(), (
+            "invariant must tie the version bump to the approval test, "
+            "not to explicit approval only"
+        )
         # Turn 2 must reference the gate so the invariant is hard to miss.
         turn_2 = " ".join(ss["turn_2_review_and_write"])
         assert "pre_update_confirmation" in turn_2
+
+    def test_turn_markers_shape(self, starter_doc: dict) -> None:
+        tm = starter_doc["agent_guidelines"]["framework"]["turn_markers"]
+        for key in ("rule", "tag_schema", "detection_regex", "states"):
+            assert key in tm, f"turn_markers missing key: {key}"
+        # The detection_regex must actually match the four declared states.
+        regex = re.compile(tm["detection_regex"])
+        for state_name in (
+            "turn_1_end",
+            "turn_2_awaiting_confirmation",
+            "turn_2_complete",
+            "session_zero_end",
+        ):
+            assert state_name in tm["states"], f"turn_markers missing state: {state_name}"
+            state = tm["states"][state_name]
+            for field in ("when", "banner", "tag"):
+                assert field in state, f"{state_name} missing field: {field}"
+            assert regex.search(state["tag"]), (
+                f"{state_name}.tag does not match detection_regex: {state['tag']}"
+            )
+
+    def test_turns_wire_end_of_turn_markers(self, starter_doc: dict) -> None:
+        """Each defined turn's instruction list must reference turn_markers so the
+        agent emits an end-of-turn signal that automation can grep for."""
+        sp = starter_doc["agent_guidelines"]["session_protocol"]
+        turn_1 = " ".join(sp["standard_session"]["turn_1_research"])
+        turn_2 = " ".join(sp["standard_session"]["turn_2_review_and_write"])
+        session_zero = " ".join(sp["session_zero"]["after_answers"])
+        assert "turn_markers" in turn_1, "turn_1_research must reference turn_markers"
+        assert "turn_markers" in turn_2, "turn_2_review_and_write must reference turn_markers"
+        assert "turn_markers" in session_zero, (
+            "session_zero.after_answers must reference turn_markers"
+        )
+
+    def test_html_generation_handles_no_shell_access(self, starter_doc: dict) -> None:
+        """html_generation.agent_action must cover the web-chat-no-shell case —
+        printing the build command verbatim — not only the 'run via bash' path."""
+        action = starter_doc["agent_guidelines"]["framework"]["html_generation"]["agent_action"]
+        lower = action.lower()
+        assert "shell access" in lower or "no shell" in lower, (
+            "agent_action must distinguish the shell-access / no-shell-access branches"
+        )
+        assert "verbatim" in lower, (
+            "agent_action must instruct printing the command verbatim for the no-shell case"
+        )
 
     def test_session_protocol_states(self, starter_doc: dict) -> None:
         sp = starter_doc["agent_guidelines"]["session_protocol"]
