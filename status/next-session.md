@@ -1,5 +1,82 @@
 # Next session
 
+## Session 2026-04-19 (session 6)
+
+### What was done
+
+- **Shipped protocol refinements to `starter.json`** (PR [#44]),
+  motivated by a real user incident: Claude-on-the-web stopped
+  Turn 2 for a redundant third confirmation, then the user's
+  quota ran out before the build step could run, so no HTML was
+  produced. Three interlocking fixes in one PR (user explicitly
+  overrode the one-concern-per-PR rule — same file, same theme):
+  1. `standard_session.pre_update_confirmation` gained an
+     **approval test**: submission of second-opinion sources + a
+     continue signal in the same message, with clean vetting and
+     no blocking contradictions, counts as implicit approval and
+     Turn 2 proceeds directly to the atomic write. Invariant
+     amended to tie the version bump to the approval test OR
+     explicit approval.
+  2. `framework.html_generation.agent_action` now distinguishes
+     shell-access (run the command) from no-shell (web chat UI:
+     print the build command verbatim on its own line, ready to
+     copy — "you can now run X" is not enough).
+  3. New `framework.turn_markers` section: every defined turn
+     ends with a human-readable banner + machine-readable
+     HTML-comment tag on the final two lines. Four states —
+     `turn_1_end`, `turn_2_awaiting_confirmation`,
+     `turn_2_complete`, `session_zero_end`. A stable
+     `detection_regex` is exposed so external automation can
+     detect turn boundaries. Placeholder syntax is `{name}` (not
+     `<name>`) so the tag template is a valid HTML comment AND
+     matches the regex.
+- Version bumped **1.2.0 → 1.2.1**; `make version-sync` +
+  `make regen-example` applied. Four new/tightened assertions in
+  `TestStarterDocIntegrity` (approval-test wording, invariant
+  rewording, `turn_markers` shape + regex round-trip, no-shell
+  branch in `html_generation.agent_action`); **116 tests pass**.
+- **Gemini review on #44 — both points accepted** (commit b381811):
+  use the full `framework.turn_markers.states` path to match the
+  turn_1 and session_zero bullets; qualify the
+  `{version}`/`{file_name}` substitution with "where applicable"
+  since `turn_2_awaiting_confirmation` has no placeholders.
+- **Published 1.2.1 to PyPI** via `make publish`. Live at
+  https://pypi.org/project/research-buddy/1.2.1/ .
+- **Zero open PRs** at session end. `main` CI green.
+
+### Next steps
+
+1. **Roadmap step #6 — raise coverage**. `main.py` 64% → ≥85%,
+   `validator.py` 63% → ≥85%. Target the untested branches:
+   `--watch`, `--pdf`, `--all`, batch mode, validator error paths,
+   version-compat tiers.
+2. **Roadmap step #7 — mutation-testing baseline**. Install
+   `mutmut`, configure against `src/research_buddy/`, capture
+   baseline survivor count. Use the `mutmut-report` skill at
+   `.claude/skills/mutmut-report/` to triage survivors.
+3. **Roadmap step #8 — coverage threshold in CI**. Add
+   `--cov-fail-under=85` to pytest and wire `pytest-cov` into the
+   CI test job. Optional: codecov upload + README badge.
+4. After the coverage trio, steps #9 (split `main.py`) and #10
+   (split `build.py` via a `renderers/` package).
+5. Downstream projects need to run `research-buddy upgrade
+   <path>/*.json --apply` to pick up `turn_markers` and the
+   rewritten gate in their existing JSONs. The 1.2.0 → 1.2.1
+   bump is patch-level, so existing docs will NOT emit a
+   compat warning on build — the agent picks up the new
+   guidelines only after the user runs `upgrade`.
+6. Ongoing: keep an eye on new Dependabot PRs (majors
+   individually, python-minor-patch group as one, CI must stay
+   green on each).
+
+### Blockers
+
+- None.
+
+[#44]: https://github.com/nuncaeslupus/research-buddy/pull/44
+
+---
+
 ## Session 2026-04-19 (session 5)
 
 ### What was done
