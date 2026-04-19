@@ -183,7 +183,7 @@
                     "Bump version in all locations per framework.versioning.",
                     "Produce the new version JSON and the HTML per framework.html_generation. This fulfills the multi-research process in exactly two turns.",
                     "If queue is now empty → run queue_empty flow.",
-                    "End the message with the framework.turn_markers banner and tag — use turn_2_complete if the atomic write succeeded, or turn_2_awaiting_confirmation if the approval test did not pass and you are asking the user to explicitly approve. Substitute {version} and {file_name} from meta. These two lines are the FINAL two lines of the message."
+                    "End the message with the framework.turn_markers.states banner and tag — use turn_2_complete if the atomic write succeeded, or turn_2_awaiting_confirmation if the approval test did not pass and you are asking the user to explicitly approve. Substitute {version} and {file_name} from meta where applicable. These two lines are the FINAL two lines of the message."
                 ],
                 "always": [
                     "Every queue item must have a defined Objective / Key Question before research starts.",
