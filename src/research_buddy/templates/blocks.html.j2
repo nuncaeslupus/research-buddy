@@ -59,3 +59,30 @@
 {%- macro cc_banner(title, md_html) -%}
 <div class="cc-banner"><div><h4>{{ title }}</h4><p>{{ md_html }}</p></div></div>
 {% endmacro -%}
+
+{%- macro phase_cards(cards) -%}
+<div class="phase-bar">
+{% for card in cards %}
+<div class="phase-card {{ card.phase }}"><h4>{{ card.title_html }}</h4><ul>{% for item in card.items_html %}<li>{{ item }}</li>
+{% endfor %}</ul></div>
+{% endfor %}
+</div>
+{% endmacro -%}
+
+{%- macro card_grid(cls, cards) -%}
+<div class="{{ cls }}">
+{% for card in cards %}
+<div class="card"><div class="card-title">{{ card.title_html }}</div><p>{{ card.md_html }}</p></div>
+{% endfor %}
+</div>
+{% endmacro -%}
+
+{%- macro references(items) -%}
+<ul class="references">
+{% for item in items %}<li>{% if item.ver %}<span class="tag tag-blue">{{ item.ver }}</span> {% endif %}{% if item.date %}<span class="date">{{ item.date }}</span> {% endif %}{{ item.text_html }}</li>
+{% endfor %}</ul>
+{% endmacro -%}
+
+{%- macro svg(html) -%}
+<div class="diagram-wrap">{{ html }}</div>
+{% endmacro -%}

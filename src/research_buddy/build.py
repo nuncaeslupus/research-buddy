@@ -439,7 +439,7 @@ def r_table(b: Block, _state: BuildState) -> str:
 
 
 def r_svg(b: Block, _state: BuildState) -> str:
-    return f'<div class="diagram-wrap">{b.get("html", "")}</div>\n'
+    return str(_block_macros().svg(html=b.get("html", "")))
 
 
 def r_usage_banner(b: Block, _state: BuildState) -> str:
@@ -462,45 +462,38 @@ def r_cc_banner(b: Block, _state: BuildState) -> str:
 
 
 def r_phase_cards(b: Block, _state: BuildState) -> str:
-    cards_html = ""
-    for card in b.get("cards", []):
-        phase = card.get("phase", "p1")
-        title = card.get("title", "")
-        items = card.get("items", [])
-        items_html = "".join(f"<li>{md(i)}</li>\n" for i in items)
-        cards_html += (
-            f'<div class="phase-card {phase}"><h4>{md(title)}</h4><ul>{items_html}</ul></div>\n'
-        )
-    return f'<div class="phase-bar">\n{cards_html}</div>\n'
+    cards = [
+        {
+            "phase": card.get("phase", "p1"),
+            "title_html": md(card.get("title", "")),
+            "items_html": [md(i) for i in card.get("items", [])],
+        }
+        for card in b.get("cards", [])
+    ]
+    return str(_block_macros().phase_cards(cards=cards))
 
 
 def r_card_grid(b: Block, _state: BuildState) -> str:
     cols = b.get("cols", 2)
-    extra = " three" if cols == 3 else ""
-    cards_html = ""
-    for card in b.get("cards", []):
-        title_val = card.get("title", "")
-        md_val = card.get("md", "")
-        cards_html += (
-            f'<div class="card">'
-            f'<div class="card-title">{md(title_val)}</div>'
-            f"<p>{md(md_val)}</p>"
-            f"</div>\n"
-        )
-    return f'<div class="card-grid{extra}">\n{cards_html}</div>\n'
+    cls = "card-grid three" if cols == 3 else "card-grid"
+    cards = [
+        {"title_html": md(c.get("title", "")), "md_html": md(c.get("md", ""))}
+        for c in b.get("cards", [])
+    ]
+    return str(_block_macros().card_grid(cls=cls, cards=cards))
 
 
 def r_references(b: Block, _state: BuildState) -> str:
     """Render a 'references' block."""
-    items_html = ""
-    for item in b.get("items", []):
-        ver = item.get("version", "")
-        date = item.get("date", "")
-        text = item.get("text", "")
-        ver_tag = f'<span class="tag tag-blue">{ver}</span> ' if ver else ""
-        date_tag = f'<span class="date">{date}</span> ' if date else ""
-        items_html += f"<li>{ver_tag}{date_tag}{md(text)}</li>\n"
-    return f'<ul class="references">\n{items_html}</ul>\n'
+    items = [
+        {
+            "ver": item.get("version", ""),
+            "date": item.get("date", ""),
+            "text_html": md(item.get("text", "")),
+        }
+        for item in b.get("items", [])
+    ]
+    return str(_block_macros().references(items=items))
 
 
 BLOCK_RENDERERS: dict[str, Any] = {
