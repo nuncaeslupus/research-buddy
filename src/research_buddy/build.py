@@ -154,6 +154,12 @@ def _block_macros() -> Any:
     return _get_env().get_template("blocks.html.j2").module
 
 
+@functools.lru_cache(maxsize=1)
+def _section_macros() -> Any:
+    """Return the imported module of section.html.j2, exposing macros as attributes."""
+    return _get_env().get_template("section.html.j2").module
+
+
 # ── Inline Markdown → HTML ──────────────────────────────────────────────────
 
 
@@ -561,23 +567,31 @@ def render_section(
     if sec.get("current"):
         display_title += ' <span class="tag tag-green">Current</span>'
 
-    num_html = f'<span class="num">{number}</span> ' if number else ""
-
+    macros = _section_macros()
     if is_title_page:
-        doc_title = (meta or {}).get("title", "Documentation")
-        doc_subtitle = (meta or {}).get("subtitle", "")
-        ver = (meta or {}).get("version", "")
-        date = (meta or {}).get("date", "")
-        ver_line = f"<p><strong>Version:</strong> v{ver} \u2014 {date}</p>\n" if ver else ""
-        sub_line = f'<p class="subtitle">{doc_subtitle}</p>\n' if doc_subtitle else ""
-        heading = f"<h1>{doc_title}</h1>\n{sub_line}{ver_line}"
-        open_tag = f'<div id="{sid}" class="title-page">\n{heading}'
-        close_tag = "</div>\n"
+        open_tag = str(
+            macros.title_page_open(
+                sid=sid,
+                doc_title=(meta or {}).get("title", "Documentation"),
+                doc_subtitle=(meta or {}).get("subtitle", ""),
+                ver=(meta or {}).get("version", ""),
+                date=(meta or {}).get("date", ""),
+            )
+        )
+        close_tag = str(macros.section_close(tag="div"))
     else:
-        h_html = f"<{h_tag}>{num_html}{display_title}</{h_tag}>\n"
         tag = "section" if level == 2 else "div"
-        open_tag = f'<{tag} id="{sid}" class="level-{level}">\n{h_html}'
-        close_tag = f"</{tag}>\n"
+        open_tag = str(
+            macros.section_open(
+                tag=tag,
+                sid=sid,
+                level=level,
+                h_tag=h_tag,
+                num=number,
+                display_title_html=display_title,
+            )
+        )
+        close_tag = str(macros.section_close(tag=tag))
 
     # Add this section to navigation
     nav_list.append({"id": sid, "num": number, "title": title, "level": level})
