@@ -10,6 +10,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+import jinja2
+
 # ── Type aliases ────────────────────────────────────────────────────────────
 
 Block = dict[str, Any]
@@ -123,6 +125,27 @@ def _asset_to_base64(data: bytes, mime: str) -> str:
     """Convert binary data to base64 data URL."""
     b64 = base64.b64encode(data).decode("utf-8")
     return f"data:{mime};base64,{b64}"
+
+
+# ── Jinja environment ───────────────────────────────────────────────────────
+
+# autoescape=False matches the historical behaviour: r_svg embeds caller-provided
+# HTML verbatim and md()/title fields are interpolated raw. The trust assumption
+# is documented in starter.json's agent_guidelines (no JS in svg blocks).
+
+
+@functools.lru_cache(maxsize=1)
+def _get_env() -> jinja2.Environment:
+    env = jinja2.Environment(
+        loader=jinja2.PackageLoader("research_buddy", "templates"),
+        autoescape=False,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        keep_trailing_newline=True,
+    )
+    env.globals["md"] = md
+    env.filters["md"] = md
+    return env
 
 
 # ── Inline Markdown → HTML ──────────────────────────────────────────────────
