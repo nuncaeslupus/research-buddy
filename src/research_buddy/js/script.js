@@ -47,6 +47,27 @@ if (menuToggle) {
   });
 }
 
+/* ── Theme toggle ───────────────────────────────────────────────────── */
+function applyThemeIcon() {
+  var btn = $('theme-toggle');
+  if (!btn) return;
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.textContent = dark ? '☀' : '☾';
+}
+
+var themeToggle = $('theme-toggle');
+if (themeToggle) {
+  applyThemeIcon();
+  themeToggle.addEventListener('click', function() {
+    var html = document.documentElement;
+    var dark = html.getAttribute('data-theme') === 'dark';
+    if (dark) html.removeAttribute('data-theme');
+    else      html.setAttribute('data-theme', 'dark');
+    try { localStorage.setItem('rb-theme', dark ? 'light' : 'dark'); } catch(e) {}
+    applyThemeIcon();
+  });
+}
+
 /* Close sidebar when clicking outside on mobile */
 document.addEventListener('click', function(e) {
   var sb = $('sidebar');
