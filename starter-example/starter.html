@@ -262,8 +262,10 @@ a.xlink:hover {
 pre { padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
 code { font-family: var(--mono); }
 
-/* ── Mobile ── */
-@media (max-width: 768px) {
+/* ── Mobile / short viewport ── */
+/* (max-height: 500px) catches phones in landscape (height ~390-430px)
+   without affecting tablets (≥744px tall) or laptops (≥600px tall). */
+@media (max-width: 768px), (max-height: 500px) {
   #menu-toggle {
     display: block;
     position: sticky; left: 0; z-index: 1;
@@ -1700,7 +1702,7 @@ function switchTab(tab, noSave) {
     if (nav) nav.classList.toggle('active', t === tab);
   });
   var sb = $('sidebar');
-  if (window.innerWidth <= 768 && sb) sb.classList.remove('open');
+  if (sb && window.matchMedia('(max-width: 768px), (max-height: 500px)').matches) sb.classList.remove('open');
   if (!noSave) try { sessionStorage.setItem('activeTab', tab); } catch(e) {}
 }
 
