@@ -4,11 +4,25 @@
 
 - `framework`        — template-owned, replaced wholesale on upgrade
 - `session_protocol` — template-owned, replaced wholesale (session_zero.note preserved)
-- `project_specific` — project-owned, never touched
+- `project_specific` — project-owned; values preserved, top-level keys
+                       reordered to match the starter's canonical order.
 
-Also bumps `meta.research_buddy_version` to the installed CLI version.
+Also bumps `meta.research_buddy_version` to the installed CLI version, and
+fixes structural ordering at four levels so an agent reading top-to-bottom
+encounters keys in the right order:
+
+1. Doc top-level: agent_guidelines, meta, tabs, changelog
+2. agent_guidelines: framework, session_protocol, project_specific
+3. meta: starter's key order (extras preserved at end)
+4. agent_guidelines.project_specific: starter's key order (extras at end)
+
 The CLI handler in `main.py` stamps `meta.format_note` only when the
 upgrade produces real changes, so a no-op re-run stays idempotent.
+
+Equality note: dict `==` compares values but NOT key order, so a
+reorder-only change would otherwise look identical to a no-op. Use
+`docs_equivalent()` from this module — it walks dicts comparing both
+keys-in-order and values, recursively.
 """
 
 from __future__ import annotations
@@ -72,6 +86,43 @@ def upgrade_doc(
     if old_rb != installed_version:
         changes.append(f"meta.research_buddy_version: {old_rb} → {installed_version}")
 
+    # Structural reordering — fix four levels of key order so an agent
+    # reading the file top-to-bottom hits keys in the canonical order
+    # defined by the starter. All values are preserved; only key order
+    # changes. Track whether any reordering actually happened so the
+    # caller's `doc == upgraded` idempotency check still works.
+    reordered_at: list[str] = []
+
+    starter_meta = starter.get("meta", {}) or {}
+    starter_ps = new_ag.get("project_specific", {}) or {}
+
+    upgraded_ag = upgraded["agent_guidelines"]
+    if isinstance(upgraded_ag.get("project_specific"), dict):
+        new_ps = _reorder_dict(upgraded_ag["project_specific"], list(starter_ps.keys()))
+        if list(new_ps.keys()) != list(upgraded_ag["project_specific"].keys()):
+            reordered_at.append("agent_guidelines.project_specific")
+        upgraded_ag["project_specific"] = new_ps
+
+    new_ag_ordered = _reorder_dict(
+        upgraded_ag, ["framework", "session_protocol", "project_specific"]
+    )
+    if list(new_ag_ordered.keys()) != list(upgraded_ag.keys()):
+        reordered_at.append("agent_guidelines")
+    upgraded["agent_guidelines"] = new_ag_ordered
+
+    new_meta = _reorder_dict(meta, list(starter_meta.keys()))
+    if list(new_meta.keys()) != list(meta.keys()):
+        reordered_at.append("meta")
+    upgraded["meta"] = new_meta
+
+    new_top = _reorder_dict(upgraded, ["agent_guidelines", "meta", "tabs", "changelog"])
+    if list(new_top.keys()) != list(upgraded.keys()):
+        reordered_at.append("top-level")
+    upgraded = new_top
+
+    if reordered_at:
+        changes.append(f"keys reordered: {', '.join(reordered_at)}")
+
     return upgraded, changes, key_diffs
 
 
@@ -92,6 +143,43 @@ def stamp_format_note(doc: Doc, installed_version: str) -> str:
     existing = (meta.get("format_note", "") or "").rstrip()
     meta["format_note"] = f"{existing}\n{entry}" if existing else entry
     return entry
+
+
+def _reorder_dict(d: Doc, canonical: list[str]) -> Doc:
+    """Return a new dict whose keys appear in `canonical` order (when
+    present in `d`), followed by any extra keys in their original order.
+
+    Values are not copied — caller controls deep-vs-shallow.
+    """
+    seen: set[str] = set()
+    out: Doc = {}
+    for key in canonical:
+        if key in d:
+            out[key] = d[key]
+            seen.add(key)
+    for key, value in d.items():
+        if key not in seen:
+            out[key] = value
+    return out
+
+
+def docs_equivalent(a: Any, b: Any) -> bool:
+    """Compare two JSON-shaped values by both value AND key order.
+
+    Built-in `dict == dict` ignores key order, which would mask
+    reorder-only upgrades. This helper treats two dicts as equivalent
+    only when their keys appear in the same order and all values are
+    recursively equivalent. Lists compare element-wise; scalars use `==`.
+    """
+    if isinstance(a, dict) and isinstance(b, dict):
+        if list(a.keys()) != list(b.keys()):
+            return False
+        return all(docs_equivalent(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return False
+        return all(docs_equivalent(x, y) for x, y in zip(a, b, strict=False))
+    return bool(a == b)
 
 
 def _compute_key_diffs(old_ag: Doc, new_ag: Doc) -> dict[str, list[str]]:

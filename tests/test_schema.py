@@ -303,3 +303,55 @@ class TestStarterDocIntegrity:
         modes = starter_doc["agent_guidelines"]["framework"]["failure_modes"]
         text = " ".join(modes).lower()
         assert "invent" in text or "fictional" in text or "role-play" in text
+
+    def test_citation_format_consistent(self, starter_doc: dict) -> None:
+        """The citation format must be identical wherever it's specified.
+        Drift here is exactly the kind of bug that motivated splitting the
+        brief template into a single source of truth — guard against
+        regressions."""
+        fw = starter_doc["agent_guidelines"]["framework"]
+        ss = starter_doc["agent_guidelines"]["session_protocol"]["standard_session"]
+
+        canonical = "Title, Author, Year, Venue, DOI/URL"
+        # The Turn 1 findings instruction must request the canonical citation format.
+        turn_1 = " ".join(ss["turn_1_research"])
+        assert canonical in turn_1, (
+            f"turn_1_research must reference the canonical citation format "
+            f"({canonical!r}); got: {turn_1!r}"
+        )
+
+        # The brief template (single source of truth) must also use the canonical format.
+        brief = fw["second_opinion_review"]["brief_template"]
+        assert isinstance(brief, dict), "brief_template must be a dict (instruction + template)"
+        assert canonical in brief["template"], (
+            f"brief_template.template must reference the canonical citation format ({canonical!r})"
+        )
+
+    def test_brief_template_is_single_source_of_truth(self, starter_doc: dict) -> None:
+        """The verbatim copy-paste template lives ONLY in
+        framework.second_opinion_review.brief_template.template — Turn 1
+        references it by name rather than inlining a copy."""
+        fw = starter_doc["agent_guidelines"]["framework"]
+        ss = starter_doc["agent_guidelines"]["session_protocol"]["standard_session"]
+
+        brief = fw["second_opinion_review"]["brief_template"]
+        assert isinstance(brief, dict)
+        assert "instruction" in brief and "template" in brief
+        # Placeholder markers identify the verbatim template.
+        marker = "[PROJECT_AND_BASIC_CHARACTERISTICS]"
+        assert marker in brief["template"], (
+            f"brief_template.template must contain placeholder markers like {marker!r}"
+        )
+
+        # Turn 1 must NOT inline the verbatim template — that's how it
+        # drifted from the brief_template description before. It MUST
+        # reference brief_template by name.
+        turn_1 = " ".join(ss["turn_1_research"])
+        assert marker not in turn_1, (
+            "turn_1_research must NOT inline the verbatim template — "
+            "reference framework.second_opinion_review.brief_template instead"
+        )
+        assert "brief_template" in turn_1, (
+            "turn_1_research must reference framework.second_opinion_review.brief_template "
+            "by name so there's a single source of truth"
+        )

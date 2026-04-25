@@ -129,6 +129,142 @@ class TestUpgradeDoc:
         assert diffs["framework_removed"] == []
 
 
+class TestUpgradeReorder:
+    """Reorder-only changes must produce a write — `dict ==` ignores key order
+    but a doc with `agent_guidelines` at the end is structurally wrong even
+    when its values are correct."""
+
+    def test_moves_agent_guidelines_to_top(self, starter_doc: dict) -> None:
+        doc = {
+            "meta": copy.deepcopy(starter_doc["meta"]),
+            "tabs": copy.deepcopy(starter_doc["tabs"]),
+            "agent_guidelines": copy.deepcopy(starter_doc["agent_guidelines"]),
+        }
+        assert next(iter(doc.keys())) != "agent_guidelines"  # precondition
+
+        upgraded, changes, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        assert next(iter(upgraded.keys())) == "agent_guidelines"
+        assert any("reordered" in c for c in changes)
+
+    def test_orders_top_level_canonical(self, starter_doc: dict) -> None:
+        doc = {
+            "tabs": copy.deepcopy(starter_doc["tabs"]),
+            "changelog": copy.deepcopy(starter_doc.get("changelog", {})),
+            "meta": copy.deepcopy(starter_doc["meta"]),
+            "agent_guidelines": copy.deepcopy(starter_doc["agent_guidelines"]),
+        }
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        assert list(upgraded.keys()) == ["agent_guidelines", "meta", "tabs", "changelog"]
+
+    def test_preserves_top_level_extras_at_end(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        doc["custom_extension"] = {"keep": "me"}
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        keys = list(upgraded.keys())
+        assert keys[: len(("agent_guidelines", "meta", "tabs", "changelog"))] == [
+            "agent_guidelines",
+            "meta",
+            "tabs",
+            "changelog",
+        ]
+        assert "custom_extension" in keys[4:]
+        assert upgraded["custom_extension"] == {"keep": "me"}
+
+    def test_orders_agent_guidelines_children(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        ag = doc["agent_guidelines"]
+        # Reverse the children
+        doc["agent_guidelines"] = {
+            "project_specific": ag["project_specific"],
+            "session_protocol": ag["session_protocol"],
+            "framework": ag["framework"],
+        }
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        assert list(upgraded["agent_guidelines"].keys()) == [
+            "framework",
+            "session_protocol",
+            "project_specific",
+        ]
+
+    def test_orders_meta_keys_match_starter(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        starter_meta_keys = list(starter_doc["meta"].keys())
+        # Scramble meta key order
+        doc["meta"] = dict(reversed(list(doc["meta"].items())))
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        assert list(upgraded["meta"].keys()) == starter_meta_keys
+
+    def test_meta_extras_preserved_at_end(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        doc["meta"] = {"format_note": "old note", **doc["meta"]}
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        keys = list(upgraded["meta"].keys())
+        canonical = list(starter_doc["meta"].keys())
+        assert keys[: len(canonical)] == canonical
+        assert "format_note" in keys[len(canonical) :]
+        assert upgraded["meta"]["format_note"] == "old note"
+
+    def test_orders_project_specific_keys_match_starter(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        starter_ps_keys = list(starter_doc["agent_guidelines"]["project_specific"].keys())
+        # Scramble project_specific key order
+        ps = doc["agent_guidelines"]["project_specific"]
+        doc["agent_guidelines"]["project_specific"] = dict(reversed(list(ps.items())))
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        assert list(upgraded["agent_guidelines"]["project_specific"].keys()) == starter_ps_keys
+
+    def test_project_specific_values_preserved_during_reorder(self, starter_doc: dict) -> None:
+        doc = copy.deepcopy(starter_doc)
+        doc["agent_guidelines"]["project_specific"]["domain"] = "project domain"
+        doc["agent_guidelines"]["project_specific"]["custom_field"] = "keep me"
+        # Now scramble
+        ps = doc["agent_guidelines"]["project_specific"]
+        doc["agent_guidelines"]["project_specific"] = dict(reversed(list(ps.items())))
+
+        upgraded, _, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        out_ps = upgraded["agent_guidelines"]["project_specific"]
+        assert out_ps["domain"] == "project domain"
+        assert out_ps["custom_field"] == "keep me"
+
+    def test_reorder_only_change_triggers_write(self, tmp_project: Path) -> None:
+        """Reorder-only change (no value differences) must still be detected
+        as a real change — otherwise downstream files with the wrong
+        structure can never be fixed by upgrade."""
+        doc_path = next((tmp_project / "source").glob("*_v*.json"))
+        with doc_path.open() as f:
+            doc = json.load(f)
+        # Move agent_guidelines to the end without touching values.
+        scrambled = {
+            "meta": doc["meta"],
+            "tabs": doc["tabs"],
+            "changelog": doc.get("changelog", {}),
+            "agent_guidelines": doc["agent_guidelines"],
+        }
+        with doc_path.open("w") as f:
+            json.dump(scrambled, f)
+
+        result = cmd_upgrade(_Args(paths=[str(tmp_project)], apply=True))
+
+        assert result == 0
+        with doc_path.open() as f:
+            written = json.load(f)
+        assert next(iter(written.keys())) == "agent_guidelines"
+
+
 class TestStampFormatNote:
     def test_appends_dated_entry(self) -> None:
         doc: dict = {"meta": {"version": "1.2"}}

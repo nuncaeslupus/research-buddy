@@ -16,7 +16,7 @@ from typing import Any
 import argcomplete
 
 from research_buddy.build import build_html, find_latest_json
-from research_buddy.upgrade import stamp_format_note, upgrade_doc
+from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
 from research_buddy.validator import validate
 
 
@@ -334,7 +334,7 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
 
         upgraded, changes, key_diffs = upgrade_doc(doc, starter, __version__)
 
-        if doc == upgraded:
+        if docs_equivalent(doc, upgraded):
             print("  Already in sync with starter.json.")
             print()
             continue
