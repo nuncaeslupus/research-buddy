@@ -148,6 +148,12 @@ def _get_env() -> jinja2.Environment:
     return env
 
 
+@functools.lru_cache(maxsize=1)
+def _block_macros() -> Any:
+    """Return the imported module of blocks.html.j2, exposing macros as attributes."""
+    return _get_env().get_template("blocks.html.j2").module
+
+
 # ── Inline Markdown → HTML ──────────────────────────────────────────────────
 
 
@@ -217,20 +223,19 @@ def md_block(text: str) -> str:
 
 
 def r_p(b: Block, _state: BuildState) -> str:
-    style = f' style="{b["style"]}"' if b.get("style") else ""
-    return f"<p{style}>{md(b.get('md', ''))}</p>\n"
+    return str(_block_macros().p(md_html=md(b.get("md", "")), style=b.get("style")))
 
 
 def r_h3(b: Block, state: BuildState) -> str:
     sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
-    badge_val = b.get("badge")
-    badge = f' <span class="tag tag-blue">{badge_val}</span>' if badge_val else ""
-    return f'<h3 id="{sid}">{md(b.get("md", ""))}{badge}</h3>\n'
+    return str(
+        _block_macros().h3(sid=sid, md_html=md(b.get("md", "")), badge=b.get("badge"))
+    )
 
 
 def r_h4(b: Block, state: BuildState) -> str:
     sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
-    return f'<h4 id="{sid}">{md(b.get("md", ""))}</h4>\n'
+    return str(_block_macros().h4(sid=sid, md_html=md(b.get("md", ""))))
 
 
 def r_heading(b: Block, state: BuildState) -> str:
@@ -239,28 +244,27 @@ def r_heading(b: Block, state: BuildState) -> str:
     tag = f"h{level}" if level in (3, 4) else "h3"
     text = b.get("content", "") or b.get("md", "")
     sid = state.unique_id(b.get("id") or slugify(text))
-    return f'<{tag} id="{sid}">{md(text)}</{tag}>\n'
+    return str(_block_macros().heading(tag=tag, sid=sid, md_html=md(text)))
 
 
 def r_paragraph(b: Block, _state: BuildState) -> str:
     """Render a 'paragraph' block: {type, content}."""
     text = b.get("content", "") or b.get("md", "")
-    style = f' style="{b["style"]}"' if b.get("style") else ""
-    return f"<p{style}>{md(text)}</p>\n"
+    return str(_block_macros().p(md_html=md(text), style=b.get("style")))
 
 
 def r_hr(_b: Block, _state: BuildState) -> str:
-    return "<hr>\n"
+    return str(_block_macros().hr())
 
 
 def r_ul(b: Block, _state: BuildState) -> str:
-    items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
-    return f"<ul>\n{items}</ul>\n"
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().ul(items_html=items_html))
 
 
 def r_ol(b: Block, _state: BuildState) -> str:
-    items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
-    return f"<ol>\n{items}</ol>\n"
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().ol(items_html=items_html))
 
 
 def r_code(b: Block, _state: BuildState) -> str:

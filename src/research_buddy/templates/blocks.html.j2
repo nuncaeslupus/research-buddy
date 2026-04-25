@@ -1,0 +1,37 @@
+{# Block macros — keep emitted bytes identical to the original r_* renderers. #}
+
+{%- macro p(md_html, style) -%}
+<p{% if style %} style="{{ style }}"{% endif %}>{{ md_html }}</p>
+{% endmacro -%}
+
+{%- macro hr() -%}
+<hr>
+{% endmacro -%}
+
+{%- macro h3(sid, md_html, badge) -%}
+<h3 id="{{ sid }}">{{ md_html }}{% if badge %} <span class="tag tag-blue">{{ badge }}</span>{% endif %}</h3>
+{% endmacro -%}
+
+{%- macro h4(sid, md_html) -%}
+<h4 id="{{ sid }}">{{ md_html }}</h4>
+{% endmacro -%}
+
+{%- macro heading(tag, sid, md_html) -%}
+<{{ tag }} id="{{ sid }}">{{ md_html }}</{{ tag }}>
+{% endmacro -%}
+
+{%- macro ul(items_html) -%}
+<ul>
+{% for item in items_html %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+{% endmacro -%}
+
+{%- macro ol(items_html) -%}
+<ol>
+{% for item in items_html %}
+<li>{{ item }}</li>
+{% endfor %}
+</ol>
+{% endmacro -%}
