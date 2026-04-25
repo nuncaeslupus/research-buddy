@@ -86,3 +86,18 @@
 {%- macro svg(html) -%}
 <div class="diagram-wrap">{{ html }}</div>
 {% endmacro -%}
+
+{%- macro code(lang, code_html) -%}
+<div class="code-wrap"{% if lang %} data-lang="{{ lang }}"{% endif %}><button class="copy-btn" title="Copy">⎘</button><pre><code{% if lang %} class="language-{{ lang }}"{% endif %}>{{ code_html }}</code></pre></div>
+{% endmacro -%}
+
+{%- macro table(table_cls, colgroup_html, has_headers, header_cells_html, row_cells_html) -%}
+<div class="table-wrap"><table{{ table_cls }}>
+{{ colgroup_html }}{% if has_headers %}<thead><tr>{{ header_cells_html }}</tr></thead>
+{% endif %}<tbody>
+{% for cells in row_cells_html %}
+<tr>{{ cells }}</tr>
+{% endfor %}
+</tbody>
+</table></div>
+{% endmacro -%}

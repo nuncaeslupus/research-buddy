@@ -284,15 +284,8 @@ def r_code(b: Block, _state: BuildState) -> str:
         )
         if py_signals >= 2:
             lang = "python"
-    code = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    lang_attr = f' data-lang="{lang}"' if lang else ""
-    lang_cls = f' class="language-{lang}"' if lang else ""
-    return (
-        f'<div class="code-wrap"{lang_attr}>'
-        f'<button class="copy-btn" title="Copy">⎘</button>'
-        f"<pre><code{lang_cls}>{code}</code></pre>"
-        f"</div>\n"
-    )
+    code_html = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return str(_block_macros().code(lang=lang, code_html=code_html))
 
 
 def r_callout(b: Block, _state: BuildState) -> str:
@@ -411,31 +404,35 @@ def r_table(b: Block, _state: BuildState) -> str:
     col_widths, use_fixed = _table_col_widths(headers, ncols)
 
     # <colgroup><col> is more reliable than per-<th> style for fixed layout
-    colgroup = ""
+    colgroup_html = ""
     if col_widths:
         cols_html = "".join(
             f'<col style="width:{col_widths[i]}">' if i in col_widths else "<col>"
             for i in range(ncols)
         )
-        colgroup = f"<colgroup>{cols_html}</colgroup>\n"
+        colgroup_html = f"<colgroup>{cols_html}</colgroup>\n"
 
     table_cls = ' class="t-fixed"' if use_fixed else ""
 
-    thead = ""
-    if headers:
-        ths = "".join(f"<th>{md(h)}</th>" for h in headers)
-        thead = f"<thead><tr>{ths}</tr></thead>\n"
+    header_cells_html = "".join(f"<th>{md(h)}</th>" for h in headers)
 
-    tbody_rows = []
+    row_cells_html = []
     for row in rows:
         cells = []
         for i, cell in enumerate(row):
             nw = ' class="nw"' if i < len(nowrap) and nowrap[i] else ""
             cells.append(f"<td{nw}>{md(cell)}</td>")
-        tbody_rows.append(f"<tr>{''.join(cells)}</tr>\n")
-    tbody = f"<tbody>\n{''.join(tbody_rows)}</tbody>\n"
+        row_cells_html.append("".join(cells))
 
-    return f'<div class="table-wrap"><table{table_cls}>\n{colgroup}{thead}{tbody}</table></div>\n'
+    return str(
+        _block_macros().table(
+            table_cls=table_cls,
+            colgroup_html=colgroup_html,
+            has_headers=bool(headers),
+            header_cells_html=header_cells_html,
+            row_cells_html=row_cells_html,
+        )
+    )
 
 
 def r_svg(b: Block, _state: BuildState) -> str:
