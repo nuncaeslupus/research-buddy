@@ -4,93 +4,92 @@
 
 ### What was done
 
-- **Shipped Jinja2 migration of `build.py`** (PR pending at
-  session end on branch `refactor/jinja-templates`; bumps
-  1.3.4 → 1.4.0). Folded roadmap step #10 ("split build.py via
-  a renderers package") into the Jinja move — there was no
-  value in shipping a renderer split that would be torn out a
-  step later. New `templates/` package (`base.html.j2`,
+- **Shipped Jinja2 migration of `build.py` to PR review** (PR
+  [#53] open, CI green, bot review pending; bumps 1.3.4 →
+  1.4.0). Folded roadmap step #10 ("split build.py via a
+  renderers package") into the Jinja move — there was no value
+  in shipping a renderer split that would be torn out a step
+  later. New `templates/` package (`base.html.j2`,
   `blocks.html.j2`, `section.html.j2`) holds all markup;
   `build.py` is now 1–4 line wrappers + the heuristics
   (`_table_col_widths`, `_nowrap_cols`, Python language
   auto-detect, `_resolve_lang_code`).
-- **Migration order — 7 commits, byte-identity gate at every
+- **Migration order — 8 commits, byte-identity gate at every
   step.** Each commit ended with `make regen-example` producing
   a `starter-example/starter.html` that `diff`-ed clean against
   a baseline captured on `main` before the branch was cut.
-  127 tests + lint stayed green at every step.
-  1. **Scaffolding:** added `jinja2>=3.1` to dependencies,
-     registered `templates/` as package data, added
-     `_get_env()` returning a cached
-     `Environment(autoescape=False, trim_blocks=True,
-     lstrip_blocks=True)`. `autoescape=False` matches today's
-     behaviour (`r_svg` embeds caller HTML verbatim, `md()`
-     returns raw HTML). Trust assumption documented near the
-     env factory.
-  2. **8 simplest renderers** (`p`, `h3`, `h4`, `heading`,
-     `paragraph`, `hr`, `ul`, `ol`) into `blocks.html.j2`.
-  3. **Banners + callout + verdict** (`callout`, `verdict`,
-     `usage_banner`, `agnostic_banner`, `cc_banner`).
-  4. **Container renderers** (`phase_cards`, `card_grid`,
-     `references`, `svg`).
-  5. **`code` and `table`** — most complex; conditional
-     `data-lang`/`language-*` class on code, conditional
-     `colgroup` + `t-fixed` class on table.
-  6. **`section.html.j2`** with `title_page_open`,
-     `section_open`, `section_close` macros. Recursion +
-     `nav_list` mutation stayed in Python; macros are pure
-     templates for the section box.
-  7. **`base.html.j2`** replaced the bottom f-string of
-     `build_html()`. The inline FOUC `<script>` (which had
-     `{{ }}` brace escapes in the f-string for JS literal
-     braces) lives inside `{% raw %}{% endraw %}` so Jinja
-     leaves the JS alone. `keep_trailing_newline=False`
-     (default) so the file ends at `</html>` with no
-     trailing newline.
+  127 tests + lint stayed green at every step. Order:
+  scaffolding (jinja dep, _get_env) → 8 simplest renderers →
+  banners + callout + verdict → containers → code+table →
+  section.html.j2 → base.html.j2 → version bump.
+- **Lint slip.** `make lint` runs `ruff check + mypy` only;
+  CI also runs `ruff format --check`. Three wrappers needed
+  reformatting (lines that fit on one line after the migration
+  shrunk them). Fixed in commit `08832c2`. Could add `ruff
+  format --check` to `make lint` to catch this locally next
+  time, or `pre-commit install` (already documented in
+  CLAUDE.md but not run on this branch).
 - **Key whitespace pattern:** every block macro is wrapped in
   `{%- macro ... -%}` (strips whitespace at start of body) and
   `{% endmacro -%}` (preserves trailing newline of body, strips
   whitespace AFTER the endmacro). The combination emits exactly
   the bytes of the original f-string return value.
-- **Public surface preserved.** `tests/test_build.py` imports
-  `BuildState`, `find_latest_json`, `md`, `md_block`,
-  `r_callout`, `r_code`, `r_h3`, `r_heading`, `r_p`,
-  `r_paragraph`, `r_table`, `render_blocks`, `render_section`,
-  `slugify` — all still importable, all tests still pass
-  unchanged. `validator.py:13` still imports `slugify`,
-  `main.py:18` still imports `build_html` and
-  `find_latest_json`.
+  `keep_trailing_newline=False` (default) on the env so
+  `base.html.j2` ends at `</html>` without a trailing newline,
+  matching the original f-string.
+- **Gemini bot posted 5 inline comments** on PR [#53]:
+  1. **HIGH (security):** `autoescape=False` permits HTML
+     injection via titles/badges. Suggests: enable autoescape,
+     mark trusted output (`md()`, svg) with `| safe`.
+  2. **MEDIUM:** Manual `&/</>` escape in `r_code` becomes
+     redundant if autoescape is on.
+  3. **MEDIUM:** `<colgroup>`/`<col>` assembly still in Python
+     — should move into the `table` macro.
+  4. **MEDIUM:** `table_cls = ' class="t-fixed"' if use_fixed
+     else ""` — pass `use_fixed` boolean instead.
+  5. **MEDIUM:** `<td>` cell loop with `nw` conditional class
+     still in Python — should move into the macro.
 
 ### Next steps
 
-1. **Push branch + open PR; merge after green CI.** PR title:
-   "refactor(build): replace hand-rolled HTML assembly with
-   Jinja2 templates". Body: link to plan
-   `~/.claude/plans/playful-tinkering-forest.md` for the design,
-   highlight byte-identity guarantee.
-2. **After merge: `make publish` to PyPI.** This is a MINOR
-   bump (new runtime dependency `jinja2>=3.1` + `markupsafe`).
-   Existing downstream docs at v1.3.x will emit an info note on
-   build (tool newer than doc). Optional: tag `v1.4.0`, push.
-3. **[#48] follow-up PR** (still queued from session 8): drop
+1. **Triage bot review on [#53] and decide.** My provisional
+   call (user wanted to think on it):
+   - **#1/#2 (autoescape):** push back. The original code never
+     escaped title/label/badge fields either, so this PR
+     doesn't change the security posture. The trust model
+     lives in `starter.json.agent_guidelines` — agents are
+     instructed not to embed JS in svg blocks. Flipping
+     autoescape on would (a) break byte-identity for any input
+     containing `<`, `&`, `'` and (b) require `| safe` on every
+     `md()` interpolation site and `r_svg`. Better as a
+     follow-up "tighten input trust" PR if we want to move
+     from agent-trust to in-template-trust.
+   - **#3/#4/#5 (table macro):** accept. The table macro is
+     half-done — `<colgroup>` loop, `t-fixed` class string, and
+     `<td>` cell loop with the `nw` conditional are pure markup
+     and belong in the template. Refactor passes `headers`,
+     `rows`, `nowrap`, `col_widths`, `ncols`, `use_fixed`
+     directly; macro does the loops. Byte-identity gate
+     protects against whitespace regressions.
+2. **After triage, push final fixes; merge [#53].**
+3. **After merge: `make publish` to PyPI.** This is a MINOR
+   bump (new runtime dep `jinja2>=3.1` + transitive
+   `markupsafe`). Existing downstream docs at v1.3.x will emit
+   an info note on build (tool newer than doc). Optional: tag
+   `v1.4.0`, push.
+4. **[#48] follow-up PR** (still queued from session 8): drop
    "verbatim" from the two `starter.json` instructions where it
    conflicts with the "Adapt to each project" requirement;
    switch `upgrade.py:_reorder_dict` callers to derive the
    canonical key order from `list(new_ag.keys())` and
    `list(starter.keys())` so the upgrade logic auto-tracks
    future starter changes.
-4. **Roadmap step #6 — raise coverage** (carried since session
+5. **Roadmap step #6 — raise coverage** (carried since session
    5). `main.py` 64 % → ≥85 %, `validator.py` 63 % → ≥85 %.
-   Target the untested branches: `--watch`, `--pdf`, `--all`,
-   batch mode, validator error paths, version-compat tiers.
-5. **Roadmap step #7 — mutation-testing baseline** with
-   `mutmut`; use the `mutmut-report` skill to triage survivors.
-6. **Roadmap step #8 — coverage threshold in CI** with
-   `--cov-fail-under=85`.
-7. **Roadmap step #9 — split `main.py`** into `cli.py` +
-   `commands/{build,init,validate}.py`. Step #10 is now done
-   (folded into the Jinja migration).
-8. **Theme-aware conditionals are now cheap.** Adding `<style>`
+6. **Roadmap steps #7, #8, #9** — mutation-testing baseline,
+   coverage threshold in CI, splitting `main.py`. Step #10 is
+   now done (folded into the Jinja migration).
+7. **Theme-aware conditionals are now cheap.** Adding `<style>`
    blocks gated on user prefs, print-specific output, or new
    block types only needs a macro edit, not f-string surgery.
    Worth keeping in mind for the queued "real PDF generator"
@@ -98,7 +97,9 @@
 
 ### Blockers
 
-- None. Branch ready to push.
+- None. PR [#53] is awaiting human triage of the bot review.
+
+[#53]: https://github.com/nuncaeslupus/research-buddy/pull/53
 
 ---
 
