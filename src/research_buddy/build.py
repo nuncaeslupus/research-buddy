@@ -10,6 +10,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+import jinja2
+
 # ── Type aliases ────────────────────────────────────────────────────────────
 
 Block = dict[str, Any]
@@ -125,6 +127,38 @@ def _asset_to_base64(data: bytes, mime: str) -> str:
     return f"data:{mime};base64,{b64}"
 
 
+# ── Jinja environment ───────────────────────────────────────────────────────
+
+# autoescape=False matches the historical behaviour: r_svg embeds caller-provided
+# HTML verbatim and md()/title fields are interpolated raw. The trust assumption
+# is documented in starter.json's agent_guidelines (no JS in svg blocks).
+
+
+@functools.lru_cache(maxsize=1)
+def _get_env() -> jinja2.Environment:
+    env = jinja2.Environment(
+        loader=jinja2.PackageLoader("research_buddy", "templates"),
+        autoescape=False,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    env.globals["md"] = md
+    env.filters["md"] = md
+    return env
+
+
+@functools.lru_cache(maxsize=1)
+def _block_macros() -> Any:
+    """Return the imported module of blocks.html.j2, exposing macros as attributes."""
+    return _get_env().get_template("blocks.html.j2").module
+
+
+@functools.lru_cache(maxsize=1)
+def _section_macros() -> Any:
+    """Return the imported module of section.html.j2, exposing macros as attributes."""
+    return _get_env().get_template("section.html.j2").module
+
+
 # ── Inline Markdown → HTML ──────────────────────────────────────────────────
 
 
@@ -194,20 +228,17 @@ def md_block(text: str) -> str:
 
 
 def r_p(b: Block, _state: BuildState) -> str:
-    style = f' style="{b["style"]}"' if b.get("style") else ""
-    return f"<p{style}>{md(b.get('md', ''))}</p>\n"
+    return str(_block_macros().p(md_html=md(b.get("md", "")), style=b.get("style")))
 
 
 def r_h3(b: Block, state: BuildState) -> str:
     sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
-    badge_val = b.get("badge")
-    badge = f' <span class="tag tag-blue">{badge_val}</span>' if badge_val else ""
-    return f'<h3 id="{sid}">{md(b.get("md", ""))}{badge}</h3>\n'
+    return str(_block_macros().h3(sid=sid, md_html=md(b.get("md", "")), badge=b.get("badge")))
 
 
 def r_h4(b: Block, state: BuildState) -> str:
     sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
-    return f'<h4 id="{sid}">{md(b.get("md", ""))}</h4>\n'
+    return str(_block_macros().h4(sid=sid, md_html=md(b.get("md", ""))))
 
 
 def r_heading(b: Block, state: BuildState) -> str:
@@ -216,28 +247,27 @@ def r_heading(b: Block, state: BuildState) -> str:
     tag = f"h{level}" if level in (3, 4) else "h3"
     text = b.get("content", "") or b.get("md", "")
     sid = state.unique_id(b.get("id") or slugify(text))
-    return f'<{tag} id="{sid}">{md(text)}</{tag}>\n'
+    return str(_block_macros().heading(tag=tag, sid=sid, md_html=md(text)))
 
 
 def r_paragraph(b: Block, _state: BuildState) -> str:
     """Render a 'paragraph' block: {type, content}."""
     text = b.get("content", "") or b.get("md", "")
-    style = f' style="{b["style"]}"' if b.get("style") else ""
-    return f"<p{style}>{md(text)}</p>\n"
+    return str(_block_macros().p(md_html=md(text), style=b.get("style")))
 
 
 def r_hr(_b: Block, _state: BuildState) -> str:
-    return "<hr>\n"
+    return str(_block_macros().hr())
 
 
 def r_ul(b: Block, _state: BuildState) -> str:
-    items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
-    return f"<ul>\n{items}</ul>\n"
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().ul(items_html=items_html))
 
 
 def r_ol(b: Block, _state: BuildState) -> str:
-    items = "".join(f"<li>{md(i)}</li>\n" for i in b.get("items", []))
-    return f"<ol>\n{items}</ol>\n"
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().ol(items_html=items_html))
 
 
 def r_code(b: Block, _state: BuildState) -> str:
@@ -257,36 +287,28 @@ def r_code(b: Block, _state: BuildState) -> str:
         )
         if py_signals >= 2:
             lang = "python"
-    code = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    lang_attr = f' data-lang="{lang}"' if lang else ""
-    lang_cls = f' class="language-{lang}"' if lang else ""
-    return (
-        f'<div class="code-wrap"{lang_attr}>'
-        f'<button class="copy-btn" title="Copy">⎘</button>'
-        f"<pre><code{lang_cls}>{code}</code></pre>"
-        f"</div>\n"
-    )
+    code_html = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return str(_block_macros().code(lang=lang, code_html=code_html))
 
 
 def r_callout(b: Block, _state: BuildState) -> str:
     variant = b.get("variant", "blue")
-    title = b.get("title", "")
     cls = f"callout {variant}" if variant != "blue" else "callout"
-    title_html = f'<div class="callout-title">{title}</div>\n' if title else ""
-    return f'<div class="{cls}">\n{title_html}<p>{md(b.get("md", ""))}</p>\n</div>\n'
+    return str(
+        _block_macros().callout(cls=cls, title=b.get("title", ""), md_html=md(b.get("md", "")))
+    )
 
 
 def r_verdict(b: Block, _state: BuildState) -> str:
     badge = b.get("badge", "reject")
     badge_text = b.get("badge_text", badge.upper())
-    label = b.get("label", "")
-    text = md(b.get("md", ""))
-    return (
-        f'<div class="verdict">'
-        f'<span class="verdict-label">{md(label)}</span>'
-        f'<span class="verdict-badge {badge}">{badge_text}</span>'
-        f'<span class="verdict-text">{text}</span>'
-        f"</div>\n"
+    return str(
+        _block_macros().verdict(
+            badge=badge,
+            badge_text=badge_text,
+            label_html=md(b.get("label", "")),
+            text_html=md(b.get("md", "")),
+        )
     )
 
 
@@ -381,106 +403,71 @@ def r_table(b: Block, _state: BuildState) -> str:
     rows = b.get("rows", [])
     ncols = len(headers) or (len(rows[0]) if rows else 0)
     nowrap = _nowrap_cols(headers, rows)
-
     col_widths, use_fixed = _table_col_widths(headers, ncols)
-
-    # <colgroup><col> is more reliable than per-<th> style for fixed layout
-    colgroup = ""
-    if col_widths:
-        cols_html = "".join(
-            f'<col style="width:{col_widths[i]}">' if i in col_widths else "<col>"
-            for i in range(ncols)
+    return str(
+        _block_macros().table(
+            headers=headers,
+            rows=rows,
+            nowrap=nowrap,
+            col_widths=col_widths,
+            ncols=ncols,
+            use_fixed=use_fixed,
         )
-        colgroup = f"<colgroup>{cols_html}</colgroup>\n"
-
-    table_cls = ' class="t-fixed"' if use_fixed else ""
-
-    thead = ""
-    if headers:
-        ths = "".join(f"<th>{md(h)}</th>" for h in headers)
-        thead = f"<thead><tr>{ths}</tr></thead>\n"
-
-    tbody_rows = []
-    for row in rows:
-        cells = []
-        for i, cell in enumerate(row):
-            nw = ' class="nw"' if i < len(nowrap) and nowrap[i] else ""
-            cells.append(f"<td{nw}>{md(cell)}</td>")
-        tbody_rows.append(f"<tr>{''.join(cells)}</tr>\n")
-    tbody = f"<tbody>\n{''.join(tbody_rows)}</tbody>\n"
-
-    return f'<div class="table-wrap"><table{table_cls}>\n{colgroup}{thead}{tbody}</table></div>\n'
+    )
 
 
 def r_svg(b: Block, _state: BuildState) -> str:
-    return f'<div class="diagram-wrap">{b.get("html", "")}</div>\n'
+    return str(_block_macros().svg(html=b.get("html", "")))
 
 
 def r_usage_banner(b: Block, _state: BuildState) -> str:
-    title = b.get("title", "")
-    items = b.get("items", [])
-    items_html = "".join(f"<li>{md(i)}</li>\n" for i in items)
-    return f'<div class="usage-banner"><h4>{title}</h4><ul>{items_html}</ul></div>\n'
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().usage_banner(title=b.get("title", ""), items_html=items_html))
 
 
 def r_agnostic_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get("title", "")
-    md_val = b.get("md", "")
-    return (
-        f'<div class="agnostic">'
-        f'<div class="ico">🌐</div>'
-        f"<div><h4>{title_val}</h4>"
-        f"<p>{md(md_val)}</p>"
-        f"</div></div>\n"
+    return str(
+        _block_macros().agnostic_banner(title=b.get("title", ""), md_html=md(b.get("md", "")))
     )
 
 
 def r_cc_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get("title", "")
-    md_val = b.get("md", "")
-    return f'<div class="cc-banner"><div><h4>{title_val}</h4><p>{md(md_val)}</p></div></div>\n'
+    return str(_block_macros().cc_banner(title=b.get("title", ""), md_html=md(b.get("md", ""))))
 
 
 def r_phase_cards(b: Block, _state: BuildState) -> str:
-    cards_html = ""
-    for card in b.get("cards", []):
-        phase = card.get("phase", "p1")
-        title = card.get("title", "")
-        items = card.get("items", [])
-        items_html = "".join(f"<li>{md(i)}</li>\n" for i in items)
-        cards_html += (
-            f'<div class="phase-card {phase}"><h4>{md(title)}</h4><ul>{items_html}</ul></div>\n'
-        )
-    return f'<div class="phase-bar">\n{cards_html}</div>\n'
+    cards = [
+        {
+            "phase": card.get("phase", "p1"),
+            "title_html": md(card.get("title", "")),
+            "items_html": [md(i) for i in card.get("items", [])],
+        }
+        for card in b.get("cards", [])
+    ]
+    return str(_block_macros().phase_cards(cards=cards))
 
 
 def r_card_grid(b: Block, _state: BuildState) -> str:
     cols = b.get("cols", 2)
-    extra = " three" if cols == 3 else ""
-    cards_html = ""
-    for card in b.get("cards", []):
-        title_val = card.get("title", "")
-        md_val = card.get("md", "")
-        cards_html += (
-            f'<div class="card">'
-            f'<div class="card-title">{md(title_val)}</div>'
-            f"<p>{md(md_val)}</p>"
-            f"</div>\n"
-        )
-    return f'<div class="card-grid{extra}">\n{cards_html}</div>\n'
+    cls = "card-grid three" if cols == 3 else "card-grid"
+    cards = [
+        {"title_html": md(c.get("title", "")), "md_html": md(c.get("md", ""))}
+        for c in b.get("cards", [])
+    ]
+    return str(_block_macros().card_grid(cls=cls, cards=cards))
 
 
 def r_references(b: Block, _state: BuildState) -> str:
     """Render a 'references' block."""
-    items_html = ""
-    for item in b.get("items", []):
-        ver = item.get("version", "")
-        date = item.get("date", "")
-        text = item.get("text", "")
-        ver_tag = f'<span class="tag tag-blue">{ver}</span> ' if ver else ""
-        date_tag = f'<span class="date">{date}</span> ' if date else ""
-        items_html += f"<li>{ver_tag}{date_tag}{md(text)}</li>\n"
-    return f'<ul class="references">\n{items_html}</ul>\n'
+    items = [
+        {
+            "ver": item.get("version", ""),
+            "date": item.get("date", ""),
+            "text_html": md(item.get("text", "")),
+        }
+        for item in b.get("items", [])
+    ]
+    return str(_block_macros().references(items=items))
 
 
 BLOCK_RENDERERS: dict[str, Any] = {
@@ -551,23 +538,31 @@ def render_section(
     if sec.get("current"):
         display_title += ' <span class="tag tag-green">Current</span>'
 
-    num_html = f'<span class="num">{number}</span> ' if number else ""
-
+    macros = _section_macros()
     if is_title_page:
-        doc_title = (meta or {}).get("title", "Documentation")
-        doc_subtitle = (meta or {}).get("subtitle", "")
-        ver = (meta or {}).get("version", "")
-        date = (meta or {}).get("date", "")
-        ver_line = f"<p><strong>Version:</strong> v{ver} \u2014 {date}</p>\n" if ver else ""
-        sub_line = f'<p class="subtitle">{doc_subtitle}</p>\n' if doc_subtitle else ""
-        heading = f"<h1>{doc_title}</h1>\n{sub_line}{ver_line}"
-        open_tag = f'<div id="{sid}" class="title-page">\n{heading}'
-        close_tag = "</div>\n"
+        open_tag = str(
+            macros.title_page_open(
+                sid=sid,
+                doc_title=(meta or {}).get("title", "Documentation"),
+                doc_subtitle=(meta or {}).get("subtitle", ""),
+                ver=(meta or {}).get("version", ""),
+                date=(meta or {}).get("date", ""),
+            )
+        )
+        close_tag = str(macros.section_close(tag="div"))
     else:
-        h_html = f"<{h_tag}>{num_html}{display_title}</{h_tag}>\n"
         tag = "section" if level == 2 else "div"
-        open_tag = f'<{tag} id="{sid}" class="level-{level}">\n{h_html}'
-        close_tag = f"</{tag}>\n"
+        open_tag = str(
+            macros.section_open(
+                tag=tag,
+                sid=sid,
+                level=level,
+                h_tag=h_tag,
+                num=number,
+                display_title_html=display_title,
+            )
+        )
+        close_tag = str(macros.section_close(tag=tag))
 
     # Add this section to navigation
     nav_list.append({"id": sid, "num": number, "title": title, "level": level})
@@ -775,32 +770,18 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
     theme_block += _RB_FOOTER_CSS
 
-    return f"""<!DOCTYPE html>
-<html lang="{lang_code}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{doc_title} — v{ver}</title>
-<!-- v{ver} -->
-<script>
-(function(){{
-  try {{
-    if (localStorage.getItem('rb-theme') === 'dark') {{
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }}
-  }} catch (e) {{}}
-}})();
-</script>
-<style>
-{hljs_css}
-{css}{theme_block}
-</style>
-</head>
-<body>
-{body_content}
-<script>{hljs_js}</script>
-<script defer>
-{js}
-</script>
-</body>
-</html>"""
+    return (
+        _get_env()
+        .get_template("base.html.j2")
+        .render(
+            lang_code=lang_code,
+            doc_title=doc_title,
+            ver=ver,
+            hljs_css=hljs_css,
+            css=css,
+            theme_block=theme_block,
+            body_content=body_content,
+            hljs_js=hljs_js,
+            js=js,
+        )
+    )

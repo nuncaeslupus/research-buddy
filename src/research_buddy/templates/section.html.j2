@@ -1,0 +1,18 @@
+{# Open/close markup for sections; recursion + state mutation stays in build.py. #}
+
+{%- macro title_page_open(sid, doc_title, doc_subtitle, ver, date) -%}
+<div id="{{ sid }}" class="title-page">
+<h1>{{ doc_title }}</h1>
+{% if doc_subtitle %}<p class="subtitle">{{ doc_subtitle }}</p>
+{% endif %}{% if ver %}<p><strong>Version:</strong> v{{ ver }} — {{ date }}</p>
+{% endif %}
+{% endmacro -%}
+
+{%- macro section_open(tag, sid, level, h_tag, num, display_title_html) -%}
+<{{ tag }} id="{{ sid }}" class="level-{{ level }}">
+<{{ h_tag }}>{% if num %}<span class="num">{{ num }}</span> {% endif %}{{ display_title_html }}</{{ h_tag }}>
+{% endmacro -%}
+
+{%- macro section_close(tag) -%}
+</{{ tag }}>
+{% endmacro -%}

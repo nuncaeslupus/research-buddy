@@ -1,0 +1,104 @@
+{# Block macros — keep emitted bytes identical to the original r_* renderers. #}
+
+{%- macro p(md_html, style) -%}
+<p{% if style %} style="{{ style }}"{% endif %}>{{ md_html }}</p>
+{% endmacro -%}
+
+{%- macro hr() -%}
+<hr>
+{% endmacro -%}
+
+{%- macro h3(sid, md_html, badge) -%}
+<h3 id="{{ sid }}">{{ md_html }}{% if badge %} <span class="tag tag-blue">{{ badge }}</span>{% endif %}</h3>
+{% endmacro -%}
+
+{%- macro h4(sid, md_html) -%}
+<h4 id="{{ sid }}">{{ md_html }}</h4>
+{% endmacro -%}
+
+{%- macro heading(tag, sid, md_html) -%}
+<{{ tag }} id="{{ sid }}">{{ md_html }}</{{ tag }}>
+{% endmacro -%}
+
+{%- macro ul(items_html) -%}
+<ul>
+{% for item in items_html %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+{% endmacro -%}
+
+{%- macro ol(items_html) -%}
+<ol>
+{% for item in items_html %}
+<li>{{ item }}</li>
+{% endfor %}
+</ol>
+{% endmacro -%}
+
+{%- macro callout(cls, title, md_html) -%}
+<div class="{{ cls }}">
+{% if title %}<div class="callout-title">{{ title }}</div>
+{% endif %}<p>{{ md_html }}</p>
+</div>
+{% endmacro -%}
+
+{%- macro verdict(badge, badge_text, label_html, text_html) -%}
+<div class="verdict"><span class="verdict-label">{{ label_html }}</span><span class="verdict-badge {{ badge }}">{{ badge_text }}</span><span class="verdict-text">{{ text_html }}</span></div>
+{% endmacro -%}
+
+{%- macro usage_banner(title, items_html) -%}
+<div class="usage-banner"><h4>{{ title }}</h4><ul>{% for item in items_html %}<li>{{ item }}</li>
+{% endfor %}</ul></div>
+{% endmacro -%}
+
+{%- macro agnostic_banner(title, md_html) -%}
+<div class="agnostic"><div class="ico">🌐</div><div><h4>{{ title }}</h4><p>{{ md_html }}</p></div></div>
+{% endmacro -%}
+
+{%- macro cc_banner(title, md_html) -%}
+<div class="cc-banner"><div><h4>{{ title }}</h4><p>{{ md_html }}</p></div></div>
+{% endmacro -%}
+
+{%- macro phase_cards(cards) -%}
+<div class="phase-bar">
+{% for card in cards %}
+<div class="phase-card {{ card.phase }}"><h4>{{ card.title_html }}</h4><ul>{% for item in card.items_html %}<li>{{ item }}</li>
+{% endfor %}</ul></div>
+{% endfor %}
+</div>
+{% endmacro -%}
+
+{%- macro card_grid(cls, cards) -%}
+<div class="{{ cls }}">
+{% for card in cards %}
+<div class="card"><div class="card-title">{{ card.title_html }}</div><p>{{ card.md_html }}</p></div>
+{% endfor %}
+</div>
+{% endmacro -%}
+
+{%- macro references(items) -%}
+<ul class="references">
+{% for item in items %}<li>{% if item.ver %}<span class="tag tag-blue">{{ item.ver }}</span> {% endif %}{% if item.date %}<span class="date">{{ item.date }}</span> {% endif %}{{ item.text_html }}</li>
+{% endfor %}</ul>
+{% endmacro -%}
+
+{%- macro svg(html) -%}
+<div class="diagram-wrap">{{ html }}</div>
+{% endmacro -%}
+
+{%- macro code(lang, code_html) -%}
+<div class="code-wrap"{% if lang %} data-lang="{{ lang }}"{% endif %}><button class="copy-btn" title="Copy">⎘</button><pre><code{% if lang %} class="language-{{ lang }}"{% endif %}>{{ code_html }}</code></pre></div>
+{% endmacro -%}
+
+{%- macro table(headers, rows, nowrap, col_widths, ncols, use_fixed) -%}
+<div class="table-wrap"><table{% if use_fixed %} class="t-fixed"{% endif %}>
+{% if col_widths %}<colgroup>{% for i in range(ncols) %}{% if i in col_widths %}<col style="width:{{ col_widths[i] }}">{% else %}<col>{% endif %}{% endfor %}</colgroup>
+{% endif %}{% if headers %}<thead><tr>{% for h in headers %}<th>{{ h | md }}</th>{% endfor %}</tr></thead>
+{% endif %}<tbody>
+{% for row in rows %}
+<tr>{% for cell in row %}<td{% if loop.index0 < nowrap|length and nowrap[loop.index0] %} class="nw"{% endif %}>{{ cell | md }}</td>{% endfor %}</tr>
+{% endfor %}
+</tbody>
+</table></div>
+{% endmacro -%}
