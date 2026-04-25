@@ -21,7 +21,7 @@ function switchTab(tab, noSave) {
     if (nav) nav.classList.toggle('active', t === tab);
   });
   var sb = $('sidebar');
-  if (window.innerWidth <= 768 && sb) sb.classList.remove('open');
+  if ((window.innerWidth <= 768 || window.innerHeight <= 500) && sb) sb.classList.remove('open');
   if (!noSave) try { sessionStorage.setItem('activeTab', tab); } catch(e) {}
 }
 

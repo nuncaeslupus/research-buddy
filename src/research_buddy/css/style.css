@@ -213,8 +213,10 @@ a.xlink:hover {
 pre { padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
 code { font-family: var(--mono); }
 
-/* ── Mobile ── */
-@media (max-width: 768px) {
+/* ── Mobile / short viewport ── */
+/* (max-height: 500px) catches phones in landscape (height ~390-430px)
+   without affecting tablets (≥744px tall) or laptops (≥600px tall). */
+@media (max-width: 768px), (max-height: 500px) {
   #menu-toggle { display: block; }
   #sidebar {
     position: fixed; top: var(--tabbar-h); left: 0; bottom: 0;
