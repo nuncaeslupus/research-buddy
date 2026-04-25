@@ -91,12 +91,13 @@
 <div class="code-wrap"{% if lang %} data-lang="{{ lang }}"{% endif %}><button class="copy-btn" title="Copy">⎘</button><pre><code{% if lang %} class="language-{{ lang }}"{% endif %}>{{ code_html }}</code></pre></div>
 {% endmacro -%}
 
-{%- macro table(table_cls, colgroup_html, has_headers, header_cells_html, row_cells_html) -%}
-<div class="table-wrap"><table{{ table_cls }}>
-{{ colgroup_html }}{% if has_headers %}<thead><tr>{{ header_cells_html }}</tr></thead>
+{%- macro table(headers, rows, nowrap, col_widths, ncols, use_fixed) -%}
+<div class="table-wrap"><table{% if use_fixed %} class="t-fixed"{% endif %}>
+{% if col_widths %}<colgroup>{% for i in range(ncols) %}{% if i in col_widths %}<col style="width:{{ col_widths[i] }}">{% else %}<col>{% endif %}{% endfor %}</colgroup>
+{% endif %}{% if headers %}<thead><tr>{% for h in headers %}<th>{{ h | md }}</th>{% endfor %}</tr></thead>
 {% endif %}<tbody>
-{% for cells in row_cells_html %}
-<tr>{{ cells }}</tr>
+{% for row in rows %}
+<tr>{% for cell in row %}<td{% if loop.index0 < nowrap|length and nowrap[loop.index0] %} class="nw"{% endif %}>{{ cell | md }}</td>{% endfor %}</tr>
 {% endfor %}
 </tbody>
 </table></div>

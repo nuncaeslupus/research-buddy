@@ -403,37 +403,15 @@ def r_table(b: Block, _state: BuildState) -> str:
     rows = b.get("rows", [])
     ncols = len(headers) or (len(rows[0]) if rows else 0)
     nowrap = _nowrap_cols(headers, rows)
-
     col_widths, use_fixed = _table_col_widths(headers, ncols)
-
-    # <colgroup><col> is more reliable than per-<th> style for fixed layout
-    colgroup_html = ""
-    if col_widths:
-        cols_html = "".join(
-            f'<col style="width:{col_widths[i]}">' if i in col_widths else "<col>"
-            for i in range(ncols)
-        )
-        colgroup_html = f"<colgroup>{cols_html}</colgroup>\n"
-
-    table_cls = ' class="t-fixed"' if use_fixed else ""
-
-    header_cells_html = "".join(f"<th>{md(h)}</th>" for h in headers)
-
-    row_cells_html = []
-    for row in rows:
-        cells = []
-        for i, cell in enumerate(row):
-            nw = ' class="nw"' if i < len(nowrap) and nowrap[i] else ""
-            cells.append(f"<td{nw}>{md(cell)}</td>")
-        row_cells_html.append("".join(cells))
-
     return str(
         _block_macros().table(
-            table_cls=table_cls,
-            colgroup_html=colgroup_html,
-            has_headers=bool(headers),
-            header_cells_html=header_cells_html,
-            row_cells_html=row_cells_html,
+            headers=headers,
+            rows=rows,
+            nowrap=nowrap,
+            col_widths=col_widths,
+            ncols=ncols,
+            use_fixed=use_fixed,
         )
     )
 
