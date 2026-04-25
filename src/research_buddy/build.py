@@ -141,7 +141,6 @@ def _get_env() -> jinja2.Environment:
         autoescape=False,
         trim_blocks=True,
         lstrip_blocks=True,
-        keep_trailing_newline=True,
     )
     env.globals["md"] = md
     env.filters["md"] = md
@@ -799,32 +798,14 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
     theme_block += _RB_FOOTER_CSS
 
-    return f"""<!DOCTYPE html>
-<html lang="{lang_code}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{doc_title} — v{ver}</title>
-<!-- v{ver} -->
-<script>
-(function(){{
-  try {{
-    if (localStorage.getItem('rb-theme') === 'dark') {{
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }}
-  }} catch (e) {{}}
-}})();
-</script>
-<style>
-{hljs_css}
-{css}{theme_block}
-</style>
-</head>
-<body>
-{body_content}
-<script>{hljs_js}</script>
-<script defer>
-{js}
-</script>
-</body>
-</html>"""
+    return _get_env().get_template("base.html.j2").render(
+        lang_code=lang_code,
+        doc_title=doc_title,
+        ver=ver,
+        hljs_css=hljs_css,
+        css=css,
+        theme_block=theme_block,
+        body_content=body_content,
+        hljs_js=hljs_js,
+        js=js,
+    )
