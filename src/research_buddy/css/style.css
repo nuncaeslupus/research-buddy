@@ -29,11 +29,14 @@ body {
   display: flex; align-items: center; padding: 0 14px;
   border-bottom: 1px solid var(--border); z-index: 100;
   gap: 8px;
+  overflow-x: auto; scrollbar-width: none;
 }
+#tab-bar::-webkit-scrollbar { display: none; }
 
 #menu-toggle {
-  display: none; background: none; border: 1px solid var(--border);
+  display: none; background: var(--bg2); border: 1px solid var(--border);
   color: var(--text2); padding: 4px 8px; border-radius: 4px; cursor: pointer;
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -41,6 +44,7 @@ body {
   padding: 0 16px; height: 100%; cursor: pointer;
   font-size: 13px; font-weight: 500; transition: all .15s;
   border-bottom: 2px solid transparent;
+  flex-shrink: 0; white-space: nowrap;
 }
 .tab-btn:hover { color: var(--text); background: var(--bg3); }
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
@@ -217,7 +221,12 @@ code { font-family: var(--mono); }
 /* (max-height: 500px) catches phones in landscape (height ~390-430px)
    without affecting tablets (≥744px tall) or laptops (≥600px tall). */
 @media (max-width: 768px), (max-height: 500px) {
-  #menu-toggle { display: block; }
+  #menu-toggle {
+    display: block;
+    position: sticky; left: 0; z-index: 1;
+    height: 100%; border-radius: 0;
+    border-top: none; border-bottom: none; border-left: none;
+  }
   #sidebar {
     position: fixed; top: var(--tabbar-h); left: 0; bottom: 0;
     z-index: 200; width: 280px; transform: translateX(-100%);
