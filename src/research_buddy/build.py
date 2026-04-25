@@ -297,23 +297,22 @@ def r_code(b: Block, _state: BuildState) -> str:
 
 def r_callout(b: Block, _state: BuildState) -> str:
     variant = b.get("variant", "blue")
-    title = b.get("title", "")
     cls = f"callout {variant}" if variant != "blue" else "callout"
-    title_html = f'<div class="callout-title">{title}</div>\n' if title else ""
-    return f'<div class="{cls}">\n{title_html}<p>{md(b.get("md", ""))}</p>\n</div>\n'
+    return str(
+        _block_macros().callout(cls=cls, title=b.get("title", ""), md_html=md(b.get("md", "")))
+    )
 
 
 def r_verdict(b: Block, _state: BuildState) -> str:
     badge = b.get("badge", "reject")
     badge_text = b.get("badge_text", badge.upper())
-    label = b.get("label", "")
-    text = md(b.get("md", ""))
-    return (
-        f'<div class="verdict">'
-        f'<span class="verdict-label">{md(label)}</span>'
-        f'<span class="verdict-badge {badge}">{badge_text}</span>'
-        f'<span class="verdict-text">{text}</span>'
-        f"</div>\n"
+    return str(
+        _block_macros().verdict(
+            badge=badge,
+            badge_text=badge_text,
+            label_html=md(b.get("label", "")),
+            text_html=md(b.get("md", "")),
+        )
     )
 
 
@@ -444,28 +443,22 @@ def r_svg(b: Block, _state: BuildState) -> str:
 
 
 def r_usage_banner(b: Block, _state: BuildState) -> str:
-    title = b.get("title", "")
-    items = b.get("items", [])
-    items_html = "".join(f"<li>{md(i)}</li>\n" for i in items)
-    return f'<div class="usage-banner"><h4>{title}</h4><ul>{items_html}</ul></div>\n'
+    items_html = [md(i) for i in b.get("items", [])]
+    return str(_block_macros().usage_banner(title=b.get("title", ""), items_html=items_html))
 
 
 def r_agnostic_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get("title", "")
-    md_val = b.get("md", "")
-    return (
-        f'<div class="agnostic">'
-        f'<div class="ico">🌐</div>'
-        f"<div><h4>{title_val}</h4>"
-        f"<p>{md(md_val)}</p>"
-        f"</div></div>\n"
+    return str(
+        _block_macros().agnostic_banner(
+            title=b.get("title", ""), md_html=md(b.get("md", ""))
+        )
     )
 
 
 def r_cc_banner(b: Block, _state: BuildState) -> str:
-    title_val = b.get("title", "")
-    md_val = b.get("md", "")
-    return f'<div class="cc-banner"><div><h4>{title_val}</h4><p>{md(md_val)}</p></div></div>\n'
+    return str(
+        _block_macros().cc_banner(title=b.get("title", ""), md_html=md(b.get("md", "")))
+    )
 
 
 def r_phase_cards(b: Block, _state: BuildState) -> str:

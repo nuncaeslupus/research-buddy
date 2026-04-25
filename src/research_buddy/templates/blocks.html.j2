@@ -35,3 +35,27 @@
 {% endfor %}
 </ol>
 {% endmacro -%}
+
+{%- macro callout(cls, title, md_html) -%}
+<div class="{{ cls }}">
+{% if title %}<div class="callout-title">{{ title }}</div>
+{% endif %}<p>{{ md_html }}</p>
+</div>
+{% endmacro -%}
+
+{%- macro verdict(badge, badge_text, label_html, text_html) -%}
+<div class="verdict"><span class="verdict-label">{{ label_html }}</span><span class="verdict-badge {{ badge }}">{{ badge_text }}</span><span class="verdict-text">{{ text_html }}</span></div>
+{% endmacro -%}
+
+{%- macro usage_banner(title, items_html) -%}
+<div class="usage-banner"><h4>{{ title }}</h4><ul>{% for item in items_html %}<li>{{ item }}</li>
+{% endfor %}</ul></div>
+{% endmacro -%}
+
+{%- macro agnostic_banner(title, md_html) -%}
+<div class="agnostic"><div class="ico">🌐</div><div><h4>{{ title }}</h4><p>{{ md_html }}</p></div></div>
+{% endmacro -%}
+
+{%- macro cc_banner(title, md_html) -%}
+<div class="cc-banner"><div><h4>{{ title }}</h4><p>{{ md_html }}</p></div></div>
+{% endmacro -%}
