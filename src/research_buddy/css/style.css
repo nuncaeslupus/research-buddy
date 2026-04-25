@@ -222,6 +222,8 @@ code { font-family: var(--mono); }
   #menu-toggle {
     display: block;
     position: sticky; left: 0; z-index: 1;
+    height: 100%; border-radius: 0;
+    border-top: none; border-bottom: none; border-left: none;
   }
   #sidebar {
     position: fixed; top: var(--tabbar-h); left: 0; bottom: 0;
