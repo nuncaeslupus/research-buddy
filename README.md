@@ -1,4 +1,4 @@
-# Research Buddy v1.3.3
+# Research Buddy v1.3.4
 
 <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
 

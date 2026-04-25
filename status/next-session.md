@@ -1,5 +1,127 @@
 # Next session
 
+## Session 2026-04-25 (session 8)
+
+### What was done
+
+- **Shipped HTML rendering improvements split across four PRs**
+  ([#49] merged; [#50], [#51], [#52] open at session end). User
+  triaged the four concerns up front and authorized the
+  one-PR-per-concern split:
+  1. **[#49] — logo PNG resize** (1.3.0 → 1.3.1, PATCH). The
+     bundled `images/research-buddy.png` was 1536×1536 / 725 KB
+     but only ever displayed at ~100 px. Resized to 200×200 via
+     PIL Lanczos (27 KB, -96 %). Generated HTML dropped from
+     ~944 KB to ~190 KB — the user's "embedded libraries" guess
+     turned out to be wrong; the logo was the real culprit.
+     `highlight.min.js` is 127 KB and legitimate, kept as-is.
+  2. **[#50] — tab bar mobile overflow** (1.3.1 → 1.3.2, PATCH).
+     The 5-tab bar clipped on phones because nothing could
+     scroll. Added `overflow-x: auto`, hid the scrollbar
+     (`scrollbar-width: none` + `::-webkit-scrollbar`),
+     `flex-shrink: 0` + `white-space: nowrap` on tab buttons,
+     and made the burger menu `position: sticky; left: 0` so it
+     stays pinned while tabs scroll under it. After bot review,
+     pushed a follow-up giving the sticky button `height: 100%`
+     and stripping its top/bottom/left borders so tabs aren't
+     visible in gaps as they scroll past.
+  3. **[#51] — sidebar overlay in landscape phones**
+     (1.3.1 → 1.3.3, PATCH). Mobile sidebar overlay was gated on
+     `max-width: 768px` only, so phones in landscape (height
+     ~390-430 px, width 844-915 px) fell through to the desktop
+     rule and the sidebar ate half the screen. Expanded the
+     media query to `(max-width: 768px), (max-height: 500px)` —
+     500 px catches landscape phones without affecting tablets
+     (≥744 px tall) or laptops (≥600 px tall). After bot review,
+     swapped the JS-side `window.innerWidth/innerHeight`
+     comparison for `window.matchMedia('(max-width: 768px),
+     (max-height: 500px)')` so CSS and JS share the same media
+     query and can't drift.
+  4. **[#52] — light theme by default with dark-mode toggle**
+     (1.3.1 → 1.3.4, PATCH). User wanted light as the default
+     with the option to switch. CSS `:root` now holds a light
+     palette (#ffffff / #1a2030 / saturated brand colours);
+     dark colours moved under `:root[data-theme="dark"]` and
+     `color-scheme` follows. The bundled hljs CSS got an Atom
+     One Light default with the existing One Dark scoped under
+     `[data-theme="dark"]`. New `--code-bg` and `--skip-*`
+     variables replace previously-hardcoded `#0d1117` /
+     `#2a2020` / `#886666`. Tab bar gained a ☀/☾ toggle aligned
+     to the right; click flips the attribute and persists the
+     choice in `localStorage('rb-theme')`. Inline `<head>`
+     script reads localStorage **before paint** to avoid FOUC.
+     Hardcoded footer colours (`#8090b8`, `#6070a0`,
+     `#a0b0d0`) were replaced with `var(--text3)` so both
+     themes look right.
+- **Version leapfrog deliberate.** Each PR bumped one PATCH so
+  the four PRs could land independently without version-string
+  conflicts: 1.3.1 (logo), 1.3.2 (tab bar), 1.3.3 (landscape),
+  1.3.4 (theme). PRs [#51] and [#52] both needed a `git merge
+  origin/main` mid-session once earlier PRs landed (style.css
+  in [#51], style.css + version files in [#52]) — auto-merge
+  handled the CSS, version files were trivial "ours".
+- **Bot reviews triaged, not blindly applied.**
+  `gemini-code-assist[bot]` posted on [#50], [#51], and [#52].
+  Accepted: sticky button full-height ([#50]), `matchMedia`
+  ([#51]). Skipped with reasoning: scrollbar discoverability on
+  [#50] (matches mobile platform conventions); `THEME_KEY`
+  constant on [#52] (the magic string actually crosses the
+  build.py↔script.js boundary, so factoring inside script.js
+  alone doesn't reduce duplication); FOUC-script "duplication"
+  on [#52] (bot misread — `starter-example/starter.html` is
+  the *output* of `build.py`, not separate source).
+- **Bot review on already-merged [#48] still open.** Four
+  comments on `starter.json` ("verbatim" wording vs. "Adapt to
+  each project" placeholders) and `upgrade.py` (hardcoded
+  ordering keys vs. deriving from `list(starter.keys())` /
+  `list(new_ag.keys())`). Worth folding into the next small
+  cleanup PR — none are urgent.
+
+### Next steps
+
+1. **After [#50], [#51], [#52] all merge**, cut a 1.3.4 PyPI
+   release. `make publish`, push tag, confirm install.
+2. **Jinja2 migration of `build.py`** (user agreed to plan it
+   as a follow-up). Goal: replace the assembly f-string at the
+   bottom of `build_html()` and the per-block renderers with
+   Jinja templates / macros, keeping `make regen-example` byte-
+   identical against the pre-migration baseline. New runtime
+   dependency, but the `<head>` / `<body>` / per-tab scaffolding
+   becomes substantially more readable, and adding theme-aware
+   conditionals (or future block types) gets cheaper.
+3. **[#48] follow-up PR**: drop "verbatim" from the two
+   `starter.json` instructions where it conflicts with the
+   "Adapt to each project" requirement; switch
+   `upgrade.py:_reorder_dict` callers to derive the canonical
+   key order from `list(new_ag.keys())` and
+   `list(starter.keys())` so the upgrade logic auto-tracks
+   future starter changes.
+4. **Roadmap step #6 — raise coverage** (carried from session
+   7). `main.py` 64 % → ≥85 %, `validator.py` 63 % → ≥85 %.
+   Target the untested branches: `--watch`, `--pdf`, `--all`,
+   batch mode, validator error paths, version-compat tiers.
+5. **Roadmap steps #7 / #8 / #9 / #10** — mutation-testing
+   baseline, coverage threshold in CI, splitting `main.py`,
+   splitting `build.py` via a `renderers/` package (the last
+   item likely interacts with the Jinja migration; sequence
+   them carefully).
+6. **Downstream cleanup** — same standing item: any project
+   with `agent_guidelines` mid-file or in legacy key order can
+   run `research-buddy upgrade <path>/*.json --apply` to pick
+   up the 1.3.0 reorganization.
+
+### Blockers
+
+- None. [#50] / [#51] / [#52] all green and ready to merge in
+  any order; conflicts pre-resolved.
+
+[#49]: https://github.com/nuncaeslupus/research-buddy/pull/49
+[#50]: https://github.com/nuncaeslupus/research-buddy/pull/50
+[#51]: https://github.com/nuncaeslupus/research-buddy/pull/51
+[#52]: https://github.com/nuncaeslupus/research-buddy/pull/52
+
+---
+
 ## Session 2026-04-25 (session 7)
 
 ### What was done

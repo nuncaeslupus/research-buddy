@@ -69,10 +69,10 @@ _LANGUAGE_NAME_TO_CODE = {
 
 _RB_FOOTER_CSS = """
 /* ── Research Buddy footer ── */
-.rb-powered-by{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;font-size:12px;color:#8090b8;clear:both}
+.rb-powered-by{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;font-size:12px;color:var(--text3);clear:both}
 .rb-logo{width:100px;height:auto}
-.rb-powered-by a{color:#8090b8;text-decoration:none}
-.rb-powered-by a:hover{color:#a0b0d0}
+.rb-powered-by a{color:var(--text3);text-decoration:none}
+.rb-powered-by a:hover{color:var(--text2)}
 @media print{.rb-powered-by{display:none}}
 """
 
@@ -683,6 +683,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         '<div id="tab-bar">\n'
         '<button id="menu-toggle" aria-label="Menu">☰</button>\n'
         + "\n".join(tab_btns)
+        + '\n<button id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">☾</button>'
         + "</div>\n"
     )
 
@@ -712,7 +713,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
             )
 
         tab_body_parts.append(
-            f'<p style="text-align:center;color:#6070a0;font-size:12px;padding:16px 0">'
+            f'<p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">'
             f"{doc_title} \u00b7 {label} \u00b7 v{ver}</p>\n"
         )
 
@@ -781,6 +782,15 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{doc_title} — v{ver}</title>
 <!-- v{ver} -->
+<script>
+(function(){{
+  try {{
+    if (localStorage.getItem('rb-theme') === 'dark') {{
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }}
+  }} catch (e) {{}}
+}})();
+</script>
 <style>
 {hljs_css}
 {css}{theme_block}

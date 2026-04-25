@@ -1,4 +1,25 @@
 :root {
+  /* Light theme — default. Dark theme overrides below via [data-theme="dark"]. */
+  --bg:      #ffffff;  --bg2:    #f6f7fa;  --bg3: #eef0f5;  --bg4: #e2e6ee;
+  --border:  #d4d9e3;
+  --text:    #1a2030;  --text2:  #4a5568;  --text3: #8090a0;
+  --blue:    #2563eb;  --blue-d: #dbeafe;
+  --teal:    #0d9488;  --teal-d: #ccfbf1;
+  --green:   #16a34a;  --green-d: #dcfce7;
+  --amber:   #d97706;  --amber-d: #fef3c7;
+  --red:     #dc2626;  --red-d: #fee2e2;
+  --purple:  #7c3aed;  --purple-d: #ede9fe;
+  --code-bg: #fafafa;
+  --skip-bg: #f5ebeb; --skip-fg: #a07878;
+  --font:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono:    "JetBrains Mono", ui-monospace, monospace;
+  --radius:  6px;
+  --sidebar-w: 280px;
+  --tabbar-h:  48px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
   --bg:      #0f1117;  --bg2:    #161b27;  --bg3: #1c2235;  --bg4: #222840;
   --border:  #2d3556;
   --text:    #e2e8f8;  --text2:  #b0bad0;  --text3: #7585a5;
@@ -8,11 +29,9 @@
   --amber:   #fbbf24;  --amber-d: #78350f;
   --red:     #f87171;  --red-d: #7f1d1d;
   --purple:  #a78bfa;  --purple-d: #4c1d95;
-  --font:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono:    "JetBrains Mono", ui-monospace, monospace;
-  --radius:  6px;
-  --sidebar-w: 280px;
-  --tabbar-h:  48px;
+  --code-bg: #0d1117;
+  --skip-bg: #2a2020; --skip-fg: #886666;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,6 +67,14 @@ body {
 }
 .tab-btn:hover { color: var(--text); background: var(--bg3); }
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+
+#theme-toggle {
+  margin-left: auto; flex-shrink: 0;
+  background: none; border: 1px solid var(--border);
+  color: var(--text2); padding: 4px 10px; border-radius: 4px;
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+#theme-toggle:hover { color: var(--text); background: var(--bg3); }
 
 #layout { display: flex; margin-top: var(--tabbar-h); height: calc(100vh - var(--tabbar-h)); }
 
@@ -140,7 +167,7 @@ td.nw { white-space: nowrap; font-family: var(--mono); font-size: 11px; color: v
 .tag-purple          { background: var(--purple-d); color: var(--purple); }
 .tag-teal            { background: var(--teal-d);   color: var(--teal);   }
 .cloud               { background: var(--teal-d);   color: var(--teal);   }
-.skip                { background: #2a2020;          color: #886666;       }
+.skip                { background: var(--skip-bg);   color: var(--skip-fg); }
 
 /* ── Cross-links ── */
 a.xlink {
@@ -195,7 +222,7 @@ a.xlink:hover {
 
 .code-wrap {
   position: relative; margin: 16px 0;
-  background: #0d1117;
+  background: var(--code-bg);
   border: 1px solid var(--border); border-left: 3px solid var(--blue);
   border-radius: 0 var(--radius) var(--radius) 0;
 }

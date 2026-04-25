@@ -1,3 +1,3 @@
 """research-buddy — structured JSON to single-file HTML documentation."""
 
-__version__ = "1.3.3"
+__version__ = "1.3.4"
