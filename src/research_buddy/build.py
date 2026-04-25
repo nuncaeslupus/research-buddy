@@ -233,9 +233,7 @@ def r_p(b: Block, _state: BuildState) -> str:
 
 def r_h3(b: Block, state: BuildState) -> str:
     sid = state.unique_id(b.get("id") or slugify(b.get("md", "")))
-    return str(
-        _block_macros().h3(sid=sid, md_html=md(b.get("md", "")), badge=b.get("badge"))
-    )
+    return str(_block_macros().h3(sid=sid, md_html=md(b.get("md", "")), badge=b.get("badge")))
 
 
 def r_h4(b: Block, state: BuildState) -> str:
@@ -451,16 +449,12 @@ def r_usage_banner(b: Block, _state: BuildState) -> str:
 
 def r_agnostic_banner(b: Block, _state: BuildState) -> str:
     return str(
-        _block_macros().agnostic_banner(
-            title=b.get("title", ""), md_html=md(b.get("md", ""))
-        )
+        _block_macros().agnostic_banner(title=b.get("title", ""), md_html=md(b.get("md", "")))
     )
 
 
 def r_cc_banner(b: Block, _state: BuildState) -> str:
-    return str(
-        _block_macros().cc_banner(title=b.get("title", ""), md_html=md(b.get("md", "")))
-    )
+    return str(_block_macros().cc_banner(title=b.get("title", ""), md_html=md(b.get("md", ""))))
 
 
 def r_phase_cards(b: Block, _state: BuildState) -> str:
@@ -798,14 +792,18 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
     theme_block += _RB_FOOTER_CSS
 
-    return _get_env().get_template("base.html.j2").render(
-        lang_code=lang_code,
-        doc_title=doc_title,
-        ver=ver,
-        hljs_css=hljs_css,
-        css=css,
-        theme_block=theme_block,
-        body_content=body_content,
-        hljs_js=hljs_js,
-        js=js,
+    return (
+        _get_env()
+        .get_template("base.html.j2")
+        .render(
+            lang_code=lang_code,
+            doc_title=doc_title,
+            ver=ver,
+            hljs_css=hljs_css,
+            css=css,
+            theme_block=theme_block,
+            body_content=body_content,
+            hljs_js=hljs_js,
+            js=js,
+        )
     )
