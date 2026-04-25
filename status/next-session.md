@@ -1,5 +1,104 @@
 # Next session
 
+## Session 2026-04-25 (session 7)
+
+### What was done
+
+- **Shipped starter reorganization + structural upgrade** (PR [#48]).
+  Single PR bundled because all changes were "same file, same
+  theme" — the user explicitly authorized the one-concern-per-PR
+  override for this case (consistent with the same override on PR
+  [#44]).
+  1. **`agent_guidelines.framework` reordered** for top-down
+     readability: orientation (`about`) → boundaries
+     (`failure_modes`) → research methodology (`source_discovery`,
+     `second_opinion_review`, `synthesis_matrix`) → document
+     mechanics (`document_navigation`, `content_format`,
+     `cross_links`, `widget_library`, `versioning`,
+     `update_targets`) → output signals (`turn_markers`,
+     `html_generation`). `standard_session` children reordered so
+     `pre_update_confirmation` sits adjacent to Turn 2 (the turn
+     that calls it). **Steps within `turn_1_research` and
+     `turn_2_review_and_write` arrays are unchanged** — those are
+     the procedure, not subject to reorder.
+  2. **Single source of truth for the verbatim brief template.**
+     The ~1 KB template that was inlined in
+     `turn_1_research[3]` now lives only in
+     `framework.second_opinion_review.brief_template` as a
+     `{instruction, template}` dict. Turn 1 references it by name.
+     Citation format aligned to `Title, Author, Year, Venue,
+     DOI/URL` everywhere (the prior drift between Turn 1 and
+     `brief_template` was the bug commit `8f1d335` half-fixed).
+  3. **Three long passages tightened** without losing essence:
+     `versioning.tool_version_compatibility`,
+     `html_generation.agent_action`,
+     `brief_template.instruction`. `failure_modes` "no go-ahead"
+     wording now references `pre_update_confirmation` so it
+     doesn't contradict the implicit-approval test added in
+     [#44].
+  4. **`research-buddy upgrade` reorders existing files at four
+     levels** — doc top-level (`agent_guidelines, meta, tabs,
+     changelog`), `agent_guidelines` children, `meta` keys,
+     `project_specific` keys. Custom/extra keys land at the end
+     of their level. Required because `dict ==` ignores key order
+     — added `docs_equivalent()` helper and switched
+     `cmd_upgrade`'s idempotency check to it, so reorder-only
+     changes trigger a write instead of being silently skipped.
+- **11 new tests** (127 pass total): 9 in `TestUpgradeReorder`
+  for the new reorder behavior, 2 in `TestStarterDocIntegrity`
+  asserting the citation format is consistent across both Turn 1
+  and `brief_template`, and that Turn 1 references
+  `brief_template` instead of inlining a placeholder marker (so
+  the same drift can't happen again).
+- **Smoke-tested upgrade dry-run** against two real downstream
+  docs: `ai_trading_system_v4.2.json` (would reorder
+  `meta` + `agent_guidelines.project_specific`) and
+  `~/Descargas/alzheimer_companion_v1_10.json` (had
+  `agent_guidelines` at position 4 — reorder would fix
+  top-level + meta). Neither file was modified — dry-run only.
+- **Version 1.2.2 → 1.3.0** (MINOR per
+  `framework.versioning.rule`; content change in starter).
+  `make version-sync` + `make regen-example` ran clean — the
+  rebuilt `starter-example/starter.html` only changed in the
+  version-footer string (agent_guidelines isn't user-visible in
+  the rendered HTML).
+- **Published 1.3.0 to PyPI** via `make publish`. Live at
+  https://pypi.org/project/research-buddy/1.3.0/. Tag `v1.3.0`
+  pushed.
+- **Zero open PRs** at session end. `main` CI green.
+
+### Next steps
+
+1. **Roadmap step #6 — raise coverage**. `main.py` 64% → ≥85%,
+   `validator.py` 63% → ≥85%. Target the untested branches:
+   `--watch`, `--pdf`, `--all`, batch mode, validator error paths,
+   version-compat tiers.
+2. **Roadmap step #7 — mutation-testing baseline**. Install
+   `mutmut`, configure against `src/research_buddy/`, capture
+   baseline survivor count via the `mutmut-report` skill.
+3. **Roadmap step #8 — coverage threshold in CI**. Add
+   `--cov-fail-under=85` to pytest and wire `pytest-cov` into the
+   CI test job. Optional: codecov upload + README badge.
+4. After the coverage trio, steps #9 (split `main.py`) and #10
+   (split `build.py` via a `renderers/` package).
+5. **Downstream cleanup**: any project that has
+   `agent_guidelines` mid-file or in legacy key order can now run
+   `research-buddy upgrade <path>/*.json --apply` to pick up the
+   1.3.0 reorganization. The 1.2.2 → 1.3.0 bump is MINOR, so
+   existing docs WILL emit an info note on build (tool newer than
+   doc) until they re-run upgrade.
+6. Ongoing: keep an eye on new Dependabot PRs (majors
+   individually, python-minor-patch group as one, CI must stay
+   green on each).
+
+### Blockers
+
+- None.
+
+[#48]: https://github.com/nuncaeslupus/research-buddy/pull/48
+
+---
+
 ## Session 2026-04-19 (session 6)
 
 ### What was done
