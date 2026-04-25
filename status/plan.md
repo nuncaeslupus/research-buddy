@@ -48,20 +48,16 @@ both protect the refactors.
       (argparse wiring) + `commands/{build,init,validate}.py`. Keep
       `main.py` as a thin shim re-exporting `main` for the console
       script.
-- [ ] **10. Split `build.py` (796 lines).** Create a `renderers/`
-      package with one module per block type and a dispatch registry
-      (`RENDERERS: dict[str, Callable[[Block, BuildState], str]]`).
-      `build.py` keeps only `build_html`, helpers, and constants.
+- [x] **10. Split `build.py` (796 lines).** Folded into the Jinja2
+      migration listed in "Future improvements" — the renderer
+      split would have been torn out a step later. Each `r_*`
+      block renderer is now a 1–4 line wrapper around a Jinja
+      macro in `src/research_buddy/templates/`; the f-string
+      scaffold at the bottom of `build_html()` is now
+      `base.html.j2`.
+      *Shipped via the Jinja migration.*
 
 ## Future improvements (queued, not in the current batch)
-
-- **Jinja2 templates.** Replace the hand-rolled HTML string assembly
-  in `build.py` (and the `r_*` renderers) with Jinja2 templates
-  living in `templates/`. Benefits: fewer HTML-escaping bugs,
-  designer-friendly, easier to diff. Cost: new runtime dep, template
-  discovery via `importlib.resources`, and a meaningful rewrite of
-  every renderer. Schedule after #10 — the renderer split is a
-  prerequisite.
 
 - **Mobile-friendly tab bar.** Symptom: when a document has many
   tabs, the top menu overflows off-screen on mobile with no way to

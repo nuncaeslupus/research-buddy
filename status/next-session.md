@@ -1,5 +1,107 @@
 # Next session
 
+## Session 2026-04-26 (session 9)
+
+### What was done
+
+- **Shipped Jinja2 migration of `build.py`** (PR pending at
+  session end on branch `refactor/jinja-templates`; bumps
+  1.3.4 → 1.4.0). Folded roadmap step #10 ("split build.py via
+  a renderers package") into the Jinja move — there was no
+  value in shipping a renderer split that would be torn out a
+  step later. New `templates/` package (`base.html.j2`,
+  `blocks.html.j2`, `section.html.j2`) holds all markup;
+  `build.py` is now 1–4 line wrappers + the heuristics
+  (`_table_col_widths`, `_nowrap_cols`, Python language
+  auto-detect, `_resolve_lang_code`).
+- **Migration order — 7 commits, byte-identity gate at every
+  step.** Each commit ended with `make regen-example` producing
+  a `starter-example/starter.html` that `diff`-ed clean against
+  a baseline captured on `main` before the branch was cut.
+  127 tests + lint stayed green at every step.
+  1. **Scaffolding:** added `jinja2>=3.1` to dependencies,
+     registered `templates/` as package data, added
+     `_get_env()` returning a cached
+     `Environment(autoescape=False, trim_blocks=True,
+     lstrip_blocks=True)`. `autoescape=False` matches today's
+     behaviour (`r_svg` embeds caller HTML verbatim, `md()`
+     returns raw HTML). Trust assumption documented near the
+     env factory.
+  2. **8 simplest renderers** (`p`, `h3`, `h4`, `heading`,
+     `paragraph`, `hr`, `ul`, `ol`) into `blocks.html.j2`.
+  3. **Banners + callout + verdict** (`callout`, `verdict`,
+     `usage_banner`, `agnostic_banner`, `cc_banner`).
+  4. **Container renderers** (`phase_cards`, `card_grid`,
+     `references`, `svg`).
+  5. **`code` and `table`** — most complex; conditional
+     `data-lang`/`language-*` class on code, conditional
+     `colgroup` + `t-fixed` class on table.
+  6. **`section.html.j2`** with `title_page_open`,
+     `section_open`, `section_close` macros. Recursion +
+     `nav_list` mutation stayed in Python; macros are pure
+     templates for the section box.
+  7. **`base.html.j2`** replaced the bottom f-string of
+     `build_html()`. The inline FOUC `<script>` (which had
+     `{{ }}` brace escapes in the f-string for JS literal
+     braces) lives inside `{% raw %}{% endraw %}` so Jinja
+     leaves the JS alone. `keep_trailing_newline=False`
+     (default) so the file ends at `</html>` with no
+     trailing newline.
+- **Key whitespace pattern:** every block macro is wrapped in
+  `{%- macro ... -%}` (strips whitespace at start of body) and
+  `{% endmacro -%}` (preserves trailing newline of body, strips
+  whitespace AFTER the endmacro). The combination emits exactly
+  the bytes of the original f-string return value.
+- **Public surface preserved.** `tests/test_build.py` imports
+  `BuildState`, `find_latest_json`, `md`, `md_block`,
+  `r_callout`, `r_code`, `r_h3`, `r_heading`, `r_p`,
+  `r_paragraph`, `r_table`, `render_blocks`, `render_section`,
+  `slugify` — all still importable, all tests still pass
+  unchanged. `validator.py:13` still imports `slugify`,
+  `main.py:18` still imports `build_html` and
+  `find_latest_json`.
+
+### Next steps
+
+1. **Push branch + open PR; merge after green CI.** PR title:
+   "refactor(build): replace hand-rolled HTML assembly with
+   Jinja2 templates". Body: link to plan
+   `~/.claude/plans/playful-tinkering-forest.md` for the design,
+   highlight byte-identity guarantee.
+2. **After merge: `make publish` to PyPI.** This is a MINOR
+   bump (new runtime dependency `jinja2>=3.1` + `markupsafe`).
+   Existing downstream docs at v1.3.x will emit an info note on
+   build (tool newer than doc). Optional: tag `v1.4.0`, push.
+3. **[#48] follow-up PR** (still queued from session 8): drop
+   "verbatim" from the two `starter.json` instructions where it
+   conflicts with the "Adapt to each project" requirement;
+   switch `upgrade.py:_reorder_dict` callers to derive the
+   canonical key order from `list(new_ag.keys())` and
+   `list(starter.keys())` so the upgrade logic auto-tracks
+   future starter changes.
+4. **Roadmap step #6 — raise coverage** (carried since session
+   5). `main.py` 64 % → ≥85 %, `validator.py` 63 % → ≥85 %.
+   Target the untested branches: `--watch`, `--pdf`, `--all`,
+   batch mode, validator error paths, version-compat tiers.
+5. **Roadmap step #7 — mutation-testing baseline** with
+   `mutmut`; use the `mutmut-report` skill to triage survivors.
+6. **Roadmap step #8 — coverage threshold in CI** with
+   `--cov-fail-under=85`.
+7. **Roadmap step #9 — split `main.py`** into `cli.py` +
+   `commands/{build,init,validate}.py`. Step #10 is now done
+   (folded into the Jinja migration).
+8. **Theme-aware conditionals are now cheap.** Adding `<style>`
+   blocks gated on user prefs, print-specific output, or new
+   block types only needs a macro edit, not f-string surgery.
+   Worth keeping in mind for the queued "real PDF generator"
+   future improvement.
+
+### Blockers
+
+- None. Branch ready to push.
+
+---
+
 ## Session 2026-04-25 (session 8)
 
 ### What was done
