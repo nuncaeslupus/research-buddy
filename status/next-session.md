@@ -1,5 +1,84 @@
 # Next session
 
+## Session 2026-04-26 (session 10)
+
+### What was done
+
+- **Executed the bot-review triage on PR [#53]** per session 9's
+  provisional call. One follow-up commit `c45061a` (folded into
+  squash-merge `b644725` on `main`) plus 5 inline replies on the
+  PR threads. Merged + 1.4.0 published to PyPI in parallel; the
+  `v1.4.0` tag was created on `b644725` at the end of the
+  session.
+- **`c45061a` — table macro refactor.** Pushed the remaining
+  hand-rolled table assembly into the Jinja macro. `r_table` is
+  now 8 lines: the two heuristics (`_nowrap_cols`,
+  `_table_col_widths`) feeding one macro call. The macro takes
+  `headers`, `rows`, `nowrap`, `col_widths`, `ncols`, `use_fixed`
+  and does the `<colgroup>` / `<col>` loop, the `t-fixed` class
+  conditional, the `<th>` loop, and the `<td>` cell loop with
+  the `nw` conditional class (via `loop.index0` against
+  `nowrap|length`). `md()` is invoked through the registered
+  Jinja filter on cell/header values. `make regen-example` was
+  byte-identical against the pre-refactor baseline (194,789
+  bytes, zero diff). 127 tests still pass.
+- **Bot replies on [#53]** — posted as inline replies via
+  `gh api … pulls/53/comments -F in_reply_to=…`:
+  - #1 (autoescape, HIGH) and #2 (manual `r_code` escape,
+    MEDIUM): pushed back. Pre-migration code never escaped
+    title/badge fields either, so this PR doesn't change the
+    security posture. Flipping autoescape on would (a) break
+    byte-identity against the 1.3.x output for any document
+    with `<`, `&`, or `'` in title/badge fields and (b) require
+    `| safe` at every `md()` interpolation site plus `r_svg`.
+    The trust model lives in `starter.json.agent_guidelines`
+    (agents instructed not to embed JS in svg blocks).
+    Tightening that — moving from agent-trust to in-template-
+    trust — is its own PR, not part of a no-behaviour-change
+    migration.
+  - #3 (colgroup), #4 (use_fixed boolean), #5 (cell loop): all
+    addressed in `c45061a`; replies point at the commit.
+- **Stale-branch cleanup.** After the squash-merge, GitHub
+  auto-deleted `refactor/jinja-templates` on the remote. A late
+  status push from this session accidentally resurrected it;
+  fixed via `git push origin :refactor/jinja-templates`. No
+  data lost — the merged content is on `main` as `b644725`, and
+  this session's status entry rides in via a separate docs PR.
+- **Lint slip from session 9 not repeated.** Ran
+  `uv run ruff format --check` manually before pushing the
+  table-macro commit. `pre-commit install` still not invoked
+  on this clone.
+
+### Next steps
+
+1. **[#48] follow-up PR** (still queued from session 8): drop
+   "verbatim" from the two `starter.json` instructions where it
+   conflicts with the "Adapt to each project" requirement;
+   switch `upgrade.py:_reorder_dict` callers to derive the
+   canonical key order from `list(new_ag.keys())` and
+   `list(starter.keys())` so the upgrade logic auto-tracks
+   future starter changes.
+2. **Roadmap step #6 — raise coverage.** `main.py` 64 % → ≥85 %,
+   `validator.py` 63 % → ≥85 %. Target the untested branches:
+   `--watch`, `--pdf`, `--all`, batch mode, validator error
+   paths, version-compat tiers.
+3. **Roadmap steps #7 / #8 / #9** — mutation-testing baseline,
+   coverage threshold in CI, splitting `main.py`. Step #10 was
+   folded into the Jinja migration in session 9.
+4. **Optional housekeeping.** Run `uv run pre-commit install`
+   on this clone so `ruff format --check` runs locally on every
+   commit — was the cause of the format slip on the first push
+   in session 9, documented in `CLAUDE.md` but never invoked on
+   this branch.
+
+### Blockers
+
+- None. v1.4.0 shipped (PyPI + git tag); `main` is clean.
+
+[#53]: https://github.com/nuncaeslupus/research-buddy/pull/53
+
+---
+
 ## Session 2026-04-26 (session 9)
 
 ### What was done
