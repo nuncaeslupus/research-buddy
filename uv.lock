@@ -1340,6 +1340,7 @@ dependencies = [
     { name = "argcomplete" },
     { name = "jinja2" },
     { name = "jsonschema" },
+    { name = "pyyaml" },
     { name = "watchdog" },
 ]
 
@@ -1370,6 +1371,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "types-jsonschema", marker = "extra == 'dev'", specifier = ">=4.0.0" },
