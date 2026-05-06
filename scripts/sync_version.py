@@ -38,6 +38,18 @@ def update_starter(version: str) -> None:
     print(f"Updated {path}")
 
 
+def update_starter_md(version: str) -> None:
+    path = Path("src/research_buddy/starter.md")
+    content = path.read_text(encoding="utf-8")
+    pattern = r'^research_buddy_version:\s*"[^"]+"'
+    replacement = f'research_buddy_version: "{version}"'
+    content, count = re.subn(pattern, replacement, content, flags=re.MULTILINE)
+    if count == 0:
+        raise ValueError(f"Could not find research_buddy_version in {path}")
+    path.write_text(content, encoding="utf-8")
+    print(f"Updated {path}")
+
+
 def update_readme(version: str) -> None:
     path = Path("README.md")
     content = path.read_text(encoding="utf-8")
@@ -54,6 +66,7 @@ def main() -> None:
         print(f"Syncing version: {version}")
         update_init(version)
         update_starter(version)
+        update_starter_md(version)
         update_readme(version)
         print("Done!")
     except Exception as e:

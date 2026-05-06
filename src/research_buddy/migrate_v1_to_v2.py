@@ -38,6 +38,8 @@ from typing import Any
 
 import yaml
 
+from research_buddy import __version__
+
 Doc = dict[str, Any]
 Block = dict[str, Any]
 
@@ -66,7 +68,7 @@ def build_frontmatter(doc: Doc) -> str:
 
     fm: Doc = {
         "format_version": 2,
-        "research_buddy_version": "2.0.0",
+        "research_buddy_version": __version__,
         "version": version_str,
         "date": meta.get("date"),
         "file_name": file_name or None,

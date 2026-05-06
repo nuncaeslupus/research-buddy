@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail with a non-zero exit code if the version strings in
 src/research_buddy/__init__.py, src/research_buddy/starter.json,
-and README.md have drifted from pyproject.toml.
+src/research_buddy/starter.md, and README.md have drifted from pyproject.toml.
 
 Wired into CI as `make check-version-sync`. Unlike `sync_version.py`, this
 script makes no changes — it just compares values.
@@ -44,6 +44,14 @@ def _starter_version() -> str:
     return str(ver)
 
 
+def _starter_md_version() -> str:
+    content = Path("src/research_buddy/starter.md").read_text(encoding="utf-8")
+    m = re.search(r'^research_buddy_version:\s*"([^"]+)"', content, re.MULTILINE)
+    if not m:
+        raise SystemExit("starter.md is missing research_buddy_version in YAML frontmatter")
+    return m.group(1)
+
+
 def _readme_version() -> str:
     content = Path("README.md").read_text(encoding="utf-8")
     # \S+ covers pre-release/build suffixes (e.g. "1.2.0-rc1", "1.2.0+build.5").
@@ -58,6 +66,7 @@ def main() -> None:
     checks = {
         "src/research_buddy/__init__.py (__version__)": _init_version(),
         "src/research_buddy/starter.json (meta.research_buddy_version)": _starter_version(),
+        "src/research_buddy/starter.md (research_buddy_version)": _starter_md_version(),
         "README.md (# Research Buddy v…)": _readme_version(),
     }
     drift = {k: v for k, v in checks.items() if v != canonical}

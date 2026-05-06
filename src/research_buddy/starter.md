@@ -1,6 +1,6 @@
 ---
 format_version: 2
-research_buddy_version: "2.0.0"
+research_buddy_version: "1.4.0"
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
 file_name: null          # base name for outputs, e.g. "my-research"
