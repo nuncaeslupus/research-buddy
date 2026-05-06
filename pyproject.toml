@@ -59,7 +59,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-research_buddy = ["css/*", "js/*", "lib/*", "images/*", "templates/*", "*.json"]
+research_buddy = ["css/*", "js/*", "lib/*", "images/*", "templates/*", "*.json", "*.md"]
 
 [tool.ruff]
 line-length = 100
