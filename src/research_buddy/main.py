@@ -320,10 +320,10 @@ def cmd_validate(args: argparse.Namespace) -> int:
                 if infos:
                     summary_parts.append(f"{len(infos)} info")
                 print(f"\n\u26a0  {', '.join(summary_parts)} in {path.name}:")
-                for issue in md_issues:
-                    line_str = f" (line {issue.line})" if issue.line else ""
-                    sev = issue.severity.upper()
-                    print(f"   [{sev}] {issue.code}: {issue.message}{line_str}")
+                for md_issue in md_issues:
+                    line_str = f" (line {md_issue.line})" if md_issue.line else ""
+                    sev = md_issue.severity.upper()
+                    print(f"   [{sev}] {md_issue.code}: {md_issue.message}{line_str}")
                 if errors:
                     exit_code = 1
             continue
@@ -508,7 +508,9 @@ def cmd_init(args: argparse.Namespace) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="research-buddy",
-        description="Generate high-fidelity research documentation from structured JSON or Markdown.",
+        description=(
+            "Generate high-fidelity research documentation from structured JSON or Markdown."
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
