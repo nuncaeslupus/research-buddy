@@ -43,7 +43,9 @@ def update_starter_md(version: str) -> None:
     content = path.read_text(encoding="utf-8")
     pattern = r'^research_buddy_version:\s*"[^"]+"'
     replacement = f'research_buddy_version: "{version}"'
-    content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    content, count = re.subn(pattern, replacement, content, flags=re.MULTILINE)
+    if count == 0:
+        raise ValueError(f"Could not find research_buddy_version in {path}")
     path.write_text(content, encoding="utf-8")
     print(f"Updated {path}")
 
