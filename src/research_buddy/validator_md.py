@@ -77,8 +77,10 @@ class Issue:
     line: int = 0  # 1-indexed; 0 = no line context
 
     def format(self, filename: str = "") -> str:
-        loc = f"{filename}:{self.line}" if self.line and filename else (
-            f"line {self.line}" if self.line else ""
+        loc = (
+            f"{filename}:{self.line}"
+            if self.line and filename
+            else (f"line {self.line}" if self.line else "")
         )
         prefix = f"[{self.severity.upper()}] {self.code}"
         if loc:
@@ -302,7 +304,7 @@ def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
                 Issue(
                     "error",
                     "entry-no-link-target",
-                    f"@{kind}: {eid} has no <a id=\"{expected}\"></a> within 3 lines",
+                    f'@{kind}: {eid} has no <a id="{expected}"></a> within 3 lines',
                     i + 1,
                 )
             )
@@ -311,7 +313,7 @@ def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
                 Issue(
                     "error",
                     "entry-id-mismatch",
-                    f"@{kind}: {eid} expects <a id=\"{expected}\"> but found <a id=\"{seen_id}\">",
+                    f'@{kind}: {eid} expects <a id="{expected}"> but found <a id="{seen_id}">',
                     seen_line,
                 )
             )
@@ -370,9 +372,7 @@ def _check_cross_links(text: str, lines: list[str]) -> list[Issue]:
 
     # Targets used illustratively in framework prose (e.g. #r-chunk-4 in examples).
     # In starter mode these are expected to be unresolved; downgrade to info.
-    illustrative_patterns = re.compile(
-        r"^(r-chunk-\d+|r-xxx-\w+|da-q\d+-\d+|da-xxx|q-\d{3})$"
-    )
+    illustrative_patterns = re.compile(r"^(r-chunk-\d+|r-xxx-\w+|da-q\d+-\d+|da-xxx|q-\d{3})$")
 
     for i, line in enumerate(lines):
         if in_fence[i]:
@@ -430,7 +430,7 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
     # Changelog top-entry version check
     cl_anchor = re.search(r"^<!-- @anchor: changelog -->\s*$", text, re.MULTILINE)
     if cl_anchor:
-        rest = text[cl_anchor.end():]
+        rest = text[cl_anchor.end() :]
         h3_m = re.search(r"^### (.+?)\s*$", rest, re.MULTILINE)
         if h3_m and version:
             heading = h3_m.group(1)
