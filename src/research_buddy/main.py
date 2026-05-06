@@ -1,4 +1,13 @@
-"""CLI entry point — research-docs build|init|validate|upgrade."""
+"""CLI entry point — research-docs build|init|validate|upgrade.
+
+v2 update: `validate` now dispatches on file extension. `.md` files are routed
+to `research_buddy.validator_md.validate_md` (v2 Markdown format); all other
+files use the existing JSON validator. `--prior FILE` enables diff-based
+checks (anchor preservation + append-only invariants) for `.md` files.
+
+The `build`, `init`, and `upgrade` subcommands remain JSON-only until the
+parallel MD scripts ship.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +27,7 @@ import argcomplete
 from research_buddy.build import build_html, find_latest_json
 from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
 from research_buddy.validator import validate
+from research_buddy.validator_md import validate_md
 
 
 def _resolve_source(path: Path) -> tuple[Path, Path] | None:
@@ -131,6 +141,17 @@ def cmd_build(args: argparse.Namespace) -> int:
     """Build HTML from document JSON(s)."""
     paths = [Path(p).resolve() for p in args.paths]
 
+    # Friendly error if a .md file is passed — MD build is not yet implemented.
+    md_paths = [p for p in paths if p.suffix == ".md"]
+    if md_paths:
+        names = ", ".join(p.name for p in md_paths)
+        print(
+            f"Error: `build` does not yet support v2 Markdown files ({names}). "
+            f"MD → HTML build is on the roadmap; for now, the .md source IS the deliverable.",
+            file=sys.stderr,
+        )
+        return 1
+
     if args.watch:
         if len(paths) > 1:
             print("Error: --watch only supports a single path.", file=sys.stderr)
@@ -232,49 +253,82 @@ def cmd_build(args: argparse.Namespace) -> int:
                     )
                     exit_code = 1
         else:
-            print(f"Error: path not found: {path}", file=sys.stderr)
+            print(f"Error: {path} does not exist.", file=sys.stderr)
             exit_code = 1
 
-    # Deduplicate while preserving order
-    seen = set()
-    unique_to_build = []
-    for jp, pr in to_build:
-        if jp not in seen:
-            unique_to_build.append((jp, pr))
-            seen.add(jp)
-
-    if not unique_to_build:
-        return exit_code
-
-    if len(unique_to_build) > 1:
-        print(f"\u26a0  Warning: Building {len(unique_to_build)} files.")
-
-    for json_path, project_root in unique_to_build:
+    # Build them all
+    for json_path, project_root in to_build:
         if args.validate_only:
             print(f"Validating {json_path.name}\u2026")
             with json_path.open(encoding="utf-8") as f:
                 doc = json.load(f)
             issues = validate(doc)
             if issues:
-                print(f"\n\u26a0  {len(issues)} issue(s) found in {json_path.name}:")
+                print(f"\n\u26a0  {len(issues)} issue(s) in {json_path.name}:")
                 for issue in issues:
                     print(f"   {issue}")
                 exit_code = 1
+            else:
+                print(f"\u2714  {json_path.name}: No issues found.")
         else:
-            res_code = perform_build(
+            rc = perform_build(
                 json_path, project_root, args.theme, args.output, args.pdf, args.no_versioning
             )
-            if res_code != 0:
-                exit_code = res_code
+            if rc != 0:
+                exit_code = rc
 
     return exit_code
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    """Validate document(s) without building."""
+    """Validate document(s) without building.
+
+    Dispatches on file extension: .md → v2 Markdown validator; all other paths
+    → v1 JSON validator (existing behavior). The --prior flag enables diff-based
+    checks for .md files; it is silently ignored when validating .json files.
+    """
     exit_code = 0
+    prior_path: Path | None = None
+    if getattr(args, "prior", None):
+        prior_path = Path(args.prior).resolve()
+        if not prior_path.is_file():
+            print(f"Error: --prior {prior_path} not found.", file=sys.stderr)
+            return 2
+
     for p in args.paths:
         path = Path(p).resolve()
+
+        # ── v2 Markdown ─────────────────────────────────────────────────────
+        if path.suffix == ".md":
+            if not path.is_file():
+                print(f"Error: {path} not found.", file=sys.stderr)
+                exit_code = 1
+                continue
+
+            print(f"Validating {path.name}\u2026")
+            md_issues = validate_md(path, prior=prior_path)
+            errors = [i for i in md_issues if i.severity == "error"]
+            warnings = [i for i in md_issues if i.severity == "warning"]
+            infos = [i for i in md_issues if i.severity == "info"]
+
+            if not md_issues:
+                print(f"\u2714  {path.name}: No issues found.")
+            else:
+                summary_parts = [f"{len(errors)} error(s)"]
+                if warnings:
+                    summary_parts.append(f"{len(warnings)} warning(s)")
+                if infos:
+                    summary_parts.append(f"{len(infos)} info")
+                print(f"\n\u26a0  {', '.join(summary_parts)} in {path.name}:")
+                for issue in md_issues:
+                    line_str = f" (line {issue.line})" if issue.line else ""
+                    sev = issue.severity.upper()
+                    print(f"   [{sev}] {issue.code}: {issue.message}{line_str}")
+                if errors:
+                    exit_code = 1
+            continue
+
+        # ── v1 JSON ─────────────────────────────────────────────────────────
         res = _resolve_source(path)
         if not res:
             print(f"Error: no versioned document (*_v*.json) found for {path}", file=sys.stderr)
@@ -318,6 +372,16 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
     exit_code = 0
     for p in args.paths:
         path = Path(p).resolve()
+        # Friendly error if a .md file is passed — MD upgrade not yet implemented.
+        if path.suffix == ".md":
+            print(
+                f"Error: `upgrade` does not yet support v2 Markdown files ({path.name}). "
+                f"v2 framework updates ship by replacing the Framework block in starter.md.",
+                file=sys.stderr,
+            )
+            exit_code = 1
+            continue
+
         res = _resolve_source(path)
         if not res:
             print(
@@ -444,7 +508,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="research-buddy",
-        description="Generate high-fidelity research documentation from structured JSON.",
+        description="Generate high-fidelity research documentation from structured JSON or Markdown.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -470,8 +534,22 @@ def main() -> None:
     p_build.add_argument("--pdf", action="store_true", help="Generate PDF export")
 
     # validate
-    p_val = sub.add_parser("validate", help="Validate document without building")
-    p_val.add_argument("paths", nargs="+", help="JSON file(s) or directory(ies) containing source/")
+    p_val = sub.add_parser(
+        "validate",
+        help="Validate document without building (supports .json and .md)",
+    )
+    p_val.add_argument(
+        "paths",
+        nargs="+",
+        help="File(s) or directory(ies) to validate. .md files use the v2 validator; "
+        "everything else uses the v1 JSON validator.",
+    )
+    p_val.add_argument(
+        "--prior",
+        default=None,
+        help="Optional prior version of the same .md file (enables anchor-preservation "
+        "and append-only checks). Ignored for .json files.",
+    )
 
     # init
     p_init = sub.add_parser("init", help="Scaffold a new documentation project")
