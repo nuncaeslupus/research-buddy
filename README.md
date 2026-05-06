@@ -1,8 +1,29 @@
-# Research Buddy v1.4.0
+# Research Buddy v1.5.0
 
 <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
 
 A structured AI research collaborator for any domain.
+
+## Format: v2 Markdown (recommended) and v1 JSON (legacy)
+
+**v2 Markdown is the recommended format for new projects** as of 1.5.
+v1 JSON remains supported for existing projects but is on a deprecation
+path; new features land on v2 first.
+
+- **v2 Markdown** (default for new work): YAML frontmatter + Markdown
+  body with HTML-comment anchors (`<!-- @anchor: ... -->`,
+  `<!-- @rule: ... -->`, `<!-- @da: ... -->`). Source of truth =
+  `*_v*-source.md` (agent-edited, full framework). The reader-facing
+  artifact is the clean view `*_v*.md` (framework stripped) or the
+  rendered HTML. Each top-level `## H2` becomes a tab.
+- **v1 JSON** (legacy): structured JSON with rich block types
+  (callouts, verdicts, fixed-width tables). Source of truth =
+  `*_v*.json`. Continue using for projects already on v1; migrate to
+  v2 with `research-buddy migrate-v1-to-v2`.
+
+`build` and `validate` dispatch on file extension. `migrate-v1-to-v2`
+and `clean` operate on v2 only. `upgrade` is v1-only — v2 framework
+updates ship by editing `starter.md` and re-deriving downstream files.
 
 ## How it works
 
@@ -136,23 +157,82 @@ research-buddy init my-project/ [--title "Project Name"] [--subtitle "..."]
 
 ### `research-buddy build <path...>`
 
-Build HTML from document JSON(s). Accepts files, directories, or both.
+Build HTML from document JSON(s) or Markdown file(s). Accepts files,
+directories, or both. Dispatches on file extension: `.json` → v1
+pipeline, `.md` → v2 pipeline (same single-file chrome — tab bar,
+sidebar nav, theme toggle, hljs).
 
 ```
 research-buddy build my-project/                    # latest version in source/
-research-buddy build my-research_v1.5.json          # specific file
-research-buddy build a.json b.json                  # batch process IN ORDER
-research-buddy build my-project/ --watch            # rebuild on change
-research-buddy build my-project/ --pdf              # + PDF export (requires weasyprint)
-research-buddy build my-project/ --output master.html # custom output name/path
-research-buddy build my-project/ --validate-only    # check only, no HTML output
+research-buddy build my-research_v1.5.json          # v1 JSON
+research-buddy build my-research_v1.0-source.md     # v2 Markdown
+research-buddy build a.json b.json                  # batch JSON IN ORDER
+research-buddy build my-project/ --watch            # rebuild on change (.json only)
+research-buddy build my-project/ --pdf              # + PDF (v1 only, requires weasyprint)
+research-buddy build my-project/ --output master.html
+research-buddy build my-project/ --validate-only    # v1 only
 ```
+
+Mixing `.json` and `.md` inputs in a single invocation is rejected;
+`--watch` and `--pdf` are not yet supported for `.md` inputs. The MD
+build strips the framework block by default (matches the JSON build's
+"reader-facing" semantics — the framework is for the agent reading the
+source, not for HTML readers).
 
 ### `research-buddy validate <path...>`
 
-Validate JSON schema + semantic rules (reference ordering, required fields, language format, `research_buddy_version` presence).
+Validate JSON or Markdown documents. Dispatches on extension: `.md` →
+v2 mechanical validator (frontmatter, anchor pairing, link resolution,
+ID uniqueness); everything else → v1 JSON validator (schema +
+reference ordering + version compat).
 
-### `research-buddy upgrade <path...>`
+```
+research-buddy validate my-research_v1.0-source.md
+research-buddy validate my-research_v1.1-source.md --prior my-research_v1.0-source.md
+```
+
+The optional `--prior` flag (v2 only) compares against an earlier
+version of the same file and enforces append-only invariants:
+anchors, Discarded Alternatives, References, and Changelog entries
+must never disappear.
+
+### `research-buddy clean <path...>` (v2)
+
+Generate the shareable clean view from a v2 source file: strips the
+framework block (`<!-- @anchor: framework.core -->` …
+`<!-- @end: framework.reference -->`) and regenerates the title block
+from the YAML frontmatter. Output: `{file_name}_v{version}.md`
+alongside the source.
+
+```
+research-buddy clean my-research_v1.0-source.md
+research-buddy clean my-research_v1.0-source.md -o /tmp/out.md
+```
+
+Refuses to run on a starter file (`project.domain` is null in the
+frontmatter) — there's nothing to clean until session zero fills in
+the project specification.
+
+### `research-buddy migrate-v1-to-v2 <path...>` (v2)
+
+One-way migration from a v1 JSON document to a v2 Markdown source
+file. Maps `meta.*` + `agent_guidelines.project_specific.*` to YAML
+frontmatter; replaces the old framework with the v2 framework block
+copied from the bundled `starter.md`; promotes research-tab sections
+to top-level H2s; converts verdict blocks to `@rule` / `@da` blocks
+with stable IDs.
+
+```
+research-buddy migrate-v1-to-v2 my-research_v3.0.json     # writes my-research_v3.0-source.md
+research-buddy migrate-v1-to-v2 old.json -o new-source.md
+research-buddy migrate-v1-to-v2 old.json --force          # overwrite existing output
+```
+
+Refuses to overwrite an existing output unless `--force` is passed.
+After migration, run `research-buddy validate <output>.md` to confirm
+the result.
+
+### `research-buddy upgrade <path...>` (v1 only)
 
 Re-sync a project JSON against the installed `starter.json`: replaces `agent_guidelines.framework` and `agent_guidelines.session_protocol` wholesale, preserves `session_zero.note` so initialized projects do not re-run session zero, leaves `agent_guidelines.project_specific` untouched, and bumps `meta.research_buddy_version`. Appends a dated migration entry to `meta.format_note` only when something actually changed.
 
@@ -251,11 +331,19 @@ make update-skills  # Pull latest shared Claude skills
 
 ## Examples
 
-The `starter-example/` directory contains a pre-built HTML output from the starter
-template. Regenerate it with:
+The `starter-example/` directory contains pre-built HTML outputs from
+the bundled starters:
+
+- `starter.html` — built from `starter.json` (v1 JSON pipeline).
+- `starter-md.html` — built from `starter.md` (v2 Markdown pipeline,
+  framework stripped to match the v1 reader view).
+
+Regenerate with:
 
 ```bash
-make regen-example
+make regen-example      # v1 only
+make regen-md-example   # v2 only
+make regen-examples     # both
 ```
 
 ## License

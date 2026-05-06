@@ -25,7 +25,9 @@ from typing import Any
 import argcomplete
 
 from research_buddy.build import build_html, find_latest_json
+from research_buddy.build_md import build_md_html
 from research_buddy.clean_md import clean_md
+from research_buddy.clean_md import parse_frontmatter as parse_md_frontmatter
 from research_buddy.migrate_v1_to_v2 import (
     derive_output_path as derive_md_output_path,
 )
@@ -144,20 +146,97 @@ def perform_build(
     return 1 if issues else 0
 
 
+def perform_build_md(
+    md_path: Path,
+    project_root: Path,
+    theme: str | None = None,
+    output: str | None = None,
+    no_versioning: bool = False,
+) -> int:
+    """Build HTML from a v2 Markdown source file."""
+    print(f"Reading {md_path.name}…")
+    text = md_path.read_text(encoding="utf-8")
+
+    md_issues = validate_md(md_path)
+    errors = [i for i in md_issues if i.severity == "error"]
+    if md_issues:
+        sev_counts = (
+            f"{len(errors)} error(s), "
+            f"{sum(1 for i in md_issues if i.severity == 'warning')} warning(s)"
+        )
+        print(f"\n⚠  {sev_counts} in {md_path.name}:")
+        for issue in md_issues:
+            line_str = f" (line {issue.line})" if issue.line else ""
+            print(f"   [{issue.severity.upper()}] {issue.code}: {issue.message}{line_str}")
+        print()
+
+    fm, _ = parse_md_frontmatter(text)
+    fm = fm or {}
+
+    theme_css = None
+    theme_path = Path(theme) if theme else project_root / "theme.css"
+    if theme_path.exists():
+        theme_css = theme_path.read_text(encoding="utf-8")
+        print(f"Using theme: {theme_path.name}")
+
+    print("Building HTML…")
+    html = build_md_html(text, theme_css=theme_css)
+
+    base_name = fm.get("file_name") or re.sub(r"_v\d+(?:[._]\d+)*(?:-source)?$", "", md_path.stem)
+    stable_path = Path(output).resolve() if output else project_root / f"{base_name}.html"
+
+    if not no_versioning:
+        versions_dir = project_root / "versions"
+        versions_dir.mkdir(exist_ok=True)
+        version = fm.get("version", "1.0")
+        versioned_name = f"{base_name}_v{version}.html"
+        versioned_path = versions_dir / versioned_name
+        versioned_path.write_text(html, encoding="utf-8")
+        stable_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(versioned_path, stable_path)
+        print(f"Written → versions/{versioned_name}")
+    else:
+        stable_path.parent.mkdir(parents=True, exist_ok=True)
+        stable_path.write_text(html, encoding="utf-8")
+
+    size_kb = len(html.encode()) / 1024
+    print(f"Written → {stable_path} ({size_kb:.0f} KB)")
+    return 1 if errors else 0
+
+
 def cmd_build(args: argparse.Namespace) -> int:
-    """Build HTML from document JSON(s)."""
+    """Build HTML from document JSON or Markdown file(s)."""
     paths = [Path(p).resolve() for p in args.paths]
 
-    # Friendly error if a .md file is passed — MD build is not yet implemented.
+    # Single-file MD dispatch — short-circuits the JSON resolver. MD files
+    # don't have project source/ + versions/ scaffolding requirements.
     md_paths = [p for p in paths if p.suffix == ".md"]
-    if md_paths:
-        names = ", ".join(p.name for p in md_paths)
+    if md_paths and any(p.suffix != ".md" for p in paths):
         print(
-            f"Error: `build` does not yet support v2 Markdown files ({names}). "
-            f"MD → HTML build is on the roadmap; for now, the .md source IS the deliverable.",
+            "Error: cannot mix .json and .md inputs in a single `build` invocation.",
             file=sys.stderr,
         )
         return 1
+    if md_paths:
+        if args.watch:
+            print("Error: --watch is not supported for .md inputs.", file=sys.stderr)
+            return 1
+        if args.pdf:
+            print("Error: --pdf is not yet supported for .md inputs.", file=sys.stderr)
+            return 1
+        exit_code = 0
+        for md_path in md_paths:
+            if not md_path.is_file():
+                print(f"Error: {md_path} not found.", file=sys.stderr)
+                exit_code = 1
+                continue
+            project_root = md_path.parent
+            rc = perform_build_md(
+                md_path, project_root, args.theme, args.output, args.no_versioning
+            )
+            if rc != 0:
+                exit_code = rc
+        return exit_code
 
     if args.watch:
         if len(paths) > 1:

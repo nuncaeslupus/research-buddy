@@ -1,4 +1,4 @@
-.PHONY: lint format test test-all clean sync regen-example build publish version-sync check-version-sync update-skills
+.PHONY: lint format test test-all clean sync regen-example regen-md-example regen-examples build publish version-sync check-version-sync update-skills
 
 sync:
 	uv sync --extra dev
@@ -17,6 +17,11 @@ check-version-sync:
 
 regen-example:
 	uv run research-buddy build src/research_buddy/starter.json --output starter-example/starter.html --no-versioning
+
+regen-md-example:
+	uv run research-buddy build src/research_buddy/starter.md --output starter-example/starter-md.html --no-versioning
+
+regen-examples: regen-example regen-md-example
 
 lint: check-version-sync
 	uv run ruff check . && uv run ruff format --check . && uv run mypy . --explicit-package-bases

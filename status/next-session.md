@@ -1,5 +1,115 @@
 # Next session
 
+## Session 2026-05-07 (session 11)
+
+### What was done
+
+- **Shipped a six-stage v2-Markdown maturation plan** in five PRs
+  off `main`. Plan committed as
+  `.claude/plans/greedy-imagining-raven.md`. PRs #56–#61 had landed
+  the v2 surface (starter.md, validator_md, clean_md,
+  migrate_v1_to_v2) without tests, packaging, version-sync coverage,
+  or MD→HTML build. This session closed those gaps and bumped to
+  **1.5.0**.
+- **PR [#64] — wheel ships `*.md`**. One-line addition to
+  `[tool.setuptools.package-data]` so `starter.md` is bundled.
+  Without it, `migrate-v1-to-v2` would fail at runtime via
+  `importlib.resources` after `pip install`.
+- **PR [#65] — version-sync covers starter.md.** Five sources now
+  tracked instead of four. `scripts/sync_version.py` and
+  `scripts/check_version_sync.py` extended; `migrate_v1_to_v2.py`
+  sources `research_buddy_version` from the package `__version__`
+  rather than hardcoding (no more drift). New
+  `tests/test_version_sync.py` (5 tests). Decision after dialogue
+  with user: MD tracks the wheel version (single source of truth) —
+  `format_version: 2` is the orthogonal format-generation marker.
+- **PR [#66] — full test coverage for v2 surface** (132 → 205
+  tests). 73 new tests across `test_validator_md.py` (27),
+  `test_clean_md.py` (20), `test_migrate_v1_to_v2.py` (26).
+  Pattern matches `test_upgrade.py`. CI initially failed on
+  `ruff format --check` (Makefile's `make lint` didn't include it);
+  fix landed in the same PR — `make lint` now mirrors CI exactly.
+  Gemini caught a brittle `"*" not in out.split(...)[1]...` assertion
+  in `test_clean_md.py`; replaced with a structural check.
+- **PR [#67] — `build_md.py` + main dispatch + v2 example**
+  (Stages 4 + 6 combined). Adds `build_md_html(text, *,
+  theme_css=None, keep_framework=False)` reusing the v1 chrome via
+  `base.html.j2`. Each top-level `## H2` becomes a tab; `### H3` /
+  `#### H4` feed the sidebar nav. Renders GFM tables, preserves
+  raw HTML and `<!-- @anchor: ... -->` comments. New runtime deps:
+  `markdown-it-py>=3.0`, `mdit-py-plugins>=0.4`. New
+  `tests/test_build_md.py` (27 tests). `cmd_build` now dispatches
+  on `.md`. `starter-example/starter-md.html` (195 KB) lands
+  alongside the unchanged `starter.html` (190 KB after the 1.5.0
+  bump). `make regen-md-example` and `make regen-examples` added.
+  After user feedback, default behavior strips the framework block
+  (matches `starter.html` semantics — agent-facing source ≠
+  reader-facing artifact); `keep_framework=True` for the
+  agent-source view. Starter-mode FILL placeholders carry over from
+  v1 so the unconfigured starter renders comparably.
+- **Version bump 1.4.0 → 1.5.0.** Decision made jointly: 1.5 is a
+  MINOR (new build_md feature, new runtime deps, no breaking
+  change to v1). MD set as the recommended format for new
+  projects. JSON remains supported but marked deprecated in README
+  + CLAUDE.md.
+- **Docs (Stage 5).** README gains a "v2 Markdown (recommended)
+  vs v1 JSON (legacy)" section; commands table extended with
+  `clean`, `migrate-v1-to-v2`, and the v2 dispatch on `build` /
+  `validate --prior`; examples section covers both starters.
+  CLAUDE.md updated: layout includes the four new modules; commands
+  table mentions `regen-md-example` / `regen-examples`; new
+  "Non-obvious things" entries call out the build dispatch, the v2
+  anchor system, the `format_version` vs `research_buddy_version`
+  distinction, and the wheel package-data gotcha.
+
+### Next steps
+
+1. **Merge PR [#67]** (build_md + Stage 6 example) and the docs +
+   1.5.0 bump PR (this session's last commit). After both land,
+   `make publish` to PyPI as 1.5.0. Tag `v1.5.0`, push.
+2. **`init` still scaffolds v1 JSON.** With v2 now the recommended
+   format, `research-buddy init` should produce a v2 MD source by
+   default (and probably gain a `--v1` flag for legacy JSON
+   projects). Out of scope for this session; one focused PR.
+3. **v2 build fidelity vs v1 starter.html.** `starter-md.html`
+   (195 KB) is close to `starter.html` (190 KB) but the bodies
+   look different: v1 renders rich blocks (callouts, fixed-width
+   tables, numbered subheadings via `<span class="num">`); v2
+   renders plain markdown — no callout primitive in the source
+   format. Closing that gap means either (a) extending the v2
+   source format with callout-equivalent fenced syntax (e.g.
+   GFM-style `> [!NOTE]`) and teaching `build_md` to render it, or
+   (b) accepting that v2 is intentionally simpler. Decision and
+   roadmap entry pending.
+4. **`upgrade` for v2.** Currently v1-only. v2 framework refresh
+   ships by re-running `migrate-v1-to-v2` or by manually replacing
+   the framework block; a dedicated `upgrade-md` would automate
+   re-injecting the latest framework block from `starter.md` into
+   an existing v2 source. Lower priority — manual replace works
+   for now.
+5. **Carried from earlier sessions:**
+   - **[#48] follow-up PR** — drop "verbatim" from two
+     `starter.json` instructions; switch
+     `upgrade.py:_reorder_dict` callers to derive canonical order
+     from `list(starter.keys())`.
+   - **Roadmap step #6 — raise coverage.** `main.py` was 64 % at
+     session 10; this session added meaningful coverage to the v2
+     side but didn't measure overall. Re-run `pytest --cov` and
+     plan the targeted-branches PR.
+   - **Roadmap steps #7 / #8 / #9 / #10** — mutation testing,
+     coverage gate, splitting `main.py`. Deferred again.
+
+### Blockers
+
+- None. Both PRs open and CI green at session end.
+
+[#64]: https://github.com/nuncaeslupus/research-buddy/pull/64
+[#65]: https://github.com/nuncaeslupus/research-buddy/pull/65
+[#66]: https://github.com/nuncaeslupus/research-buddy/pull/66
+[#67]: https://github.com/nuncaeslupus/research-buddy/pull/67
+
+---
+
 ## Session 2026-04-26 (session 10)
 
 ### What was done
