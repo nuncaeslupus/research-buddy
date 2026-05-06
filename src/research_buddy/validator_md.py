@@ -38,7 +38,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -77,8 +77,10 @@ class Issue:
     line: int = 0  # 1-indexed; 0 = no line context
 
     def format(self, filename: str = "") -> str:
-        loc = f"{filename}:{self.line}" if self.line and filename else (
-            f"line {self.line}" if self.line else ""
+        loc = (
+            f"{filename}:{self.line}"
+            if self.line and filename
+            else (f"line {self.line}" if self.line else "")
         )
         prefix = f"[{self.severity.upper()}] {self.code}"
         if loc:
@@ -191,7 +193,8 @@ def _check_frontmatter(text: str, path: Path) -> list[Issue]:
             Issue(
                 "error",
                 "wrong-format-version",
-                f"format_version is {fmt_ver!r}, expected 2 (this validator handles v2 Markdown only)",
+                f"format_version is {fmt_ver!r}, expected 2 "
+                "(this validator handles v2 Markdown only)",
                 end_line,
             )
         )
@@ -301,7 +304,7 @@ def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
                 Issue(
                     "error",
                     "entry-no-link-target",
-                    f"@{kind}: {eid} has no <a id=\"{expected}\"></a> within 3 lines",
+                    f'@{kind}: {eid} has no <a id="{expected}"></a> within 3 lines',
                     i + 1,
                 )
             )
@@ -310,7 +313,7 @@ def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
                 Issue(
                     "error",
                     "entry-id-mismatch",
-                    f"@{kind}: {eid} expects <a id=\"{expected}\"> but found <a id=\"{seen_id}\">",
+                    f'@{kind}: {eid} expects <a id="{expected}"> but found <a id="{seen_id}">',
                     seen_line,
                 )
             )
@@ -369,9 +372,7 @@ def _check_cross_links(text: str, lines: list[str]) -> list[Issue]:
 
     # Targets used illustratively in framework prose (e.g. #r-chunk-4 in examples).
     # In starter mode these are expected to be unresolved; downgrade to info.
-    illustrative_patterns = re.compile(
-        r"^(r-chunk-\d+|r-xxx-\w+|da-q\d+-\d+|da-xxx|q-\d{3})$"
-    )
+    illustrative_patterns = re.compile(r"^(r-chunk-\d+|r-xxx-\w+|da-q\d+-\d+|da-xxx|q-\d{3})$")
 
     for i, line in enumerate(lines):
         if in_fence[i]:
@@ -413,9 +414,15 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
     version = fm.get("version")
     file_name = fm.get("file_name")
 
+    # Detect whether this is a source file (has framework block) or a clean view
+    has_framework = "<!-- @anchor: framework.core -->" in text
+
     # Filename check
     if version and file_name:
-        expected = f"{file_name}_v{version}-source.md"
+        if has_framework:
+            expected = f"{file_name}_v{version}-source.md"
+        else:
+            expected = f"{file_name}_v{version}.md"
         if path.name != expected:
             issues.append(
                 Issue(
@@ -429,7 +436,7 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
     # Changelog top-entry version check
     cl_anchor = re.search(r"^<!-- @anchor: changelog -->\s*$", text, re.MULTILINE)
     if cl_anchor:
-        rest = text[cl_anchor.end():]
+        rest = text[cl_anchor.end() :]
         h3_m = re.search(r"^### (.+?)\s*$", rest, re.MULTILINE)
         if h3_m and version:
             heading = h3_m.group(1)
@@ -452,8 +459,9 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
 
 def _extract_section(text: str, anchor_id: str) -> str | None:
     """Return the text between <!-- @anchor: anchor_id --> and <!-- @end: anchor_id -->."""
+    escaped = re.escape(anchor_id)
     pattern = re.compile(
-        rf"<!-- @anchor:\s*{re.escape(anchor_id)}\s*-->(.*?)<!-- @end:\s*{re.escape(anchor_id)}\s*-->",
+        rf"<!-- @anchor:\s*{escaped}\s*-->(.*?)<!-- @end:\s*{escaped}\s*-->",
         re.DOTALL,
     )
     m = pattern.search(text)
@@ -525,7 +533,8 @@ def _check_id_uniqueness(text: str, lines: list[str]) -> list[Issue]:
             Issue(
                 "error",
                 "id-in-queue-and-tracker",
-                f"{qid} appears in both the queue and the tracker — done items must leave the queue",
+                f"{qid} appears in both the queue and the tracker — "
+                "done items must leave the queue",
             )
         )
 
@@ -592,7 +601,8 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
             Issue(
                 "error",
                 "da-removed",
-                f"DA {name!r} from prior version is missing — Discarded Alternatives are append-only",
+                f"DA {name!r} from prior version is missing — "
+                "Discarded Alternatives are append-only",
             )
         )
 
@@ -614,7 +624,8 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
                     Issue(
                         "error",
                         f"{section_id}-entry-removed",
-                        f"{section_label} entry '{heading}' from prior version is missing — append-only",
+                        f"{section_label} entry '{heading}' from prior version is missing "
+                        "— append-only",
                     )
                 )
 
@@ -712,7 +723,7 @@ def main(argv: list[str] | None = None) -> int:
             if errors:
                 print(f"\u2718  {len(errors)} error(s).")
             else:
-                print(f"\u2714  no errors (warnings/info only).")
+                print("\u2714  no errors (warnings/info only).")
 
     return 1 if errors else 0
 
