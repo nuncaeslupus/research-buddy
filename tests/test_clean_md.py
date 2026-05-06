@@ -130,7 +130,10 @@ class TestTitleRegen:
 
     def test_subtitle_omitted_if_absent(self) -> None:
         out = regenerate_title_block(_TITLE_BLOCK, self._fm(subtitle=None))
-        assert "*" not in out.split("# Demo Project")[1].splitlines()[0:3][0]
+        lines = out.splitlines()
+        title_idx = next(i for i, line in enumerate(lines) if line.startswith("# Demo Project"))
+        # H1, blank, then version stamp — no subtitle line in between.
+        assert lines[title_idx + 2].startswith("**Version:**")
 
     def test_missing_fields_fall_back(self) -> None:
         out = regenerate_title_block(_TITLE_BLOCK, {})

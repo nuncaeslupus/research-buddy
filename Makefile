@@ -19,7 +19,7 @@ regen-example:
 	uv run research-buddy build src/research_buddy/starter.json --output starter-example/starter.html --no-versioning
 
 lint: check-version-sync
-	uv run ruff check . && uv run mypy . --explicit-package-bases
+	uv run ruff check . && uv run ruff format --check . && uv run mypy . --explicit-package-bases
 
 format:
 	uv run ruff check --fix --unsafe-fixes . && uv run ruff format .

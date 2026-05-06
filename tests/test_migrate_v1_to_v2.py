@@ -35,9 +35,7 @@ class TestFrontmatterBuild:
         assert "project" in fm
         assert "ui_strings" in fm
 
-    def test_research_buddy_version_sourced_from_package(
-        self, starter_doc: dict
-    ) -> None:
+    def test_research_buddy_version_sourced_from_package(self, starter_doc: dict) -> None:
         # Even if the source doc had a different rb_version, the migration
         # stamps the current installed version.
         doc = copy.deepcopy(starter_doc)
@@ -170,18 +168,14 @@ class TestSectionMapping:
         assert "## Project Specification" in out
 
     def test_table_block_renders_pipe_table(self) -> None:
-        out = render_block(
-            {"type": "table", "headers": ["A", "B"], "rows": [["1", "2"]]}
-        )
+        out = render_block({"type": "table", "headers": ["A", "B"], "rows": [["1", "2"]]})
         assert "| A | B |" in out
         assert "|---|---|" in out
         assert "| 1 | 2 |" in out
 
 
 class TestEndToEnd:
-    def test_round_trip_validates(
-        self, starter_doc: dict, tmp_path: Path
-    ) -> None:
+    def test_round_trip_validates(self, starter_doc: dict, tmp_path: Path) -> None:
         # Promote starter to project mode so frontmatter null-checks pass.
         doc = copy.deepcopy(starter_doc)
         doc["meta"]["version"] = "1.0"
@@ -200,9 +194,8 @@ class TestEndToEnd:
 
         issues = validate_md(out_path)
         errors = [i for i in issues if i.severity == "error"]
-        assert errors == [], (
-            "migrate output must validate clean (no errors); found: "
-            + "; ".join(f"{i.code}:{i.message}" for i in errors)
+        assert errors == [], "migrate output must validate clean (no errors); found: " + "; ".join(
+            f"{i.code}:{i.message}" for i in errors
         )
 
 
@@ -230,9 +223,7 @@ class TestCli:
         in_path.write_text(json.dumps(doc), encoding="utf-8")
         return in_path
 
-    def test_refuses_to_overwrite_without_force(
-        self, starter_doc: dict, tmp_path: Path
-    ) -> None:
+    def test_refuses_to_overwrite_without_force(self, starter_doc: dict, tmp_path: Path) -> None:
         doc = copy.deepcopy(starter_doc)
         doc["meta"]["file_name"] = "demo"
         doc["meta"]["version"] = "1.0"
@@ -244,9 +235,7 @@ class TestCli:
         assert rc == 2
         assert out_path.read_text(encoding="utf-8") == "existing\n"
 
-    def test_force_overwrites(
-        self, starter_doc: dict, tmp_path: Path
-    ) -> None:
+    def test_force_overwrites(self, starter_doc: dict, tmp_path: Path) -> None:
         doc = copy.deepcopy(starter_doc)
         doc["meta"]["file_name"] = "demo"
         doc["meta"]["version"] = "1.0"

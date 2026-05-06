@@ -61,9 +61,7 @@ class TestFrontmatter:
         issues = validate_md(path)
         assert any(i.code == "wrong-format-version" for i in issues)
         # Should not run other checks (no anchor/cross-link/etc. issues).
-        assert all(
-            i.code in {"wrong-format-version", "frontmatter-parse"} for i in issues
-        )
+        assert all(i.code in {"wrong-format-version", "frontmatter-parse"} for i in issues)
 
     def test_missing_required_field_in_project_mode(self, tmp_path: Path) -> None:
         text = """\
@@ -144,12 +142,7 @@ class TestAnchorPairing:
         assert "end-no-anchor" in _codes(validate_md(path))
 
     def test_anchors_inside_fenced_code_ignored(self, tmp_path: Path) -> None:
-        body = (
-            "```\n"
-            "<!-- @anchor: foo -->\n"
-            "<!-- @end: foo -->\n"
-            "```\n"
-        )
+        body = "```\n<!-- @anchor: foo -->\n<!-- @end: foo -->\n```\n"
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         codes = _codes(validate_md(path))
         assert "anchor-no-end" not in codes
@@ -158,11 +151,7 @@ class TestAnchorPairing:
 
 class TestEntryAnchors:
     def test_rule_with_matching_id_passes(self, tmp_path: Path) -> None:
-        body = (
-            '<!-- @rule: R-FM-1 -->\n'
-            '<a id="r-fm-1"></a>\n\n'
-            "**R-FM-1.** Body.\n"
-        )
+        body = '<!-- @rule: R-FM-1 -->\n<a id="r-fm-1"></a>\n\n**R-FM-1.** Body.\n'
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         codes = _codes(validate_md(path))
         assert "entry-no-link-target" not in codes
@@ -259,9 +248,7 @@ class TestIDUniqueness:
 
 
 class TestPriorMode:
-    def _make_pair(
-        self, tmp_path: Path, prior_body: str, new_body: str
-    ) -> tuple[Path, Path]:
+    def _make_pair(self, tmp_path: Path, prior_body: str, new_body: str) -> tuple[Path, Path]:
         prior = _write(tmp_path / "demo_v1.0.md", _project_doc(prior_body))
         new = _write(tmp_path / "demo_v1.1.md", _project_doc(new_body))
         return new, prior
@@ -278,9 +265,7 @@ class TestPriorMode:
         assert "anchor-removed" in _codes(validate_md(new, prior))
 
     def test_da_removed_errors(self, tmp_path: Path) -> None:
-        prior_body = (
-            '<!-- @da: DA-Q1-1 -->\n<a id="da-q1-1"></a>\n\n**DA-Q1-1.** x\n'
-        )
+        prior_body = '<!-- @da: DA-Q1-1 -->\n<a id="da-q1-1"></a>\n\n**DA-Q1-1.** x\n'
         new_body = "no DAs\n"
         new, prior = self._make_pair(tmp_path, prior_body, new_body)
         assert "da-removed" in _codes(validate_md(new, prior))
