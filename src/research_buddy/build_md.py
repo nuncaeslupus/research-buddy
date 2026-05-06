@@ -191,10 +191,22 @@ def build_md_html(
         text = strip_framework_block(text)
         text = unwrap_framework_links(text, framework_targets)
 
-    doc_title = fm.get("title") or "Research Document"
+    # Starter-mode fallbacks: when frontmatter fields are null (the agent
+    # hasn't filled them in yet), emit the same "[FILL in session_zero …]"
+    # placeholders the v1 JSON starter uses. Keeps the unconfigured-starter
+    # render legible side-by-side with starter.html.
+    starter_mode = ((fm.get("project") or {}).get("domain")) is None
+    fill_placeholder = "[FILL in session_zero]"
+
+    def _or_fill(value: Any, label: str) -> str:
+        if value:
+            return str(value)
+        return f"[FILL in session_zero: {label}]" if starter_mode else ""
+
+    doc_title = _or_fill(fm.get("title"), "Project Name") or "Research Document"
     short_title = fm.get("subtitle") or doc_title
-    ver = fm.get("version") or ""
-    date = fm.get("date") or ""
+    ver = fm.get("version") or (fill_placeholder if starter_mode else "")
+    date = fm.get("date") or (fill_placeholder if starter_mode else "")
 
     body = _strip_frontmatter(text)
     tabs = split_into_tabs(body)
