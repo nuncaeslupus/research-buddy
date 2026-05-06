@@ -65,17 +65,6 @@ def _md_renderer() -> MarkdownIt:
 # ---------------------------------------------------------------------------
 
 
-def _strip_frontmatter(text: str) -> str:
-    """Return the body after the YAML frontmatter, or `text` if no frontmatter."""
-    lines = text.splitlines()
-    if not lines or lines[0].rstrip() != "---":
-        return text
-    for i in range(1, len(lines)):
-        if lines[i].rstrip() == "---":
-            return "\n".join(lines[i + 1 :])
-    return text
-
-
 def split_into_tabs(body: str) -> list[tuple[str, str]]:
     """Split the body on top-level H2 headings.
 
@@ -120,16 +109,14 @@ def split_into_tabs(body: str) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def _extract_nav_entries(md_text: str) -> list[dict[str, Any]]:
-    """Parse `md_text` and return a list of {level, id, title} dicts for
-    every H3/H4 heading.
+def _extract_nav_entries(tokens: list[Any]) -> list[dict[str, Any]]:
+    """Walk a parsed token stream and return a list of {level, id, title}
+    dicts for every H3/H4 heading.
 
-    Walks the token stream rather than re-parsing the rendered HTML — the
-    inline children of a heading_open token already carry the heading text
-    and the anchors plugin has assigned `id` attributes.
+    The caller parses once and passes the tokens to both `md.renderer.render`
+    and this helper, so we don't pay for parsing twice. The anchors plugin
+    has already assigned `id` attributes by the time this runs.
     """
-    md = _md_renderer()
-    tokens = md.parse(md_text)
     out: list[dict[str, Any]] = []
     i = 0
     while i < len(tokens):
@@ -145,6 +132,26 @@ def _extract_nav_entries(md_text: str) -> list[dict[str, Any]]:
                 out.append({"level": level, "id": str(sid), "title": title})
         i += 1
     return out
+
+
+def _dedupe_heading_ids(tokens: list[Any], state: BuildState) -> None:
+    """Mutate `tokens` so heading IDs are globally unique across tabs.
+
+    The anchors plugin restarts its slug set per `parse()` call, so two
+    `### Domain` headings in different tabs both get `id="domain"` and the
+    first one swallows every cross-link. Run each heading's slug through
+    `BuildState.unique_id` (shared across all tabs) so a repeat becomes
+    `domain-2`, `domain-3`, etc. Same dedup model `build.py` uses for v1.
+    """
+    for tok in tokens:
+        if tok.type != "heading_open" or not tok.attrs:
+            continue
+        sid = tok.attrs.get("id")
+        if not sid:
+            continue
+        unique = state.unique_id(str(sid))
+        if unique != sid:
+            tok.attrs["id"] = unique
 
 
 # ---------------------------------------------------------------------------
@@ -183,13 +190,16 @@ def build_md_html(
         theme_css: Optional extra CSS appended after the default stylesheet.
         keep_framework: When True, render the framework block as content tabs.
     """
-    fm, _ = parse_frontmatter(text)
+    fm, body_start_idx = parse_frontmatter(text)
     fm = fm or {}
 
     if not keep_framework:
         framework_targets = collect_framework_targets(text)
         text = strip_framework_block(text)
         text = unwrap_framework_links(text, framework_targets)
+        # The frontmatter index from the original text isn't valid after
+        # the framework strip rewrites the body. Re-derive.
+        _, body_start_idx = parse_frontmatter(text)
 
     # Starter-mode fallbacks: when frontmatter fields are null (the agent
     # hasn't filled them in yet), emit the same "[FILL in session_zero …]"
@@ -208,7 +218,7 @@ def build_md_html(
     ver = fm.get("version") or (fill_placeholder if starter_mode else "")
     date = fm.get("date") or (fill_placeholder if starter_mode else "")
 
-    body = _strip_frontmatter(text)
+    body = "\n".join(text.splitlines()[body_start_idx:]) if body_start_idx else text
     tabs = split_into_tabs(body)
     if not tabs:
         # Nothing to render as a tab — emit a single tab carrying the whole
@@ -219,13 +229,21 @@ def build_md_html(
     md = _md_renderer()
 
     # ── tab bar ────────────────────────────────────────────────────────────
+    # Tab IDs are derived from the raw label (data-tab attribute must be a
+    # plain slug); button text is rendered through markdown-it so inline
+    # markup like *italics* works and HTML special chars get escaped.
     tab_ids: list[str] = []
+    rendered_labels: list[str] = []
     tab_btns: list[str] = []
     for i, (label, _) in enumerate(tabs):
         tid = state.unique_id(_slugify(label))
         tab_ids.append(tid)
+        rendered_label = md.renderInline(label)
+        rendered_labels.append(rendered_label)
         active = " active" if i == 0 else ""
-        tab_btns.append(f'<button class="tab-btn{active}" data-tab="{tid}">{label}</button>')
+        tab_btns.append(
+            f'<button class="tab-btn{active}" data-tab="{tid}">{rendered_label}</button>'
+        )
 
     tab_bar = (
         '<div id="tab-bar">\n'
@@ -239,25 +257,32 @@ def build_md_html(
     nav_html_parts: list[str] = []
     tab_contents: list[str] = []
 
-    for i, ((label, tab_md), tid) in enumerate(zip(tabs, tab_ids, strict=True)):
+    for i, ((label, tab_md), tid, rendered_label) in enumerate(
+        zip(tabs, tab_ids, rendered_labels, strict=True)
+    ):
         is_active = i == 0
         active_cls = " active" if is_active else ""
         tab_num = str(i + 1)
         tab_hdr_id = state.unique_id(f"tab-hdr-{tid}")
 
-        body_html = md.render(tab_md)
-        nav_entries = _extract_nav_entries(tab_md)
+        # Parse once — the same tokens feed both the renderer and the nav
+        # extractor. `_dedupe_heading_ids` rewrites collisions with the
+        # shared `state` so IDs are globally unique across tabs.
+        tokens = md.parse(tab_md)
+        _dedupe_heading_ids(tokens, state)
+        body_html = md.renderer.render(tokens, md.options, {})
+        nav_entries = _extract_nav_entries(tokens)
 
         tab_body = (
-            f'<h1 id="{tab_hdr_id}">{tab_num}. {label}</h1>\n'
+            f'<h1 id="{tab_hdr_id}">{tab_num}. {rendered_label}</h1>\n'
             f"{body_html}\n"
             f'<p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">'
-            f"{doc_title} · {label} · v{ver}</p>\n"
+            f"{doc_title} · {rendered_label} · v{ver}</p>\n"
         )
 
         # sidebar nav for this tab
         nav_html = [f'<nav class="tab-nav{active_cls}" data-for="{tid}">\n']
-        nav_html.append(f'<a href="#{tab_hdr_id}">{tab_num}. {label}</a>\n')
+        nav_html.append(f'<a href="#{tab_hdr_id}">{tab_num}. {rendered_label}</a>\n')
         for entry in nav_entries:
             cls = ' class="sub"' if entry["level"] == 3 else ' class="subsub"'
             nav_html.append(f'<a href="#{entry["id"]}"{cls}>{entry["title"]}</a>\n')

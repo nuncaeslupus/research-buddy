@@ -8,9 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from research_buddy.build import BuildState
 from research_buddy.build_md import (
+    _dedupe_heading_ids,
     _extract_nav_entries,
-    _strip_frontmatter,
+    _md_renderer,
     build_md_html,
     split_into_tabs,
 )
@@ -38,17 +40,6 @@ ui_strings:
 
 def _doc(body: str) -> str:
     return _FM + "\n" + body
-
-
-class TestStripFrontmatter:
-    def test_removes_yaml_block(self) -> None:
-        out = _strip_frontmatter(_FM + "\nbody\n")
-        assert "format_version" not in out
-        assert "body" in out
-
-    def test_no_frontmatter_passthrough(self) -> None:
-        text = "# just a doc\n"
-        assert _strip_frontmatter(text) == text
 
 
 class TestBodySplit:
@@ -79,20 +70,45 @@ class TestBodySplit:
 
 class TestNavExtraction:
     def test_h3_and_h4_collected(self) -> None:
-        entries = _extract_nav_entries("### Section One\n\ntext\n\n#### Sub\n")
-        levels = [e["level"] for e in entries]
-        titles = [e["title"] for e in entries]
-        assert levels == [3, 4]
-        assert titles == ["Section One", "Sub"]
+        tokens = _md_renderer().parse("### Section One\n\ntext\n\n#### Sub\n")
+        entries = _extract_nav_entries(tokens)
+        assert [e["level"] for e in entries] == [3, 4]
+        assert [e["title"] for e in entries] == ["Section One", "Sub"]
 
     def test_h2_not_collected(self) -> None:
         # H2s become tab labels; sidebar nav only carries H3+.
-        entries = _extract_nav_entries("## Nope\n\n### Yes\n")
-        assert [e["title"] for e in entries] == ["Yes"]
+        tokens = _md_renderer().parse("## Nope\n\n### Yes\n")
+        assert [e["title"] for e in _extract_nav_entries(tokens)] == ["Yes"]
 
     def test_anchor_ids_present(self) -> None:
-        entries = _extract_nav_entries("### Hello World\n")
-        assert entries[0]["id"] == "hello-world"
+        tokens = _md_renderer().parse("### Hello World\n")
+        assert _extract_nav_entries(tokens)[0]["id"] == "hello-world"
+
+
+class TestHeadingIDDedup:
+    """Heading IDs must be globally unique across tabs — the anchors plugin
+    restarts its slug set per parse(), so without dedup two identical H3s in
+    different tabs would both get id="domain" and the first would swallow
+    every cross-link."""
+
+    def test_dedupe_assigns_suffixed_ids(self) -> None:
+        md = _md_renderer()
+        tokens_a = md.parse("### Domain\n")
+        tokens_b = md.parse("### Domain\n")
+        state = BuildState()
+        _dedupe_heading_ids(tokens_a, state)
+        _dedupe_heading_ids(tokens_b, state)
+        id_a = next(t.attrs["id"] for t in tokens_a if t.type == "heading_open")
+        id_b = next(t.attrs["id"] for t in tokens_b if t.type == "heading_open")
+        assert id_a == "domain"
+        assert id_b == "domain-2"
+
+    def test_repeated_headings_in_full_build_have_unique_ids(self) -> None:
+        body = "## Tab A\n\n### Domain\n\nfirst\n\n## Tab B\n\n### Domain\n\nsecond\n"
+        html = build_md_html(_doc(body))
+        ids = re.findall(r'<h3 id="([^"]+)">Domain</h3>', html)
+        assert len(ids) == 2
+        assert len(set(ids)) == 2, f"heading IDs collided: {ids}"
 
 
 class TestRenderedHTML:
