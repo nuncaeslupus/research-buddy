@@ -56,6 +56,7 @@ def build_frontmatter(doc: Doc) -> str:
     file_name = re.sub(r"_v\d+(?:[._]\d+)*$", "", file_name)
 
     version = meta.get("version")
+    version_str: str | None
     if isinstance(version, (int, float)):
         version_str = f"{version:.2f}".rstrip("0").rstrip(".")
         if "." not in version_str:
@@ -98,9 +99,9 @@ def build_frontmatter(doc: Doc) -> str:
 
 def _md_table(headers: list[str], rows: list[list[str]]) -> str:
     def cell(s: Any) -> str:
-        s = str(s) if s is not None else ""
-        s = s.replace("\n", " ").replace("|", "\\|")
-        return s.strip()
+        text = str(s) if s is not None else ""
+        text = text.replace("\n", " ").replace("|", "\\|")
+        return text.strip()
 
     out = ["| " + " | ".join(cell(h) for h in headers) + " |"]
     out.append("|" + "|".join(["---"] * len(headers)) + "|")
@@ -166,11 +167,11 @@ def parse_rule_label(label: str) -> dict[str, Any]:
         if not m2:
             break
         tags.append(m2.group(1))
-        rest = rest[m2.end():]
+        rest = rest[m2.end() :]
 
     status_match = re.match(r"^\s*([A-Z][A-Z0-9_]*)", rest)
     status = status_match.group(1) if status_match else ""
-    extras = rest[status_match.end():].lstrip() if status_match else rest.strip()
+    extras = rest[status_match.end() :].lstrip() if status_match else rest.strip()
     extras = re.sub(r"^[—-]\s*", "", extras).strip()
 
     return {"id": rule_id, "tags": tags, "status": status, "extras": extras}
@@ -262,7 +263,9 @@ def render_block(blk: Block, heading_offset: int = 0) -> str:
             return _render_verdict_as_da(blk)
         label = blk.get("label", "")
         md = (blk.get("md") or "").strip()
-        return f"**{label}** _(badge: {badge})_\n\n{md}" if md else f"**{label}** _(badge: {badge})_"
+        return (
+            f"**{label}** _(badge: {badge})_\n\n{md}" if md else f"**{label}** _(badge: {badge})_"
+        )
     if t == "svg":
         return "<!-- SVG omitted in migration -->"
     if t in {"phase_cards", "agnostic_banner", "cc_banner"}:
@@ -304,17 +307,18 @@ def build_title(meta: Doc) -> str:
         parts.append("")
     parts.extend(
         [
-            f"**Format:** Research Buddy v2 (Markdown) · **Version:** {version} · **Updated:** {date}",
+            f"**Format:** Research Buddy v2 (Markdown) · "
+            f"**Version:** {version} · **Updated:** {date}",
             "",
             "This file is the source-of-truth artifact for the project. The agent edits this file; "
             "the clean view (without the framework) and the HTML rendering are derived on demand.",
             "",
             "**Filename convention:**",
             "",
-            "- `{file_name}_v{version}-source.md` — this file. Agent-edited. Full framework included. "
-            "Upload this each session.",
-            "- `{file_name}_v{version}.md` — clean view. Generated on demand. Research content only, "
-            "no framework.",
+            "- `{file_name}_v{version}-source.md` — this file. Agent-edited. "
+            "Full framework included. Upload this each session.",
+            "- `{file_name}_v{version}.md` — clean view. Generated on demand. "
+            "Research content only, no framework.",
             "- `{file_name}_v{version}.html` — HTML rendering. Generated on demand.",
             "",
             "> **Agent: read [Framework (Core)](#framework-core) before any other action. "
@@ -402,7 +406,7 @@ def build_project_specification(ps: Doc) -> str:
 
 
 def build_domain_tab(tab: Doc) -> str:
-    label = tab.get("label", tab.get("id", "Untitled"))
+    label = tab.get("label") or tab.get("id") or "Untitled"
     anchor_id = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
 
     parts = [
@@ -458,7 +462,7 @@ def _strip_done_rows_from_queue(table_block: Block, ui: Doc) -> tuple[list[str],
             m = re.match(r"^(Q-\d+)\b", topic)
             if m:
                 qid = m.group(1)
-                row[0] = topic[m.end():].lstrip(" -—:")
+                row[0] = topic[m.end() :].lstrip(" -—:")
             else:
                 qid = f"Q-{i + 1:03d}"
             row.insert(0, qid)
@@ -730,7 +734,7 @@ def migrate(doc: Doc) -> str:
     ui = meta.get("ui_strings") or {}
 
     domain_tabs = [t for t in doc.get("tabs", []) if t.get("id") not in SPECIAL_TABS]
-    research_tab = next((t for t in doc.get("tabs", []) if t.get("id") == "research"), {})
+    research_tab: Doc = next((t for t in doc.get("tabs", []) if t.get("id") == "research"), {})
 
     sections: list[str] = []
     sections.append(build_frontmatter(doc))
@@ -816,11 +820,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("input", type=Path, help="Path to the v1 *.json file")
     parser.add_argument(
-        "-o", "--output", type=Path, default=None,
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
         help="Output path (default: {file_name}_v{version}-source.md alongside input)",
     )
     parser.add_argument(
-        "--force", action="store_true",
+        "--force",
+        action="store_true",
         help="Overwrite the output file if it already exists",
     )
     args = parser.parse_args(argv)
