@@ -32,7 +32,12 @@ from research_buddy.build import (
     _load_asset,
     _resolve_lang_code,
 )
-from research_buddy.clean_md import parse_frontmatter
+from research_buddy.clean_md import (
+    collect_framework_targets,
+    parse_frontmatter,
+    strip_framework_block,
+    unwrap_framework_links,
+)
 from research_buddy.validator_md import _line_in_fence
 
 # ---------------------------------------------------------------------------
@@ -160,15 +165,31 @@ def _slugify(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_md_html(text: str, *, theme_css: str | None = None) -> str:
+def build_md_html(
+    text: str,
+    *,
+    theme_css: str | None = None,
+    keep_framework: bool = False,
+) -> str:
     """Render a v2 Markdown source document as a single-file HTML page.
+
+    By default the framework block is stripped and links into it are unwrapped,
+    matching the JSON pipeline's `starter.html` (which never renders
+    `agent_guidelines.framework`). Pass `keep_framework=True` to render the
+    full agent-facing source with the framework visible.
 
     Args:
         text: Full v2 Markdown source (with YAML frontmatter).
         theme_css: Optional extra CSS appended after the default stylesheet.
+        keep_framework: When True, render the framework block as content tabs.
     """
     fm, _ = parse_frontmatter(text)
     fm = fm or {}
+
+    if not keep_framework:
+        framework_targets = collect_framework_targets(text)
+        text = strip_framework_block(text)
+        text = unwrap_framework_links(text, framework_targets)
 
     doc_title = fm.get("title") or "Research Document"
     short_title = fm.get("subtitle") or doc_title

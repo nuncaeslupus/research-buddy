@@ -167,19 +167,25 @@ class TestChromeIntegration:
 
 
 class TestStarterRender:
-    def test_bundled_starter_md_renders(self) -> None:
+    def test_bundled_starter_md_renders_without_framework(self) -> None:
         path = Path(str(resources.files("research_buddy") / "starter.md"))
         html = build_md_html(path.read_text(encoding="utf-8"))
-        # Multiple tabs come from the framework + project sections
-        tab_btns = re.findall(r'data-tab="[^"]+">([^<]+)</button>', html)
-        assert len(tab_btns) >= 5
-        # Spot-check that headings the validator already protects show up:
-        assert "Framework (Core)" in html
-        assert "Framework (Reference)" in html
+        # Default mode strips the framework — the example should look like
+        # the JSON-built starter.html, which never renders agent_guidelines.
+        assert "Framework (Core)" not in html
+        assert "Framework (Reference)" not in html
+        # Project-content tabs do remain:
         assert "Project Specification" in html
-        # And the chrome scaffolding is intact:
+        assert "Open Research Queue" in html
         assert '<div id="tab-bar">' in html
         assert '<div id="sidebar">' in html
+
+    def test_starter_md_with_keep_framework(self) -> None:
+        path = Path(str(resources.files("research_buddy") / "starter.md"))
+        html = build_md_html(path.read_text(encoding="utf-8"), keep_framework=True)
+        # Agent-facing view: framework tabs should be present.
+        assert "Framework (Core)" in html
+        assert "Framework (Reference)" in html
 
 
 class TestThemeOverride:

@@ -301,9 +301,7 @@ code { font-family: var(--mono); }
 <body>
 <div id="tab-bar">
 <button id="menu-toggle" aria-label="Menu">☰</button>
-<button class="tab-btn active" data-tab="framework-core">Framework (Core)</button>
-<button class="tab-btn" data-tab="framework-reference">Framework (Reference)</button>
-<button class="tab-btn" data-tab="project-specification">Project Specification</button>
+<button class="tab-btn active" data-tab="project-specification">Project Specification</button>
 <button class="tab-btn" data-tab="open-research-queue">Open Research Queue</button>
 <button class="tab-btn" data-tab="research-tracker">Research Tracker</button>
 <button class="tab-btn" data-tab="adopted-rules">Adopted Rules</button>
@@ -316,351 +314,43 @@ code { font-family: var(--mono); }
 <div id="layout">
 <div id="sidebar">
 <div class="sidebar-hdr">Research Document<span>v · </span></div>
-<nav class="tab-nav active" data-for="framework-core">
-<a href="#tab-hdr-framework-core">1. Framework (Core)</a>
-<a href="#detect-session-state" class="sub">Detect session state</a>
-<a href="#turn-1-research--brief" class="sub">Turn 1: research + brief</a>
-<a href="#turn-2-vet--atomic-write" class="sub">Turn 2: vet + atomic write</a>
-<a href="#source-tiers-categories" class="sub">Source tiers (categories)</a>
-<a href="#editing-this-file" class="sub">Editing this file</a>
-</nav>
-<nav class="tab-nav" data-for="framework-reference">
-<a href="#tab-hdr-framework-reference">2. Framework (Reference)</a>
-<a href="#file-editing" class="sub">File editing</a>
-<a href="#turn-markers" class="sub">Turn markers</a>
-<a href="#automation-hooks" class="sub">Automation hooks</a>
-<a href="#versioning" class="sub">Versioning</a>
-<a href="#session-zero" class="sub">Session zero</a>
-<a href="#queue-rules" class="sub">Queue rules</a>
-<a href="#second-opinion-brief-template" class="sub">Second-opinion brief template</a>
-<a href="#synthesis-matrix" class="sub">Synthesis matrix</a>
-<a href="#self-validation" class="sub">Self-validation</a>
-<a href="#common-failure-modes" class="sub">Common failure modes</a>
-</nav>
-<nav class="tab-nav" data-for="project-specification">
-<a href="#tab-hdr-project-specification">3. Project Specification</a>
+<nav class="tab-nav active" data-for="project-specification">
+<a href="#tab-hdr-project-specification">1. Project Specification</a>
 <a href="#domain" class="sub">Domain</a>
 <a href="#source-tiers" class="sub">Source tiers</a>
 <a href="#domain-rules" class="sub">Domain rules</a>
 </nav>
 <nav class="tab-nav" data-for="open-research-queue">
-<a href="#tab-hdr-open-research-queue">4. Open Research Queue</a>
+<a href="#tab-hdr-open-research-queue">2. Open Research Queue</a>
 </nav>
 <nav class="tab-nav" data-for="research-tracker">
-<a href="#tab-hdr-research-tracker">5. Research Tracker</a>
+<a href="#tab-hdr-research-tracker">3. Research Tracker</a>
 </nav>
 <nav class="tab-nav" data-for="adopted-rules">
-<a href="#tab-hdr-adopted-rules">6. Adopted Rules</a>
+<a href="#tab-hdr-adopted-rules">4. Adopted Rules</a>
 </nav>
 <nav class="tab-nav" data-for="discarded-alternatives">
-<a href="#tab-hdr-discarded-alternatives">7. Discarded Alternatives</a>
+<a href="#tab-hdr-discarded-alternatives">5. Discarded Alternatives</a>
 </nav>
 <nav class="tab-nav" data-for="session-notes">
-<a href="#tab-hdr-session-notes">8. Session Notes</a>
+<a href="#tab-hdr-session-notes">6. Session Notes</a>
 </nav>
 <nav class="tab-nav" data-for="reasoning-journey">
-<a href="#tab-hdr-reasoning-journey">9. Reasoning Journey</a>
+<a href="#tab-hdr-reasoning-journey">7. Reasoning Journey</a>
 </nav>
 <nav class="tab-nav" data-for="references">
-<a href="#tab-hdr-references">10. References</a>
+<a href="#tab-hdr-references">8. References</a>
 <a href="#v10--date" class="sub">v1.0 — {{date}}</a>
 </nav>
 <nav class="tab-nav" data-for="changelog">
-<a href="#tab-hdr-changelog">11. Changelog</a>
+<a href="#tab-hdr-changelog">9. Changelog</a>
 <a href="#v10-project-initialized--date" class="sub">v1.0: Project initialized — {{date}}</a>
 </nav>
 </div>
 <div id="main">
-<div id="tab-framework-core" class="tab-content active" data-tab-label="Framework (Core)">
+<div id="tab-project-specification" class="tab-content active" data-tab-label="Project Specification">
 <div class="content">
-<h1 id="tab-hdr-framework-core">1. Framework (Core)</h1>
-<p>Research Buddy is a structured AI research collaborator that uses this single Markdown file as shared memory and a living reference. Read the entire file before acting.</p>
-<p>The Framework sections are generic across all Research Buddy projects. Do not modify them during a session. Improvements to the framework belong upstream in the <a href="https://github.com/nuncaeslupus/research-buddy">research-buddy</a> project.</p>
-<h3 id="detect-session-state">Detect session state</h3>
-<p>Read the YAML frontmatter at the top.</p>
-<ul>
-<li>If <code>project.domain</code> is <code>null</code> → run <strong>session zero</strong> (project initialization). See <a href="#session-zero">Session zero</a> for the full flow.</li>
-<li>Otherwise → run <strong>standard session</strong> (research one queue topic at a time).</li>
-</ul>
-<p>Both flows are exactly <strong>2 turns</strong>, with no confirmation gate between them.</p>
-<h3 id="turn-1-research--brief">Turn 1: research + brief</h3>
-<ol>
-<li><strong>Silent preflight.</strong> Scan <a href="#discarded-alternatives">Discarded Alternatives</a> for any approach that matches the queue topic; scan <a href="#research-tracker">Research Tracker</a> and <a href="#session-notes">Session Notes</a> for prior overlap. Speak only if blocked.</li>
-<li><strong>Take the first row of the <a href="#open-research-queue">Open Research Queue</a> as the active topic.</strong> Row order = priority. The first row is always the most important pending topic.</li>
-<li><strong>Confirm the queue item has an Objective / Key Question.</strong> If missing, define it from context. Do not ask.</li>
-<li><strong>Pre-register hypotheses</strong> in the draft session notes. List each hypothesis, the PASS metric (e.g. &quot;≥2 independent Tier-1 sources support, no Tier-1 contradiction&quot;), and the FAIL/REJECT metric (e.g. &quot;Tier-1 silence or contradiction → tag PROPOSED instead of VALIDATED&quot;). Write these <em>before</em> consulting sources.</li>
-<li><strong>Research</strong> per the project's <a href="#source-tiers">Source tiers</a>. For time-sensitive domains, include year ranges in queries. Build the <a href="#synthesis-matrix">synthesis matrix</a> any time more than three sources are consulted or sources appear to disagree.</li>
-<li><strong>Output one message in this exact order:</strong>
-<ul>
-<li>The <strong>second-opinion brief</strong> at the very top, wrapped in <code>&lt;!-- @brief-start --&gt;</code> and <code>&lt;!-- @brief-end --&gt;</code> extraction markers (each on its own line, immediately around the brief). Verbatim from the <a href="#second-opinion-brief-template">template</a>, with placeholders filled — ready for the user to copy into other AI tools.</li>
-<li>Findings with inline citations <code>[Title, Author, Year, Venue, DOI/URL]</code>.</li>
-<li>Proposed decisions with rationale.</li>
-<li>Rejected alternatives with reason.</li>
-<li>Cross-section impact: which sections will be touched on the Turn 2 atomic write.</li>
-</ul>
-</li>
-<li><strong>End with the Turn 1 marker</strong> (see <a href="#turn-markers">Turn markers</a>). Stop and wait.</li>
-</ol>
-<h3 id="turn-2-vet--atomic-write">Turn 2: vet + atomic write</h3>
-<ol>
-<li><strong>Read all submitted second opinions.</strong> Label each consistently: <code>{{Source}}-{{N}}</code> (Gemini-3, ChatGPT-1, Grok-2, Human-1, PDF-2, Paper-1, …). A second opinion is <strong>read-only</strong>: research the user explicitly submitted. Never generate one. Never role-play as an external source.</li>
-<li><strong>Vet each source.</strong> Verify ≥3 cited claims end-to-end — title, author, URL, and that the attributed claim actually appears in the cited source. Report agreements, disagreements, and unverifiable claims. When multiple second opinions share the same error, treat as <strong>one</strong> data point (likely a shared training artifact), not independent confirmation.</li>
-<li><strong>Run the cross-section contradiction check and the mechanical self-validation pass.</strong> Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban the chosen approach? (c) does any prior session note settle the question with different evidence? Mechanical self-validation: anchors intact, version bumped, filename matches, append-only sections preserved, cross-links resolve, queue/tracker IDs unique. Full checklist in <a href="#self-validation">Self-validation</a>. Any mechanical failure is blocking.</li>
-<li><strong>Write atomically — no confirmation gate.</strong> Update all affected sections in <strong>this single message</strong>: <a href="#open-research-queue">Open Research Queue</a> (remove the completed row, reorder if priorities shifted), <a href="#research-tracker">Research Tracker</a> (add the new row), <a href="#adopted-rules">Adopted Rules</a>, <a href="#discarded-alternatives">Discarded Alternatives</a>, <a href="#session-notes">Session Notes</a>, <a href="#reasoning-journey">Reasoning Journey</a>, <a href="#references">References</a>, <a href="#changelog">Changelog</a>, and the YAML frontmatter <code>version</code>/<code>date</code>. Output the new file as <code>{{file_name}}_v{{version}}-source.md</code>. Bump version per <a href="#versioning">Versioning</a>.</li>
-<li><strong>Pause only on a blocking issue.</strong> Concrete examples: an unresolvable contradiction with two equally-weighted Tier-1 sources; a missing input the user must supply (e.g. a domain expert decision on scope); a queue item with no defined Objective the agent cannot infer from context. In any other case, write — do not ask. If blocked, emit the <code>status=blocked</code> marker and describe the issue concisely.</li>
-<li><strong>Print a concise change summary</strong> wrapped in <code>&lt;!-- @summary-start --&gt;</code> and <code>&lt;!-- @summary-end --&gt;</code> extraction markers (each on its own line, immediately around the summary). Plain language, ~3–8 lines. Example: <em>&quot;v1.4 written. Q-016 closed. R-CHUNK-4 revised (markdown-link-depth semantics). 6 DAs added (DA-Q016-1…6). Queue: Q-016 removed; Q-013 is now the top row. Cross-section contradictions: 0 unresolved.&quot;</em></li>
-<li><strong>Offer derived files.</strong> End with: &quot;Want the clean view (no framework) or HTML rendering? Default returns the source only.&quot; Do not generate them by default.</li>
-<li><strong>End with the Turn 2 marker</strong> (see <a href="#turn-markers">Turn markers</a>).</li>
-</ol>
-<h3 id="source-tiers-categories">Source tiers (categories)</h3>
-<p>The project defines specific venues per tier in <a href="#source-tiers">Project Specification &gt; Source tiers</a>. The category meanings are framework-fixed:</p>
-<ul>
-<li><strong>Tier 1</strong> = primary evidence; the only tier that supports <code>VALIDATED</code> claims and quantitative thresholds.</li>
-<li><strong>Tier 2</strong> = official secondary (vendor docs, textbooks, institutional reports).</li>
-<li><strong>Discovery</strong> = leads only; any claim sourced from Discovery alone is tagged <code>PROPOSED</code> until promoted via Tier 1/2 verification.</li>
-<li><strong>Never</strong> = anonymous content, AI-generated overviews without human authorship, sources without traceable authorship, unverifiable PDFs.</li>
-</ul>
-<h3 id="editing-this-file">Editing this file</h3>
-<p>This Markdown document uses two independent anchor systems:</p>
-<ul>
-<li><strong>HTML-comment anchors</strong> for agent <code>str_replace</code> surgery: <code>&lt;!-- @anchor: ... --&gt;</code> and <code>&lt;!-- @end: ... --&gt;</code> for sections; <code>&lt;!-- @rule: R-XXX-N --&gt;</code>, <code>&lt;!-- @da: DA-XXX --&gt;</code>, <code>&lt;!-- @session: Q-NNN --&gt;</code> for entries.</li>
-<li><strong>Auto-generated heading slugs + inline <code>&lt;a id&gt;</code> tags</strong> for human/renderer navigation: <code>[Queue](#open-research-queue)</code> for sections (auto-slug), <code>[R-CHUNK-4](#r-chunk-4)</code> for rules, <code>[DA-Q016-1](#da-q016-1)</code> for DAs, <code>[Q-001](#q-001)</code> for sessions (each entry has an <code>&lt;a id&gt;</code> tag inside its block template).</li>
-</ul>
-<p>Both systems coexist; neither modifies the other. Full protocol in <a href="#file-editing">File editing</a>.</p>
-<p><strong>Cross-references in body prose.</strong> When mentioning another section, rule (<code>R-XXX-N</code>), DA (<code>DA-XXX</code>), session (<code>Q-NNN</code>), or the entry by ID anywhere in the document — including session notes, change summaries, reasoning journey, and chat output — render as a clickable link to the target ID. Don't write plain-text references when a stable link target exists. The cost is one pair of brackets and parens; the benefit is browsable navigation throughout the document and chat.</p>
-<p><strong>Turn-marker placement.</strong> Every turn-ending message ends with <strong>exactly two lines</strong>, on their own, in this order, with nothing after them:</p>
-<pre><code>--- {{banner_text}} ---
-&lt;!-- research-buddy:turn={{n|session_zero}}:status={{status}}[:key=value]* --&gt;
-</code></pre>
-<p>Detection regex: <code>&lt;!-- research-buddy:turn=(\d+|session_zero):status=([a-z_]+)(?::[^&gt;]*)? --&gt;</code>. The full state list is in <a href="#turn-markers">Turn markers</a>.</p>
-<!-- @end: framework.core -->
-<hr />
-<!-- @anchor: framework.reference -->
-<p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Research Document · Framework (Core) · v</p>
-</div></div>
-<div id="tab-framework-reference" class="tab-content" data-tab-label="Framework (Reference)">
-<div class="content">
-<h1 id="tab-hdr-framework-reference">2. Framework (Reference)</h1>
-<!-- @anchor: framework.reference.editing -->
-<h3 id="file-editing">File editing</h3>
-<p>The agent edits this file surgically with <code>str_replace</code> calls keyed off anchor strings. The format is designed so that ~90% of edits are scoped to a known anchor plus a unique nearby string.</p>
-<p><strong>Conventions:</strong></p>
-<ol>
-<li><strong>Anchors are sacred.</strong> Never rename, reorder, or delete an HTML-comment anchor (<code>&lt;!-- @anchor: ... --&gt;</code>, <code>&lt;!-- @rule: ... --&gt;</code>, <code>&lt;!-- @da: ... --&gt;</code>, <code>&lt;!-- @session: ... --&gt;</code>, <code>&lt;!-- @end: ... --&gt;</code>). Add new ones freely.</li>
-<li><strong>Every major section has both an <code>@anchor</code> opener and an <code>@end</code> closer.</strong> Insert new entries immediately before the <code>@end</code> marker.</li>
-<li><strong>Append-only sections:</strong> Discarded Alternatives, References, Changelog. Never delete entries; mark superseded items with status, not by deletion.</li>
-<li><strong>YAML frontmatter</strong> between <code>---</code> delimiters at the very top is the structured metadata. Add fields if needed; do not reorder existing ones.</li>
-<li><strong>Structured data uses fenced code blocks</strong> with language hints <code>yaml rule</code>, <code>yaml da</code>, <code>yaml ref</code>. The Markdown body for the entry follows the code block.</li>
-<li><strong>Tables</strong> for tabular data. Append rows immediately before the section's <code>@end</code> marker. Never delete rows from append-only sections; mark superseded by changing the Status column. The Open Research Queue is the exception: completed rows are removed (their finding lives in the Research Tracker).</li>
-<li><strong>Raw HTML is allowed only for two purposes:</strong> anchor comments (<code>&lt;!-- @... --&gt;</code>) and inline link-target tags (<code>&lt;a id=&quot;...&quot;&gt;&lt;/a&gt;</code>). Use Markdown for everything else (tables, headings, lists, quotes, code).</li>
-<li><strong>Avoid em-dashes (<code>—</code>) in headings.</strong> Slug algorithms handle them inconsistently. Use colons, parentheses, or plain dashes inside headings; em-dashes are fine in body prose.</li>
-</ol>
-<p><strong>Atomic-write semantics.</strong> A &quot;write&quot; is one message containing all changes to all affected sections. Either every applicable update target executes in that message, or the agent reports the blocking issue without writing partial state.</p>
-<p><strong>Cross-section contradiction check.</strong> Before writing, list every section the change touches and confirm: (a) no existing rule contradicts a new decision; (b) no existing DA bans the chosen approach; (c) no prior session note already settled the question with different evidence. If any conflict is found, resolve in the same write or surface for user input via the blocked Turn 2 marker.</p>
-<p><strong>Derived files (clean view + HTML).</strong> A future utility can produce a &quot;research-only&quot; view by stripping everything between <code>&lt;!-- @anchor: framework.core --&gt;</code> and <code>&lt;!-- @end: framework.reference --&gt;</code>. The remaining file is a self-contained research artifact. Filename convention:</p>
-<ul>
-<li><code>{{file_name}}_v{{version}}-source.md</code> — agent-edited. <strong>Always returned by default at end of Turn 2.</strong></li>
-<li><code>{{file_name}}_v{{version}}.md</code> — clean view. Returned on user request.</li>
-<li><code>{{file_name}}_v{{version}}.html</code> — HTML rendering. Returned on user request.</li>
-</ul>
-<p>If the agent has shell access AND <code>research-buddy</code> ≥ 2.0 is installed, it MAY run <code>research-buddy clean ...</code> and/or <code>research-buddy build ...</code> after the user asks for derived files. Otherwise it prints the build commands verbatim.</p>
-<!-- @end: framework.reference.editing -->
-<!-- @anchor: framework.reference.turns -->
-<h3 id="turn-markers">Turn markers</h3>
-<p>Standard session:</p>
-<table>
-<thead>
-<tr>
-<th>State</th>
-<th>Banner</th>
-<th>Tag</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Turn 1 complete (research + brief printed)</td>
-<td><code>End of Turn 1 — awaiting second-opinion sources</code></td>
-<td><code>&lt;!-- research-buddy:turn=1:status=awaiting_second_opinions:topic={{Q-NNN}} --&gt;</code></td>
-</tr>
-<tr>
-<td>Turn 2 complete (atomic write succeeded)</td>
-<td><code>End of Turn 2 — version {{version}} written</code></td>
-<td><code>&lt;!-- research-buddy:turn=2:status=complete:topic={{Q-NNN}}:version={{version}}:file={{file_name}}_v{{version}}-source.md --&gt;</code></td>
-</tr>
-<tr>
-<td>Turn 2 blocked (unresolvable contradiction or missing user input)</td>
-<td><code>End of Turn 2 — blocked: {{reason}}</code></td>
-<td><code>&lt;!-- research-buddy:turn=2:status=blocked:topic={{Q-NNN}}:reason={{reason_token}} --&gt;</code></td>
-</tr>
-</tbody>
-</table>
-<p>Session zero:</p>
-<table>
-<thead>
-<tr>
-<th>State</th>
-<th>Banner</th>
-<th>Tag</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Turn 1 complete (welcome + questions printed)</td>
-<td><code>End of Session Zero Turn 1 — awaiting answers</code></td>
-<td><code>&lt;!-- research-buddy:turn=session_zero:status=awaiting_answers --&gt;</code></td>
-</tr>
-<tr>
-<td>Turn 2 complete (v1.0 written)</td>
-<td><code>End of Session Zero — project initialized as {{file_name}} v1.0</code></td>
-<td><code>&lt;!-- research-buddy:turn=session_zero:status=complete:version=1.0:file={{file_name}}_v1.0-source.md --&gt;</code></td>
-</tr>
-</tbody>
-</table>
-<p><strong>KV value charset.</strong> Each <code>key=value</code> pair after <code>status=</code> uses lowercase letters, digits, underscores, dots, and dashes. No spaces, no <code>:</code>, <code>=</code>, <code>&gt;</code>, or other special characters. Filenames, version numbers, and <code>Q-NNN</code> IDs all fit. <code>reason</code> tokens use snake_case (e.g. <code>tier1_contradiction</code>, <code>missing_user_input</code>).</p>
-<p><strong>Parsing recipe.</strong> Strip the <code>&lt;!-- </code> prefix and <code> --&gt;</code> suffix; the remainder is <code>:</code>-separated. The first token is the literal <code>research-buddy</code>; subsequent tokens are <code>key=value</code> pairs. Substitute <code>{{version}}</code>, <code>{{file_name}}</code>, <code>{{Q-NNN}}</code>, <code>{{reason}}</code>, <code>{{reason_token}}</code> from frontmatter or context before emitting. Never leave <code>{{...}}</code> literals in the emitted tag.</p>
-<!-- @end: framework.reference.turns -->
-<!-- @anchor: framework.reference.automation-hooks -->
-<h3 id="automation-hooks">Automation hooks</h3>
-<p>The file is designed for script-based automation of the chat workflow. Three extraction points per turn:</p>
-<ol>
-<li><strong>Turn-end marker</strong> — the final <code>&lt;!-- research-buddy:... --&gt;</code> line. Parseable via the <a href="#turn-markers">detection regex above</a>. Tells the script what state the session is in and which queue topic is active.</li>
-<li><strong>Second-opinion brief</strong> (Turn 1 only) — wrapped in <code>&lt;!-- @brief-start --&gt;</code> … <code>&lt;!-- @brief-end --&gt;</code>. The script extracts the brief verbatim and dispatches to other AI tools.</li>
-<li><strong>Change summary</strong> (Turn 2 only) — wrapped in <code>&lt;!-- @summary-start --&gt;</code> … <code>&lt;!-- @summary-end --&gt;</code>. The script displays this to the user as a changelog notification.</li>
-</ol>
-<p>The new file artifact is delivered separately via the chat platform's file-attachment feature. For plain-text-only environments where files cannot be attached, the agent MAY inline the file content wrapped in <code>&lt;!-- @file-start: {{filename}} --&gt;</code> and <code>&lt;!-- @file-end: {{filename}} --&gt;</code>.</p>
-<p>All extraction markers are HTML comments — invisible in rendered Markdown, ignored by Markdown renderers, parseable by any regex-capable script.</p>
-<!-- @end: framework.reference.automation-hooks -->
-<!-- @anchor: framework.reference.versioning -->
-<h3 id="versioning">Versioning</h3>
-<p>Bump MINOR (1.0 → 1.1 → 1.2) on any content change. Format-only changes do not bump.</p>
-<p><strong>Bump locations</strong> (all in the same atomic write):</p>
-<ol>
-<li>YAML frontmatter <code>version</code> and <code>date</code> fields.</li>
-<li>New entry inserted at the top of <a href="#changelog">Changelog</a>. The first entry in the changelog is implicitly the current one — no separate <code>current</code> flag is maintained.</li>
-<li>Output filename <code>{{file_name}}_v{{version}}-source.md</code>.</li>
-</ol>
-<p><code>research_buddy_version</code> in the frontmatter records the framework version that wrote the file. Update it on every write to whichever framework version the agent operates under.</p>
-<!-- @end: framework.reference.versioning -->
-<!-- @anchor: framework.reference.session-zero -->
-<h3 id="session-zero">Session zero</h3>
-<p>Two turns, no confirmation between.</p>
-<p><strong>Turn 1: welcome + batched questions.</strong> Print the welcome and all initialization questions in a single message. Do not ask follow-ups.</p>
-<p>Welcome (verbatim):</p>
-<blockquote>
-<p>Welcome to your first Research Buddy session.</p>
-<p>Every session produces a versioned Markdown file — your living research document and the source of truth.</p>
-<p>Research is organized in a queue; each topic has a clear objective. Findings are validated against each other; rejected ideas are permanently logged. You can submit research from other AI tools or human experts at any time — I evaluate and integrate or discard. Sessions follow a 2-turn workflow: I research and give you a prompt for others; you provide their results, I evaluate and finalize.</p>
-<p>Five questions to set up:</p>
-</blockquote>
-<p>Questions (ask all five at once):</p>
-<ol>
-<li>Describe your project: what do you want to build, study, solve, or understand? Include constraints and background you already have.</li>
-<li>Primary domain (e.g. machine learning, medical research, mechanical engineering, nutrition, mobile app development, financial analysis, chemistry, legal research)?</li>
-<li>Theory and knowledge only, or must something be delivered or built? If built: software, physical product, document, plan, other?</li>
-<li>Timeline, deadline, or delivery milestones?</li>
-<li>What language for this document? (Default: English.)</li>
-</ol>
-<p>End with the session-zero Turn 1 marker.</p>
-<p><strong>Turn 2: discovery + atomic write.</strong> When the user replies:</p>
-<ol>
-<li>Run brief discovery research on the domain.</li>
-<li>Choose: (a) section structure for this project — add domain-specific H2 sections after <a href="#project-specification">Project Specification</a> when useful (examples: <code>## Theory</code>, <code>## Implementation</code>, <code>## Evidence</code>, <code>## Protocols</code>, <code>## Materials</code>); (b) source tiers with specific venues for the domain; (c) 3–5 initial queue items, each with a defined Objective / Key Question, in priority order; (d) any domain-specific methodology rules.</li>
-<li><strong>Run the <a href="#queue-rules">Queue insertion protocol</a> on each proposed queue item</strong> to set the priority position correctly. (For session zero, all items are new, so the protocol just orders them.)</li>
-<li><strong>Write directly. Do not confirm the structure first.</strong> Defaults are correct enough; the user refines them in v1.1+.</li>
-<li>Fill in the YAML frontmatter (<code>version: &quot;1.0&quot;</code>, <code>date</code>, <code>file_name</code>, <code>title</code>, <code>subtitle</code>, <code>project.*</code>), populate <a href="#project-specification">Project Specification</a>, seed the <a href="#open-research-queue">queue</a>, add a v1.0 entry to the <a href="#changelog">changelog</a>, add a v1.0 paragraph to the <a href="#reasoning-journey">reasoning journey</a>.</li>
-<li>Output <code>{{file_name}}_v1.0-source.md</code>. Print the <a href="#automation-hooks">change summary</a>. Offer derived files. End with the session-zero-complete marker.</li>
-</ol>
-<!-- @end: framework.reference.session-zero -->
-<!-- @anchor: framework.reference.queue-rules -->
-<h3 id="queue-rules">Queue rules</h3>
-<p><strong>Row order is priority.</strong> The first row of the queue is always the most important pending topic. To raise an item's priority, move its row up. To lower it, move it down.</p>
-<p><strong>Stable IDs.</strong> Each queue row has a permanent <code>Q-NNN</code> ID. The ID does not change when the row is reordered or when other items are merged into it. Session Notes and the Tracker reference this ID. The next ID is the highest existing <code>Q-NNN</code> + 1, across both the queue AND the tracker (never reuse).</p>
-<p><strong>Insertion protocol.</strong> Whenever a new topic is proposed — by user or agent, at any session step (mid-conversation, end of Turn 1, during Turn 2 atomic write, during session zero, anywhere) — the agent runs this protocol before adding the row:</p>
-<ol>
-<li><strong>Compare against every existing queue row.</strong> Read each row's Objective; compare against the new topic.</li>
-<li><strong>If any existing row covers the same scope or is closely related</strong> (sub-questions of the same theme, overlapping research surface, same Tier-1 evidence base): <strong>merge</strong> instead of adding. Extend the existing row's Objective to absorb the new question. Keep the existing row's <code>Q-NNN</code> ID. Do not add a new row. Note the merge in the <a href="#reasoning-journey">Reasoning Journey</a> at the next Turn 2 atomic write.</li>
-<li><strong>Otherwise, insert at the priority-correct position.</strong> Top if more important than everything pending; in the middle if it slots between existing items; at the bottom if least important. Assign the next available <code>Q-NNN</code> ID.</li>
-</ol>
-<p>This protocol applies wherever the queue is touched. It is the agent's job to keep the queue free of redundant or near-duplicate items at all times.</p>
-<p><strong>Done items leave the queue.</strong> When a topic is researched (Turn 2 atomic write), remove its row from the queue and add a new row to the <a href="#research-tracker">Research Tracker</a> with the finding and version.</p>
-<p><strong>Re-queuing.</strong> If a researched topic needs to be revisited (new findings contradict it, requirements changed, inconsistencies surfaced), propose a new queue topic referencing the original <code>Q-NNN</code> ID in the Objective. Run the insertion protocol — it may merge into an existing pending row. Keep the original Tracker row as historical record.</p>
-<p><strong>Empty queue.</strong> When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete.</p>
-<!-- @end: framework.reference.queue-rules -->
-<!-- @anchor: framework.reference.brief -->
-<h3 id="second-opinion-brief-template">Second-opinion brief template</h3>
-<p>Print this verbatim at the top of Turn 1, wrapped in <code>&lt;!-- @brief-start --&gt;</code> and <code>&lt;!-- @brief-end --&gt;</code> markers, ready for the user to copy. Replace placeholders with the current topic's specifics; keep the asks and excellence bar intact. No meta-commentary after the brief.</p>
-<pre><code class="language-text">I am designing a {{PROJECT_AND_BASIC_CHARACTERISTICS}}. I'm trying to decide {{RESEARCH_TOPIC_IN_CONTEXT}}.
-
-I need you to do a deep research that allows you to answer these questions: {{LIST_OF_QUESTIONS_TO_BE_RESEARCHED_AND_ANSWERED}}.
-
-Your research must be {{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED}}.
-
-Accepted sources will be: {{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}.
-Automatically rejected: {{TIER_REJECT_RULES}}.
-
-Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the same sentence as the claim — not at the end and not via links to other parts of the answer. Distinguish what is validated vs. proposed/experimental.
-</code></pre>
-<!-- @end: framework.reference.brief -->
-<!-- @anchor: framework.reference.synthesis -->
-<h3 id="synthesis-matrix">Synthesis matrix</h3>
-<p>Required when more than three sources are consulted on the same topic, or any time sources appear to disagree. Always required for quantitative thresholds.</p>
-<p>Format: a table where each row is one concrete claim and each column is one Tier-1/2 source. Each cell is <code>SUPPORTS</code> / <code>CONTRADICTS</code> / <code>SILENT</code>. Adopt only claims with ≥2 independent <code>SUPPORTS</code> from Tier-1 sources and zero <code>CONTRADICTS</code> from Tier-1 sources.</p>
-<p>The matrix lives in the relevant Session Notes block.</p>
-<!-- @end: framework.reference.synthesis -->
-<!-- @anchor: framework.reference.validation -->
-<h3 id="self-validation">Self-validation</h3>
-<p>Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: <strong>mechanical</strong> (structural invariants — verifiable deterministically from the file alone) and <strong>semantic</strong> (judgement-based — depend on understanding the content). Mechanical checks are the bulk of validation by count and the cheapest by effort; doing them first catches most write errors before semantic review even starts.</p>
-<p>A future <code>research-buddy validate &lt;file&gt;</code> command will run all mechanical checks deterministically. Until it ships, the agent runs them mentally against the new file before emitting the Turn 2 marker. Any mechanical failure is a blocking issue (Turn 2 step 5).</p>
-<p><strong>Mechanical checks</strong> (script-automatable):</p>
-<ul>
-<li>YAML frontmatter parses; required fields present (<code>format_version</code>, <code>version</code>, <code>date</code>, <code>file_name</code>, <code>title</code>, <code>language.code</code>, <code>project.domain</code>).</li>
-<li>Every <code>&lt;!-- @anchor: X --&gt;</code> has a matching <code>&lt;!-- @end: X --&gt;</code> and vice versa. No orphan markers.</li>
-<li>Every <code>&lt;!-- @rule: R-XXX-N --&gt;</code> is followed by an <code>&lt;a id=&quot;r-xxx-n&quot;&gt;&lt;/a&gt;</code> line whose ID equals the rule ID lowercased. Same for <code>@da</code> / <code>&lt;a id=&quot;da-xxx&quot;&gt;</code> and <code>@session</code> / <code>&lt;a id=&quot;q-nnn&quot;&gt;</code>.</li>
-<li>All cross-links <code>[text](#anchor)</code> resolve to a real heading slug or <code>&lt;a id&gt;</code> tag in the document.</li>
-<li>The first changelog entry's version equals the frontmatter <code>version</code>. The output filename equals <code>{file_name}_v{version}-source.md</code>.</li>
-<li>Every anchor present in the prior version is still present in the new file (no renames, no deletes). New anchors are fine.</li>
-<li>Append-only invariant holds for Discarded Alternatives, References, and Changelog (no entries removed since prior version).</li>
-<li>Every queue row has a unique <code>Q-NNN</code> ID; every tracker row has a unique <code>T-NNN</code> ID; no <code>Q-NNN</code> appears in both queue and tracker simultaneously.</li>
-<li>The Turn 1 second-opinion brief (when present) is wrapped in <code>&lt;!-- @brief-start --&gt;</code> / <code>&lt;!-- @brief-end --&gt;</code>. The Turn 2 change summary (when present) is wrapped in <code>&lt;!-- @summary-start --&gt;</code> / <code>&lt;!-- @summary-end --&gt;</code>. The end-of-turn marker is the final two lines.</li>
-<li>No plain-text reference to <code>R-XXX-N</code>, <code>DA-XXX</code>, or <code>Q-NNN</code> appears outside a Markdown link <code>[...](#...)</code>, an HTML comment, or a fenced code block.</li>
-</ul>
-<p><strong>Semantic checks</strong> (always agent-driven; see <a href="#common-failure-modes">Common failure modes</a> for the full inventory): source-tier discipline, cross-section contradiction check, no Discarded Alternative re-proposed, second opinions vetted before incorporation, findings compared against already-researched topics, queue insertion protocol applied, <code>VALIDATED</code> claims meet the project's validation gate, no fabricated second opinions.</p>
-<p>If the agent has shell access AND <code>research-buddy</code> ≥ 2.0 is installed, it MAY invoke <code>research-buddy validate {{file_name}}_v{{version}}-source.md</code> and report the result alongside the change summary.</p>
-<!-- @end: framework.reference.validation -->
-<!-- @anchor: framework.reference.failure-modes -->
-<h3 id="common-failure-modes">Common failure modes</h3>
-<p>Each entry is tagged <code>[mechanical]</code> (a script can detect it), <code>[semantic]</code> (the agent must reason about it), or <code>[hybrid]</code> (mechanical detection is partial; semantic review for the rest).</p>
-<ul>
-<li><code>[mechanical]</code> Renaming or deleting an anchor — breaks <code>str_replace</code> targeting from this and future sessions.</li>
-<li><code>[mechanical]</code> Skipping session zero when the frontmatter still has <code>null</code> placeholders.</li>
-<li><code>[semantic]</code> Using Discovery or Never-tier sources as primary evidence.</li>
-<li><code>[semantic]</code> Updating a section that wasn't actually affected by the change.</li>
-<li><code>[mechanical]</code> Closing a session without bumping the version, filename, and changelog.</li>
-<li><code>[semantic]</code> Adopting a decision without running the cross-section contradiction check.</li>
-<li><code>[hybrid]</code> Re-proposing an approach already in Discarded Alternatives. Mechanical: exact <code>DA-XXX</code> ID match. Semantic: paraphrased re-proposals.</li>
-<li><code>[semantic]</code> Incorporating second-opinion claims before vetting them.</li>
-<li><code>[semantic]</code> Inventing second opinions, fictional experts, or role-playing external sources.</li>
-<li><code>[semantic]</code> Treating repeated errors across multiple second opinions as independent confirmation.</li>
-<li><code>[semantic]</code> Marking a result <code>VALIDATED</code> before the project's validation gate is met.</li>
-<li><code>[semantic]</code> Failing to compare new findings against already-researched topics.</li>
-<li><code>[hybrid]</code> Language drift — content not in the file's declared <code>language.code</code>. Mechanical: language-detection library on prose. Semantic: code-switching, technical terms, proper nouns.</li>
-<li><code>[semantic]</code> Pausing for confirmation on Turn 2 when no blocking issue actually exists. The default is <strong>write</strong>.</li>
-<li><code>[mechanical]</code> Burying the second-opinion brief below findings on Turn 1, or omitting the <code>@brief-start</code> / <code>@brief-end</code> markers — the brief must be at the top, wrapped, so a script can extract and dispatch it.</li>
-<li><code>[mechanical]</code> Omitting the <code>@summary-start</code> / <code>@summary-end</code> markers around the Turn 2 change summary — same automation reason.</li>
-<li><code>[semantic]</code> Adding a queue item without running the <a href="#queue-rules">insertion protocol</a> — leads to redundant or near-duplicate rows.</li>
-<li><code>[mechanical]</code> Leaving completed rows in the Open Research Queue. Done rows move to Research Tracker; the queue holds only OPEN items.</li>
-<li><code>[semantic]</code> Generating clean view or HTML by default at end of Turn 2 — wait for the user to ask, to keep context lean.</li>
-<li><code>[mechanical]</code> Writing plain-text references to rules / DAs / sessions when a stable link target exists. Always link.</li>
-</ul>
-<!-- @end: framework.reference.failure-modes -->
-<!-- @end: framework.reference -->
-<hr />
-<!-- @anchor: project -->
-<p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Research Document · Framework (Reference) · v</p>
-</div></div>
-<div id="tab-project-specification" class="tab-content" data-tab-label="Project Specification">
-<div class="content">
-<h1 id="tab-hdr-project-specification">3. Project Specification</h1>
+<h1 id="tab-hdr-project-specification">1. Project Specification</h1>
 <!-- Filled in session zero. Modifications to project-specific values go here. Do not modify the Framework sections. -->
 <h3 id="domain">Domain</h3>
 <ul>
@@ -692,8 +382,8 @@ Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the sa
 </div></div>
 <div id="tab-open-research-queue" class="tab-content" data-tab-label="Open Research Queue">
 <div class="content">
-<h1 id="tab-hdr-open-research-queue">4. Open Research Queue</h1>
-<p>Pending topics in priority order. <strong>Top row = next session's topic.</strong> Done items leave the queue and move to the <a href="#research-tracker">Research Tracker</a>. New items pass through the <a href="#queue-rules">insertion protocol</a>.</p>
+<h1 id="tab-hdr-open-research-queue">2. Open Research Queue</h1>
+<p>Pending topics in priority order. <strong>Top row = next session's topic.</strong> Done items leave the queue and move to the <a href="#research-tracker">Research Tracker</a>. New items pass through the insertion protocol.</p>
 <table>
 <thead>
 <tr>
@@ -717,7 +407,7 @@ Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the sa
 </div></div>
 <div id="tab-research-tracker" class="tab-content" data-tab-label="Research Tracker">
 <div class="content">
-<h1 id="tab-hdr-research-tracker">5. Research Tracker</h1>
+<h1 id="tab-hdr-research-tracker">3. Research Tracker</h1>
 <p>Living status board — one row per researched topic. Rows are appended as topics complete; never deleted.</p>
 <table>
 <thead>
@@ -744,7 +434,7 @@ Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the sa
 </div></div>
 <div id="tab-adopted-rules" class="tab-content" data-tab-label="Adopted Rules">
 <div class="content">
-<h1 id="tab-hdr-adopted-rules">6. Adopted Rules</h1>
+<h1 id="tab-hdr-adopted-rules">4. Adopted Rules</h1>
 <p>Rules adopted during research. Each rule has a stable ID of the form <code>R-{{TOPIC}}-{{N}}</code> and an inline <code>&lt;a id&gt;</code> link target so other text can cross-link to it.</p>
 <p><strong>Status lifecycle:</strong> <code>PROPOSED</code> (single Tier-1 or Tier-2/Discovery support) → <code>VALIDATED</code> (≥2 independent Tier-1 sources, no Tier-1 contradiction) → <code>SUPERSEDED</code> (replaced by a newer rule; cross-link via <code>superseded_by</code>).</p>
 <p><strong>Force keywords (RFC 2119 / 8174):</strong> <code>MUST</code> / <code>MUST NOT</code> / <code>SHOULD</code> / <code>SHOULD NOT</code> / <code>MAY</code>. Force is orthogonal to status — a <code>SHOULD</code> rule may be <code>VALIDATED</code>; a <code>MUST</code> rule may be <code>PROPOSED</code>.</p>
@@ -775,7 +465,7 @@ evidence:
 </div></div>
 <div id="tab-discarded-alternatives" class="tab-content" data-tab-label="Discarded Alternatives">
 <div class="content">
-<h1 id="tab-hdr-discarded-alternatives">7. Discarded Alternatives</h1>
+<h1 id="tab-hdr-discarded-alternatives">5. Discarded Alternatives</h1>
 <p>Permanent record of rejected approaches. Never re-propose items listed here. Each entry has a stable <code>DA-{{TOPIC}}-{{N}}</code> label and an inline <code>&lt;a id&gt;</code> link target. Always check this section before proposing any approach.</p>
 <p><strong>Block format</strong> (one block per rejection; lowercase the ID for the <code>&lt;a id&gt;</code> value):</p>
 <pre><code>&lt;!-- @da: DA-EXAMPLE-1 --&gt;
@@ -790,7 +480,7 @@ evidence:
 </div></div>
 <div id="tab-session-notes" class="tab-content" data-tab-label="Session Notes">
 <div class="content">
-<h1 id="tab-hdr-session-notes">8. Session Notes</h1>
+<h1 id="tab-hdr-session-notes">6. Session Notes</h1>
 <p>One subsection per researched topic. Each contains pre-registration, sources consulted, decisions adopted, rejected claims, and second-opinion evaluation. Each block has an inline <code>&lt;a id&gt;</code> link target for cross-linking from elsewhere in the document.</p>
 <p><strong>Block format</strong> (one block per session; lowercase the ID for the <code>&lt;a id&gt;</code> value):</p>
 <pre><code>&lt;!-- @session: Q-001 --&gt;
@@ -806,7 +496,7 @@ evidence:
 |---|---|---|---|
 | ... | ... | ... | ... |
 
-**Decisions adopted.** Bulleted list with rule IDs (linked: `[R-XXX-N](#r-xxx-n)`).
+**Decisions adopted.** Bulleted list with rule IDs (linked: `R-XXX-N`).
 
 **Rejected claims.** Bulleted list with DA IDs (linked: `[DA-XXX](#da-xxx)`).
 
@@ -819,7 +509,7 @@ evidence:
 </div></div>
 <div id="tab-reasoning-journey" class="tab-content" data-tab-label="Reasoning Journey">
 <div class="content">
-<h1 id="tab-hdr-reasoning-journey">9. Reasoning Journey</h1>
+<h1 id="tab-hdr-reasoning-journey">7. Reasoning Journey</h1>
 <p>Chronological narrative of how the project arrived at its current state. One short paragraph per significant version. Reference rules / DAs / sessions by their linked IDs.</p>
 <p><strong>v1.0 — {{date}}.</strong> {{Why this project exists, what it aims to deliver, why this initial structure.}}</p>
 <!-- @end: journey -->
@@ -829,7 +519,7 @@ evidence:
 </div></div>
 <div id="tab-references" class="tab-content" data-tab-label="References">
 <div class="content">
-<h1 id="tab-hdr-references">10. References</h1>
+<h1 id="tab-hdr-references">8. References</h1>
 <p>All sources cited across research, descending version order. Each entry: Title, Author(s), Year, Venue, URL/DOI. Verify end-to-end before listing.</p>
 <h3 id="v10--date">v1.0 — {{date}}</h3>
 <ul>
@@ -842,7 +532,7 @@ evidence:
 </div></div>
 <div id="tab-changelog" class="tab-content" data-tab-label="Changelog">
 <div class="content">
-<h1 id="tab-hdr-changelog">11. Changelog</h1>
+<h1 id="tab-hdr-changelog">9. Changelog</h1>
 <p>Newest first. The first entry is implicitly the current version. Each entry: decisions adopted, rejected alternatives, contradiction-check result, second opinions reviewed (by label), sources used. Reference rules / DAs / sessions by their linked IDs.</p>
 <h3 id="v10-project-initialized--date">v1.0: Project initialized — {{date}}</h3>
 <p>{{What was set up: domain, tiers, initial queue, section structure, domain rules.}}</p>
@@ -2105,7 +1795,7 @@ return Pe}()
 
 document.addEventListener('DOMContentLoaded', function() {
 
-const TABS = /*TABS_INJECT*/["framework-core", "framework-reference", "project-specification", "open-research-queue", "research-tracker", "adopted-rules", "discarded-alternatives", "session-notes", "reasoning-journey", "references", "changelog"]/*END_INJECT*/;
+const TABS = /*TABS_INJECT*/["project-specification", "open-research-queue", "research-tracker", "adopted-rules", "discarded-alternatives", "session-notes", "reasoning-journey", "references", "changelog"]/*END_INJECT*/;
 
 /* ── helpers ── */
 function $(id) { return document.getElementById(id); }
