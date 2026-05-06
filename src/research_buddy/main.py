@@ -25,6 +25,13 @@ from typing import Any
 import argcomplete
 
 from research_buddy.build import build_html, find_latest_json
+from research_buddy.clean_md import clean_md
+from research_buddy.migrate_v1_to_v2 import (
+    derive_output_path as derive_md_output_path,
+)
+from research_buddy.migrate_v1_to_v2 import (
+    migrate as migrate_v1_to_v2,
+)
 from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
 from research_buddy.validator import validate
 from research_buddy.validator_md import validate_md
@@ -352,6 +359,91 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def cmd_migrate(args: argparse.Namespace) -> int:
+    """Migrate v1 JSON document(s) to v2 Markdown."""
+    exit_code = 0
+    for p in args.paths:
+        path = Path(p).resolve()
+        if path.suffix != ".json":
+            print(
+                f"Error: `migrate-v1-to-v2` only processes .json files; got {path.name}",
+                file=sys.stderr,
+            )
+            exit_code = 1
+            continue
+        if not path.is_file():
+            print(f"Error: {path} not found.", file=sys.stderr)
+            exit_code = 1
+            continue
+
+        try:
+            with path.open(encoding="utf-8") as f:
+                doc = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"Error: {path.name} is not valid JSON: {e}", file=sys.stderr)
+            exit_code = 2
+            continue
+
+        # Resolve output path: -o wins; otherwise derive from doc + input dir
+        out = Path(args.output).resolve() if args.output else derive_md_output_path(path, doc)
+
+        if out.exists() and not args.force:
+            print(
+                f"Error: {out} already exists. Use --force to overwrite, or specify -o.",
+                file=sys.stderr,
+            )
+            exit_code = 2
+            continue
+
+        try:
+            text = migrate_v1_to_v2(doc)
+            out.write_text(text, encoding="utf-8")
+        except (ValueError, RuntimeError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            exit_code = 2
+            continue
+
+        src_size = path.stat().st_size
+        out_size = out.stat().st_size
+        print(f"\u2714  {path.name} \u2192 {out.name} ({src_size:,} \u2192 {out_size:,} bytes)")
+        print(f"   Next: research-buddy validate {out.name}")
+    return exit_code
+
+
+def cmd_clean(args: argparse.Namespace) -> int:
+    """Generate clean-view .md from v2 source file(s)."""
+    exit_code = 0
+    for p in args.paths:
+        path = Path(p).resolve()
+        if path.suffix != ".md":
+            print(
+                f"Error: `clean` only processes v2 Markdown files; got {path.name}",
+                file=sys.stderr,
+            )
+            exit_code = 1
+            continue
+        if not path.is_file():
+            print(f"Error: {path} not found.", file=sys.stderr)
+            exit_code = 1
+            continue
+
+        try:
+            out = clean_md(path, Path(args.output).resolve() if args.output else None)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            exit_code = 2
+            continue
+
+        src_size = path.stat().st_size
+        out_size = out.stat().st_size
+        pct = (1 - out_size / src_size) * 100 if src_size else 0
+        print(
+            f"\u2714  {path.name} \u2192 {out.name} "
+            f"({src_size:,} \u2192 {out_size:,} bytes, {pct:.0f}% smaller)"
+        )
+    return exit_code
+
+
 def _load_starter_template() -> dict[str, Any]:
     """Load the starter template from package assets."""
     ref = resources.files("research_buddy") / "starter.json"
@@ -553,6 +645,47 @@ def main() -> None:
         "and append-only checks). Ignored for .json files.",
     )
 
+    # clean
+    p_clean = sub.add_parser(
+        "clean",
+        help="Generate clean-view .md from a v2 source file (strips framework block)",
+    )
+    p_clean.add_argument(
+        "paths",
+        nargs="+",
+        help="One or more *_v*-source.md files to clean",
+    )
+    p_clean.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Output path (default: {file_name}_v{version}.md alongside source). "
+        "Only meaningful when a single file is passed.",
+    )
+
+    # migrate-v1-to-v2
+    p_mig = sub.add_parser(
+        "migrate-v1-to-v2",
+        help="Migrate a v1 JSON research document to v2 Markdown",
+    )
+    p_mig.add_argument(
+        "paths",
+        nargs="+",
+        help="One or more v1 .json files to migrate",
+    )
+    p_mig.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Output .md path (default: {file_name}_v{version}-source.md alongside input). "
+        "Only meaningful when a single file is passed.",
+    )
+    p_mig.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite the output file if it already exists",
+    )
+
     # init
     p_init = sub.add_parser("init", help="Scaffold a new documentation project")
     p_init.add_argument("path", help="Target directory")
@@ -586,6 +719,8 @@ def main() -> None:
     handlers = {
         "build": cmd_build,
         "validate": cmd_validate,
+        "clean": cmd_clean,
+        "migrate-v1-to-v2": cmd_migrate,
         "init": cmd_init,
         "upgrade": cmd_upgrade,
     }
