@@ -38,7 +38,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +191,8 @@ def _check_frontmatter(text: str, path: Path) -> list[Issue]:
             Issue(
                 "error",
                 "wrong-format-version",
-                f"format_version is {fmt_ver!r}, expected 2 (this validator handles v2 Markdown only)",
+                f"format_version is {fmt_ver!r}, expected 2 "
+                "(this validator handles v2 Markdown only)",
                 end_line,
             )
         )
@@ -452,8 +453,9 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
 
 def _extract_section(text: str, anchor_id: str) -> str | None:
     """Return the text between <!-- @anchor: anchor_id --> and <!-- @end: anchor_id -->."""
+    escaped = re.escape(anchor_id)
     pattern = re.compile(
-        rf"<!-- @anchor:\s*{re.escape(anchor_id)}\s*-->(.*?)<!-- @end:\s*{re.escape(anchor_id)}\s*-->",
+        rf"<!-- @anchor:\s*{escaped}\s*-->(.*?)<!-- @end:\s*{escaped}\s*-->",
         re.DOTALL,
     )
     m = pattern.search(text)
@@ -525,7 +527,8 @@ def _check_id_uniqueness(text: str, lines: list[str]) -> list[Issue]:
             Issue(
                 "error",
                 "id-in-queue-and-tracker",
-                f"{qid} appears in both the queue and the tracker — done items must leave the queue",
+                f"{qid} appears in both the queue and the tracker — "
+                "done items must leave the queue",
             )
         )
 
@@ -592,7 +595,8 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
             Issue(
                 "error",
                 "da-removed",
-                f"DA {name!r} from prior version is missing — Discarded Alternatives are append-only",
+                f"DA {name!r} from prior version is missing — "
+                "Discarded Alternatives are append-only",
             )
         )
 
@@ -614,7 +618,8 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
                     Issue(
                         "error",
                         f"{section_id}-entry-removed",
-                        f"{section_label} entry '{heading}' from prior version is missing — append-only",
+                        f"{section_label} entry '{heading}' from prior version is missing "
+                        "— append-only",
                     )
                 )
 
@@ -712,7 +717,7 @@ def main(argv: list[str] | None = None) -> int:
             if errors:
                 print(f"\u2718  {len(errors)} error(s).")
             else:
-                print(f"\u2714  no errors (warnings/info only).")
+                print("\u2714  no errors (warnings/info only).")
 
     return 1 if errors else 0
 
