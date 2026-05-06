@@ -80,15 +80,17 @@ To run the full battery on-demand: `uv run pre-commit run --all-files`.
 
 ## Versions
 
-Four places hold the version, one source of truth:
+Five places hold the version, one source of truth:
 
 - `pyproject.toml` — canonical (`version = "…"`)
 - `src/research_buddy/__init__.py` — `__version__ = "…"` (rewritten by `sync_version.py`)
 - `src/research_buddy/starter.json` — `meta.research_buddy_version` (same)
+- `src/research_buddy/starter.md` — `research_buddy_version` in YAML frontmatter (same)
 - `README.md` — `# Research Buddy v…` heading (same)
 
 Workflow on a bump: edit `pyproject.toml`, run `make version-sync`, commit. CI's
-`make check-version-sync` catches drift.
+`make check-version-sync` catches drift; `tests/test_version_sync.py` is the
+local belt-and-suspenders.
 
 Runtime compatibility rules (see README "Version compatibility"):
 - MAJOR differs → error-level warning.
