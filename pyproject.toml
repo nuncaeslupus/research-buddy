@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-buddy"
-version = "1.4.0"
-description = "Structured AI research collaborator — generates high-fidelity HTML from versioned JSON research documents."
+version = "1.5.0"
+description = "Structured AI research collaborator — generates high-fidelity HTML from versioned JSON or Markdown research documents."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"

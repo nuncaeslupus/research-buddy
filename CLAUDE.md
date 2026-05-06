@@ -21,28 +21,43 @@ changes (step completed, new step inserted, ordering revised).
 
 ## What this repo is
 
-`research-buddy` — a CLI that turns a versioned JSON research document into a
-single-file HTML page (optional PDF via `weasyprint`). Installed as a package;
-the CLI entry point is `research_buddy.main:main`. Agents (humans or LLMs) edit
-the JSON; this tool renders it. The JSON is the source of truth.
+`research-buddy` — a CLI that turns a versioned research document
+(v2 Markdown or v1 JSON) into a single-file HTML page (optional PDF
+via `weasyprint` for v1). Installed as a package; the CLI entry point
+is `research_buddy.main:main`. Agents (humans or LLMs) edit the source
+file; this tool renders it. The source file is the source of truth.
+
+**v2 Markdown** is the recommended format for new projects (default
+since 1.5). YAML frontmatter + Markdown body with HTML-comment anchors.
+Source is `*_v*-source.md` (full framework, agent-edited); the clean
+view `*_v*.md` (framework stripped) and HTML are derived.
+
+**v1 JSON** is supported for existing projects but on a deprecation
+path. Existing JSON projects can migrate via
+`research-buddy migrate-v1-to-v2`.
 
 ## Layout
 
 ```
 src/research_buddy/
-  main.py         # argparse CLI: build | validate | init | upgrade
-  build.py        # JSON → HTML (block renderers, table widths, lang resolution)
-  upgrade.py      # Template refresh: re-sync agent_guidelines from starter.json
-  validator.py    # jsonschema + reference ordering + doc/tool version compat
-  schema.json     # Draft 2020-12 schema, bundled in the wheel
-  starter.json    # Session-zero template, bundled in the wheel
+  main.py              # argparse CLI: build | validate | clean | migrate-v1-to-v2 | init | upgrade
+  build.py             # v1 JSON → HTML (block renderers, table widths, lang resolution)
+  build_md.py          # v2 MD  → HTML (reuses v1 chrome via base.html.j2)
+  upgrade.py           # v1 template refresh: re-sync agent_guidelines from starter.json
+  validator.py         # v1 jsonschema + reference ordering + doc/tool version compat
+  validator_md.py      # v2 mechanical validator (frontmatter, anchors, links, IDs, prior diff)
+  clean_md.py          # v2 source MD → clean MD (strip framework, regen title)
+  migrate_v1_to_v2.py  # v1 JSON  → v2 MD source
+  schema.json          # v1 Draft 2020-12 schema, bundled in the wheel
+  starter.json         # v1 session-zero template, bundled in the wheel
+  starter.md           # v2 session-zero template, bundled in the wheel
   css/ js/ lib/ images/  # assets inlined into the generated HTML
 scripts/
   sync_version.py        # Source of truth = pyproject.toml; rewrites the other files
   check_version_sync.py  # Read-only: fails if anything drifted. Used by CI.
 tests/            # pytest; classes, TDD ceremony enforced
-starter-example/  # Regenerated HTML of the starter template
-Makefile          # make sync | lint | format | test | regen-example | build | publish | version-sync | check-version-sync
+starter-example/  # starter.html (v1) + starter-md.html (v2)
+Makefile          # make sync | lint | format | test | regen-example | regen-md-example | regen-examples | build | publish | version-sync | check-version-sync
 ```
 
 ## Commands (prefer Make)
@@ -50,12 +65,14 @@ Makefile          # make sync | lint | format | test | regen-example | build | p
 | Command                  | What it does                                                                |
 | ------------------------ | --------------------------------------------------------------------------- |
 | `make sync`              | `uv sync --extra dev` — install dev deps (includes weasyprint)              |
-| `make test`              | `pytest tests/ -v` — full suite (~1.5s)                                     |
-| `make lint`              | `ruff check` + `mypy`                                                       |
+| `make test`              | `pytest tests/ -v` — full suite                                             |
+| `make lint`              | `ruff check` + `ruff format --check` + `mypy` (mirrors CI)                  |
 | `make format`            | `ruff check --fix --unsafe-fixes` + `ruff format`                           |
-| `make regen-example`     | Rebuild `starter-example/starter.html` from the bundled `starter.json`      |
-| `make version-sync`      | Propagate the `pyproject.toml` version into `__init__.py`, `starter.json`, README heading |
-| `make check-version-sync`| CI gate: fails if any of the four version strings have drifted              |
+| `make regen-example`     | Rebuild `starter-example/starter.html` from `starter.json` (v1)             |
+| `make regen-md-example`  | Rebuild `starter-example/starter-md.html` from `starter.md` (v2)            |
+| `make regen-examples`    | Both of the above                                                           |
+| `make version-sync`      | Propagate `pyproject.toml` version into the four downstream files          |
+| `make check-version-sync`| CI gate: fails if any of the five version strings have drifted              |
 | `make build`             | Produce wheel + sdist in `dist/`                                            |
 | `make publish`           | `build` then `twine upload` (requires PyPI creds)                           |
 | `make update-skills`     | `git subtree pull` latest shared skills from the `shared-skills` remote     |
@@ -135,6 +152,28 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
 
 ## Non-obvious things
 
+- **`build` dispatches on file extension.** `.json` → v1 pipeline
+  (`build.py`); `.md` → v2 pipeline (`build_md.py`). Mixing the two
+  in a single invocation is rejected. `--watch` and `--pdf` are v1
+  only. `build_md_html` strips the framework block by default
+  (matches the JSON pipeline's reader-facing semantics); pass
+  `keep_framework=True` programmatically to keep it.
+- **v2 anchors are load-bearing.** `<!-- @anchor: X -->` ↔
+  `<!-- @end: X -->` and `<!-- @rule: R-XXX-N -->` ↔
+  `<a id="r-xxx-n"></a>` are the anchor system the validator
+  protects. `validate --prior` enforces append-only invariants
+  (anchors / DAs / changelog / references never disappear). Renaming
+  an anchor is a breaking change.
+- **`format_version` vs `research_buddy_version`.** The frontmatter
+  field `format_version: 2` is the *format generation* — it bumps when
+  v2 itself changes shape (rare). `research_buddy_version` is the
+  *tool version* and tracks `pyproject.toml`. Today's correct state is
+  `format_version: 2` + `research_buddy_version: 1.5.0`.
+- **`*.md` ships in the wheel.** `[tool.setuptools.package-data]`
+  globs include `*.md` so `starter.md` is available via
+  `importlib.resources` after `pip install`. Without this glob,
+  `migrate-v1-to-v2` would fail at runtime (it loads the v2 framework
+  block from the bundled starter).
 - `build.py` has English-centric heuristics in `_table_col_widths` (hand-tuned
   column widths for specific header patterns) and `r_code` (Python auto-detect
   when `lang` is missing). Good enough for the starter, intentionally left as-is.
