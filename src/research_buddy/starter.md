@@ -146,6 +146,8 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 
 If the agent has shell access AND `research-buddy` ≥ 2.0 is installed, it MAY run `research-buddy clean ...` and/or `research-buddy build ...` after the user asks for derived files. Otherwise it prints the build commands verbatim.
 
+<!-- @end: framework.reference.editing -->
+
 <!-- @anchor: framework.reference.turns -->
 ### Turn markers
 
@@ -168,6 +170,8 @@ Session zero:
 
 **Parsing recipe.** Strip the `<!-- ` prefix and ` -->` suffix; the remainder is `:`-separated. The first token is the literal `research-buddy`; subsequent tokens are `key=value` pairs. Substitute `{{version}}`, `{{file_name}}`, `{{Q-NNN}}`, `{{reason}}`, `{{reason_token}}` from frontmatter or context before emitting. Never leave `{{...}}` literals in the emitted tag.
 
+<!-- @end: framework.reference.turns -->
+
 <!-- @anchor: framework.reference.automation-hooks -->
 ### Automation hooks
 
@@ -181,6 +185,8 @@ The new file artifact is delivered separately via the chat platform's file-attac
 
 All extraction markers are HTML comments — invisible in rendered Markdown, ignored by Markdown renderers, parseable by any regex-capable script.
 
+<!-- @end: framework.reference.automation-hooks -->
+
 <!-- @anchor: framework.reference.versioning -->
 ### Versioning
 
@@ -193,6 +199,8 @@ Bump MINOR (1.0 → 1.1 → 1.2) on any content change. Format-only changes do n
 3. Output filename `{{file_name}}_v{{version}}-source.md`.
 
 `research_buddy_version` in the frontmatter records the framework version that wrote the file. Update it on every write to whichever framework version the agent operates under.
+
+<!-- @end: framework.reference.versioning -->
 
 <!-- @anchor: framework.reference.session-zero -->
 ### Session zero
@@ -230,6 +238,8 @@ End with the session-zero Turn 1 marker.
 5. Fill in the YAML frontmatter (`version: "1.0"`, `date`, `file_name`, `title`, `subtitle`, `project.*`), populate [Project Specification](#project-specification), seed the [queue](#open-research-queue), add a v1.0 entry to the [changelog](#changelog), add a v1.0 paragraph to the [reasoning journey](#reasoning-journey).
 6. Output `{{file_name}}_v1.0-source.md`. Print the [change summary](#automation-hooks). Offer derived files. End with the session-zero-complete marker.
 
+<!-- @end: framework.reference.session-zero -->
+
 <!-- @anchor: framework.reference.queue-rules -->
 ### Queue rules
 
@@ -251,6 +261,8 @@ This protocol applies wherever the queue is touched. It is the agent's job to ke
 
 **Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete.
 
+<!-- @end: framework.reference.queue-rules -->
+
 <!-- @anchor: framework.reference.brief -->
 ### Second-opinion brief template
 
@@ -269,6 +281,8 @@ Automatically rejected: {{TIER_REJECT_RULES}}.
 Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the same sentence as the claim — not at the end and not via links to other parts of the answer. Distinguish what is validated vs. proposed/experimental.
 ```
 
+<!-- @end: framework.reference.brief -->
+
 <!-- @anchor: framework.reference.synthesis -->
 ### Synthesis matrix
 
@@ -277,6 +291,8 @@ Required when more than three sources are consulted on the same topic, or any ti
 Format: a table where each row is one concrete claim and each column is one Tier-1/2 source. Each cell is `SUPPORTS` / `CONTRADICTS` / `SILENT`. Adopt only claims with ≥2 independent `SUPPORTS` from Tier-1 sources and zero `CONTRADICTS` from Tier-1 sources.
 
 The matrix lives in the relevant Session Notes block.
+
+<!-- @end: framework.reference.synthesis -->
 
 <!-- @anchor: framework.reference.validation -->
 ### Self-validation
@@ -301,6 +317,8 @@ A future `research-buddy validate <file>` command will run all mechanical checks
 **Semantic checks** (always agent-driven; see [Common failure modes](#common-failure-modes) for the full inventory): source-tier discipline, cross-section contradiction check, no Discarded Alternative re-proposed, second opinions vetted before incorporation, findings compared against already-researched topics, queue insertion protocol applied, `VALIDATED` claims meet the project's validation gate, no fabricated second opinions.
 
 If the agent has shell access AND `research-buddy` ≥ 2.0 is installed, it MAY invoke `research-buddy validate {{file_name}}_v{{version}}-source.md` and report the result alongside the change summary.
+
+<!-- @end: framework.reference.validation -->
 
 <!-- @anchor: framework.reference.failure-modes -->
 ### Common failure modes
@@ -327,6 +345,8 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 - `[mechanical]` Leaving completed rows in the Open Research Queue. Done rows move to Research Tracker; the queue holds only OPEN items.
 - `[semantic]` Generating clean view or HTML by default at end of Turn 2 — wait for the user to ask, to keep context lean.
 - `[mechanical]` Writing plain-text references to rules / DAs / sessions when a stable link target exists. Always link.
+
+<!-- @end: framework.reference.failure-modes -->
 
 <!-- @end: framework.reference -->
 
