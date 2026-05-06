@@ -413,9 +413,15 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
     version = fm.get("version")
     file_name = fm.get("file_name")
 
+    # Detect whether this is a source file (has framework block) or a clean view
+    has_framework = "<!-- @anchor: framework.core -->" in text
+
     # Filename check
     if version and file_name:
-        expected = f"{file_name}_v{version}-source.md"
+        if has_framework:
+            expected = f"{file_name}_v{version}-source.md"
+        else:
+            expected = f"{file_name}_v{version}.md"
         if path.name != expected:
             issues.append(
                 Issue(
