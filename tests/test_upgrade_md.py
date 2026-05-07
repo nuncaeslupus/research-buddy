@@ -85,6 +85,23 @@ class TestFrameworkBlockReplacement:
         with pytest.raises(UpgradeError, match=r"missing.*framework\.reference"):
             upgrade_md(broken, starter, __version__)
 
+    def test_ignores_marker_lines_inside_fenced_code_blocks(self) -> None:
+        """A fenced code example showing the marker lines must not shadow the
+        real boundaries. Without fence-skipping, the bogus FRAMEWORK_END inside
+        the fence (which appears AFTER the real one in the file) would win
+        because end-detection takes the last match."""
+        starter = _starter_text()
+        stale = _replace_framework(starter, "## Old framework block.")
+        bogus_fence = f"\n```\n{FRAMEWORK_START}\nfake content\n{FRAMEWORK_END}\n```\n"
+        stale_with_fence = stale + bogus_fence
+
+        upgraded, changes = upgrade_md(stale_with_fence, starter, __version__)
+        assert "framework block ← starter.md" in changes
+        assert "Old framework block" not in upgraded
+        # The bogus fence and its contents must be preserved verbatim — the
+        # upgrader treated those marker lines as inert prose.
+        assert bogus_fence.rstrip("\n") in upgraded
+
 
 class TestFrontmatterMigration:
     def test_renames_legacy_format_version_key(self) -> None:

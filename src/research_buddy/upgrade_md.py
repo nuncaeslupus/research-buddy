@@ -83,8 +83,8 @@ def _replace_framework_block(source: str, starter: str) -> tuple[str, list[str]]
     """Swap the source's framework block with the starter's framework block.
 
     Boundaries are matched by full-line equality with the marker (after
-    strip()), the same convention `clean_md.collect_framework_targets` uses,
-    so prose mentions of the markers inside fenced code blocks are ignored.
+    strip()) on a line that is NOT inside a fenced code block, so example
+    code that displays the markers as documentation is ignored.
     """
     src_start, src_end = _find_framework_bounds(source, "source")
     star_start, star_end = _find_framework_bounds(starter, "starter")
@@ -110,11 +110,17 @@ def _find_framework_bounds(text: str, label: str) -> tuple[int, int]:
     is missing or the closing precedes the opening.
 
     `label` is "source" or "starter" — included in error messages so the user
-    can tell which file is malformed.
+    can tell which file is malformed. Lines inside fenced code blocks are
+    skipped so example code documenting the markers does not get matched.
     """
+    from research_buddy.validator_md import _line_in_fence
+
     lines = text.splitlines()
+    in_fence = _line_in_fence(lines)
     start = end = -1
     for i, line in enumerate(lines):
+        if in_fence[i]:
+            continue
         stripped = line.strip()
         if stripped == FRAMEWORK_START and start < 0:
             start = i
