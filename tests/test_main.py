@@ -76,6 +76,20 @@ class TestInitV2:
         text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
         assert '\nsubtitle: "A short tagline"' in text
 
+    def test_init_escapes_double_quotes_in_title(self, tmp_path: Path) -> None:
+        """Titles containing a double-quote must round-trip through YAML."""
+        import yaml
+
+        target = tmp_path / "docs"
+        cmd_init(_Args(path=str(target), title='My "Awesome" Project'))
+        text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
+
+        # Frontmatter must still parse — without escaping, the inner `"` would
+        # close the YAML string early and the next char would be a syntax error.
+        fm_text = text.split("---\n", 2)[1]
+        fm = yaml.safe_load(fm_text)
+        assert fm["title"] == 'My "Awesome" Project'
+
     def test_refuses_existing(self, tmp_project: Path) -> None:
         result = cmd_init(_Args(path=str(tmp_project)))
         assert result == 1

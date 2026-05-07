@@ -789,9 +789,9 @@ def _init_v2(args: argparse.Namespace) -> int:
     print()
     print("Next steps:")
     print(f"  1. Upload {_rel_to_cwd(doc_path)} to your AI assistant")
-    print("  2. The agent will run session_zero and produce {file_name}_v1.0-source.md")
-    print("  3. research-buddy build source/{file_name}_v1.0-source.md")
-    print("  4. Open {file_name}.html in a browser")
+    print("  2. The agent will run session_zero and produce [file_name]_v1.0-source.md")
+    print("  3. research-buddy build source/[file_name]_v1.0-source.md")
+    print("  4. Open [file_name].html in a browser")
     return 0
 
 
@@ -801,6 +801,16 @@ def _set_frontmatter_scalar(text: str, key: str, value: str) -> str:
     Operates line-based to preserve YAML comments and surrounding formatting.
     Only mutates the first occurrence of `^{key}:` between the leading and
     closing `---` delimiters; no-op when the frontmatter or key is absent.
+
+    `value` is escaped for YAML's double-quoted form (backslash and
+    double-quote get backslash-escaped) so titles like `My "Awesome"
+    Project` round-trip safely.
+
+    Precondition: the matched line's existing value is unquoted scalar
+    (e.g. `null`) — we use a naive ` #` split to detect any trailing
+    comment, which would mis-fire on an existing quoted value containing
+    `#`. This holds for `init`'s actual call sites (always operating on
+    the fresh starter's `null` lines).
     """
     lines = text.splitlines()
     if not lines or lines[0].rstrip() != "---":
@@ -813,6 +823,7 @@ def _set_frontmatter_scalar(text: str, key: str, value: str) -> str:
     if fm_end < 0:
         return text
 
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     prefix = f"{key}:"
     for i in range(1, fm_end):
         line = lines[i]
@@ -823,7 +834,7 @@ def _set_frontmatter_scalar(text: str, key: str, value: str) -> str:
         if " #" in after_colon:
             _, comment_body = after_colon.split(" #", 1)
             comment = "  # " + comment_body.lstrip()
-        lines[i] = f'{key}: "{value}"{comment}'.rstrip()
+        lines[i] = f'{key}: "{escaped}"{comment}'.rstrip()
         break
 
     out = "\n".join(lines)
