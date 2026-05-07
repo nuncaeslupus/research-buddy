@@ -707,10 +707,11 @@ def _check_brief_context_slots(text: str, lines: list[str]) -> list[Issue]:
                     "warning",
                     "brief-slot-empty-but-section-non-empty",
                     f"second-opinion brief context slot '{slot_heading}' is "
-                    f"'None.' but [{anchor}] contains live entries — preflight "
-                    "may have been skipped (or the agent decided none of the "
-                    "live entries are relevant; if so, replace 'None.' with "
-                    "'None relevant.' plus a one-line reason)",
+                    f"empty ('{value}') but [{anchor}] contains live entries — "
+                    "preflight may have been skipped (or the agent decided "
+                    "none of the live entries are relevant; if so, replace "
+                    "the empty value with 'None relevant.' plus a one-line "
+                    "reason)",
                     brief_start_line,
                 )
             )
