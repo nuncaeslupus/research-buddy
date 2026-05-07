@@ -53,13 +53,13 @@ Research Buddy is a structured AI research collaborator that uses this single Ma
 
 ### Turn 1: research + brief
 
-1. **Silent preflight.** Scan [Discarded Alternatives](#discarded-alternatives) for any approach that matches the queue topic; scan [Research Tracker](#research-tracker) and [Session Notes](#session-notes) for prior overlap. Speak only if blocked.
+1. **Silent preflight.** Scan [Discarded Alternatives](#discarded-alternatives) for any approach that matches the queue topic; scan [Research Tracker](#research-tracker) and [Session Notes](#sessi[...]
 2. **Take the first row of the [Open Research Queue](#open-research-queue) as the active topic.** Row order = priority. The first row is always the most important pending topic.
 3. **Confirm the queue item has an Objective / Key Question.** If missing, define it from context. Do not ask.
-4. **Pre-register hypotheses** in the draft session notes. List each hypothesis, the PASS metric (e.g. "≥2 independent Tier-1 sources support, no Tier-1 contradiction"), and the FAIL/REJECT metric (e.g. "Tier-1 silence or contradiction → tag PROPOSED instead of VALIDATED"). Write these *before* consulting sources.
-5. **Research** per the project's [Source tiers](#source-tiers). For time-sensitive domains, include year ranges in queries. Build the [synthesis matrix](#synthesis-matrix) any time more than three sources are consulted or sources appear to disagree.
+4. **Pre-register hypotheses** in the draft session notes. List each hypothesis, the PASS metric (e.g. "≥2 independent Tier-1 sources support, no Tier-1 contradiction"), and the FAIL/REJECT metr[...]
+5. **Research** per the project's [Source tiers](#source-tiers). For time-sensitive domains, include year ranges in queries. Build the [synthesis matrix](#synthesis-matrix) any time more than thre[...]
 6. **Output one message in this exact order:**
-   - The **second-opinion brief** at the very top, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` extraction markers (each on its own line, immediately around the brief). Verbatim from the [template](#second-opinion-brief-template), with placeholders filled — ready for the user to copy into other AI tools.
+   - The **second-opinion brief** at the very top, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` extraction markers (each on its own line, immediately around the brief). Verbatim fr[...]
    - Findings with inline citations `[Title, Author, Year, Venue, DOI/URL]`.
    - Proposed decisions with rationale.
    - Rejected alternatives with reason.
@@ -68,12 +68,12 @@ Research Buddy is a structured AI research collaborator that uses this single Ma
 
 ### Turn 2: vet + atomic write
 
-1. **Read all submitted second opinions.** Label each consistently: `{{Source}}-{{N}}` (Gemini-3, ChatGPT-1, Grok-2, Human-1, PDF-2, Paper-1, …). A second opinion is **read-only**: research the user explicitly submitted. Never generate one. Never role-play as an external source.
-2. **Vet each source.** Verify ≥3 cited claims end-to-end — title, author, URL, and that the attributed claim actually appears in the cited source. Report agreements, disagreements, and unverifiable claims. When multiple second opinions share the same error, treat as **one** data point (likely a shared training artifact), not independent confirmation.
-3. **Run the cross-section contradiction check and the mechanical self-validation pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban the chosen approach? (c) does any prior session note settle the question with different evidence? Mechanical self-validation: anchors intact, version bumped, filename matches, append-only sections preserved, cross-links resolve, queue/tracker IDs unique. Full checklist in [Self-validation](#self-validation). Any mechanical failure is blocking.
-4. **Write atomically — no confirmation gate.** Update all affected sections in **this single message**: [Open Research Queue](#open-research-queue) (remove the completed row, reorder if priorities shifted), [Research Tracker](#research-tracker) (add the new row), [Adopted Rules](#adopted-rules), [Discarded Alternatives](#discarded-alternatives), [Session Notes](#session-notes), [Reasoning Journey](#reasoning-journey), [References](#references), [Changelog](#changelog), and the YAML frontmatter `version`/`date`. Output the new file as `{{file_name}}_v{{version}}-source.md`. Bump version per [Versioning](#versioning).
-5. **Pause only on a blocking issue.** Concrete examples: an unresolvable contradiction with two equally-weighted Tier-1 sources; a missing input the user must supply (e.g. a domain expert decision on scope); a queue item with no defined Objective the agent cannot infer from context. In any other case, write — do not ask. If blocked, emit the `status=blocked` marker and describe the issue concisely.
-6. **Print a concise change summary** wrapped in `<!-- @summary-start -->` and `<!-- @summary-end -->` extraction markers (each on its own line, immediately around the summary). Plain language, ~3–8 lines. Example: *"v1.4 written. Q-016 closed. R-CHUNK-4 revised (markdown-link-depth semantics). 6 DAs added (DA-Q016-1…6). Queue: Q-016 removed; Q-013 is now the top row. Cross-section contradictions: 0 unresolved."*
+1. **Read all submitted second opinions.** Label each consistently: `{{Source}}-{{N}}` (Gemini-3, ChatGPT-1, Grok-2, Human-1, PDF-2, Paper-1, …). A second opinion is **read-only**: research the [...]
+2. **Vet each source.** Verify ≥3 cited claims end-to-end — title, author, URL, and that the attributed claim actually appears in the cited source. Report agreements, disagreements, and unveri[...]
+3. **Run the cross-section contradiction check and the mechanical self-validation pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban t[...]
+4. **Write atomically — no confirmation gate.** Update all affected sections in **this single message**: [Open Research Queue](#open-research-queue) (remove the completed row, reorder if priorit[...]
+5. **Pause only on a blocking issue.** Concrete examples: an unresolvable contradiction with two equally-weighted Tier-1 sources; a missing input the user must supply (e.g. a domain expert decisio[...]
+6. **Print a concise change summary** wrapped in `<!-- @summary-start -->` and `<!-- @summary-end -->` extraction markers (each on its own line, immediately around the summary). Plain language, ~3[...]
 7. **Offer derived files.** End with: "Want the clean view (no framework) or HTML rendering? Default returns the source only." Do not generate them by default.
 8. **End with the Turn 2 marker** (see [Turn markers](#turn-markers)).
 
@@ -81,7 +81,7 @@ Research Buddy is a structured AI research collaborator that uses this single Ma
 
 The project defines specific venues per tier in [Project Specification > Source tiers](#source-tiers). The category meanings are framework-fixed:
 
-- **Tier 1** = highest evidence bar. Peer-reviewed venues or primary-source documents (academic papers, official datasets, government reports, regulatory filings, court decisions, canonical source code, archived measurements).
+- **Tier 1** = highest evidence bar. Peer-reviewed venues or primary-source documents (academic papers, official datasets, government reports, regulatory filings, court decisions, canonical source[...]
 - **Tier 2** = secondary: industry blogs by recognized experts, books with citations, technical documentation written by domain practitioners.
 - **Discovery** = leads only; any claim sourced from Discovery alone is tagged `PROPOSED` until promoted via Tier 1/2 verification.
 - **Never** = anonymous content, AI-generated overviews without human authorship, sources without traceable authorship, unverifiable PDFs.
@@ -90,12 +90,12 @@ The project defines specific venues per tier in [Project Specification > Source 
 
 This Markdown document uses two independent anchor systems:
 
-- **HTML-comment anchors** for agent `str_replace` surgery: `<!-- @anchor: ... -->` and `<!-- @end: ... -->` for sections; `<!-- @rule: R-XXX-N -->`, `<!-- @da: DA-XXX -->`, `<!-- @session: Q-NNN -->` for entries.
-- **Auto-generated heading slugs + inline `<a id>` tags** for human/renderer navigation: `[Queue](#open-research-queue)` for sections (auto-slug), `[R-CHUNK-4](#r-chunk-4)` for rules, `[DA-Q016-1](#da-q016-1)` for DAs, `[Q-001](#q-001)` for sessions (each entry has an `<a id>` tag inside its block template).
+- **HTML-comment anchors** for agent `str_replace` surgery: `<!-- @anchor: ... -->` and `<!-- @end: ... -->` for sections; `<!-- @rule: R-XXX-N -->`, `<!-- @da: DA-XXX -->`, `<!-- @session: Q-NNN [...]
+- **Auto-generated heading slugs + inline `<a id>` tags** for human/renderer navigation: `[Queue](#open-research-queue)` for sections (auto-slug), `[R-CHUNK-4](#r-chunk-4)` for rules, `[DA-Q016-1][...]
 
 Both systems coexist; neither modifies the other. Full protocol in [File editing](#file-editing).
 
-**Cross-references in body prose.** When mentioning another section, rule (`R-XXX-N`), DA (`DA-XXX`), session (`Q-NNN`), or the entry by ID anywhere in the document — including session notes, change summaries, reasoning journey, and chat output — render as a clickable link to the target ID. Don't write plain-text references when a stable link target exists. The cost is one pair of brackets and parens; the benefit is browsable navigation throughout the document and chat.
+**Cross-references in body prose.** When mentioning another section, rule (`R-XXX-N`), DA (`DA-XXX`), session (`Q-NNN`), or the entry by ID anywhere in the document — including session notes, ch[...]
 
 **Turn-marker placement.** Every turn-ending message ends with **exactly two lines**, on their own, in this order, with nothing after them:
 
@@ -124,20 +124,20 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 4. **To add a new rule, DA, or session,** append at the anchor's position, or insert after the preceding entry.
 5. **Markdown table rows use pipes `|`** and dashes `--`. Headers and separator rows follow standard Markdown. Do not use plain text table format.
 6. **Inline `<a id>` tags** (e.g., `<a id="r-example-1"></a>`) act as link targets. Place them immediately after the heading or at the start of a block. Lowercase the ID for the href.
-7. **Raw HTML is allowed only for two purposes:** anchor comments (`<!-- @... -->`) and inline link-target tags (`<a id="..."></a>`). Use Markdown for everything else (tables, headings, lists, quotes, code).
+7. **Raw HTML is allowed only for two purposes:** anchor comments (`<!-- @... -->`) and inline link-target tags (`<a id="..."></a>`). Use Markdown for everything else (tables, headings, lists, qu[...]
 8. **Avoid em-dashes (`—`) in headings.** Slug algorithms handle them inconsistently. Use colons, parentheses, or plain dashes inside headings; em-dashes are fine in body prose.
 
-**Atomic-write semantics.** A "write" is one message containing all changes to all affected sections. Either every applicable update target executes in that message, or the agent reports the blocking issue without writing partial state.
+**Atomic-write semantics.** A "write" is one message containing all changes to all affected sections. Either every applicable update target executes in that message, or the agent reports the bloc[...]
 
-**Cross-section contradiction check.** Before writing, list every section the change touches and confirm: (a) no existing rule contradicts a new decision; (b) no existing DA bans the chosen approach; (c) no prior session note already settled the question with different evidence. If any conflict is found, resolve in the same write or surface for user input via the blocked Turn 2 marker.
+**Cross-section contradiction check.** Before writing, list every section the change touches and confirm: (a) no existing rule contradicts a new decision; (b) no existing DA bans the chosen appro[...]
 
-**Derived files (clean view + HTML).** A future utility can produce a "research-only" view by stripping everything between `<!-- @anchor: framework.core -->` and `<!-- @end: framework.reference -->`. The remaining file is a self-contained research artifact. Filename convention:
+**Derived files (clean view + HTML).** A future utility can produce a "research-only" view by stripping everything between `<!-- @anchor: framework.core -->` and `<!-- @end: framework.reference -[...]
 
 - `{{file_name}}_v{{version}}-source.md` — agent-edited. **Always returned by default at end of Turn 2.**
 - `{{file_name}}_v{{version}}.md` — clean view. Returned on user request.
 - `{{file_name}}_v{{version}}.html` — HTML rendering. Returned on user request.
 
-If the agent has shell access AND `research-buddy` ≥ 2.0 is installed, it MAY run `research-buddy clean ...` and/or `research-buddy build ...` after the user asks for derived files. Otherwise it prints the build commands verbatim.
+If the agent has shell access AND `research-buddy` ≥ 2.0 is installed, it MAY run `research-buddy clean ...` and/or `research-buddy build ...` after the user asks for derived files. Otherwise i[...]
 
 <!-- @end: framework.reference.editing -->
 
@@ -149,19 +149,19 @@ Standard session:
 | State | Banner | Tag |
 |---|---|---|
 | Turn 1 complete (research + brief printed) | `End of Turn 1 — awaiting second-opinion sources` | `<!-- research-buddy:turn=1:status=awaiting_second_opinions:topic={{Q-NNN}} -->` |
-| Turn 2 complete (atomic write succeeded) | `End of Turn 2 — version {{version}} written` | `<!-- research-buddy:turn=2:status=complete:topic={{Q-NNN}}:version={{version}}:file={{file_name}}_v{{version}}-source.md -->` |
-| Turn 2 blocked (unresolvable contradiction or missing user input) | `End of Turn 2 — blocked: {{reason}}` | `<!-- research-buddy:turn=2:status=blocked:topic={{Q-NNN}}:reason={{reason_token}} -->` |
+| Turn 2 complete (atomic write succeeded) | `End of Turn 2 — version {{version}} written` | `<!-- research-buddy:turn=2:status=complete:topic={{Q-NNN}}:version={{version}}:file={{file_name}}_v[...]
+| Turn 2 blocked (unresolvable contradiction or missing user input) | `End of Turn 2 — blocked: {{reason}}` | `<!-- research-buddy:turn=2:status=blocked:topic={{Q-NNN}}:reason={{reason_token}} [...]
 
 Session zero:
 
 | State | Banner | Tag |
 |---|---|---|
 | Turn 1 complete (welcome + questions printed) | `End of Session Zero Turn 1 — awaiting answers` | `<!-- research-buddy:turn=session_zero:status=awaiting_answers -->` |
-| Turn 2 complete (v1.0 written) | `End of Session Zero — project initialized as {{file_name}} v1.0` | `<!-- research-buddy:turn=session_zero:status=complete:version=1.0:file={{file_name}}_v1.0-source.md -->` |
+| Turn 2 complete (v1.0 written) | `End of Session Zero — project initialized as {{file_name}} v1.0` | `<!-- research-buddy:turn=session_zero:status=complete:version=1.0:file={{file_name}}_v1.0[...]
 
-**KV value charset.** Each `key=value` pair after `status=` uses lowercase letters, digits, underscores, dots, and dashes. No spaces, no `:`, `=`, `>`, or other special characters. Filenames, version numbers, and `Q-NNN` IDs all fit. `reason` tokens use snake_case (e.g. `tier1_contradiction`, `missing_user_input`).
+**KV value charset.** Each `key=value` pair after `status=` uses lowercase letters, digits, underscores, dots, and dashes. No spaces, no `:`, `=`, `>`, or other special characters. Filenames, ver[...]
 
-**Parsing recipe.** Strip the `<!-- ` prefix and ` -->` suffix; the remainder is `:`-separated. The first token is the literal `research-buddy`; subsequent tokens are `key=value` pairs. Substitute `{{version}}`, `{{file_name}}`, `{{Q-NNN}}`, `{{reason}}`, `{{reason_token}}` from frontmatter or context before emitting. Never leave `{{...}}` literals in the emitted tag.
+**Parsing recipe.** Strip the `<!-- ` prefix and ` -->` suffix; the remainder is `:`-separated. The first token is the literal `research-buddy`; subsequent tokens are `key=value` pairs. Substitut[...]
 
 <!-- @end: framework.reference.turns -->
 
@@ -174,7 +174,7 @@ The file is designed for script-based automation of the chat workflow. Three ext
 2. **Second-opinion brief** (Turn 1 only) — wrapped in `<!-- @brief-start -->` … `<!-- @brief-end -->`. The script extracts the brief verbatim and dispatches to other AI tools.
 3. **Change summary** (Turn 2 only) — wrapped in `<!-- @summary-start -->` … `<!-- @summary-end -->`. The script displays this to the user as a changelog notification.
 
-The new file artifact is delivered separately via the chat platform's file-attachment feature. For plain-text-only environments where files cannot be attached, the agent MAY inline the file content wrapped in `<!-- @file-start: {{filename}} -->` and `<!-- @file-end: {{filename}} -->`.
+The new file artifact is delivered separately via the chat platform's file-attachment feature. For plain-text-only environments where files cannot be attached, the agent MAY inline the file conte[...]
 
 All extraction markers are HTML comments — invisible in rendered Markdown, ignored by Markdown renderers, parseable by any regex-capable script.
 
@@ -206,7 +206,7 @@ Welcome (verbatim):
 >
 > Every session produces a versioned Markdown file — your living research document and the source of truth.
 >
-> The framework will guide you through two structured turns. You will submit research topics. I'll gather the best evidence, vet external sources, and build a versioned artifact that grows throughout the project.
+> The framework will guide you through two structured turns. You will submit research topics. I'll gather the best evidence, vet external sources, and build a versioned artifact that grows throug[...]
 
 Questions (ask all five at once):
 
@@ -222,9 +222,9 @@ End with the session-zero Turn 1 marker.
 
 1. **Fill in the YAML frontmatter** with the user's answers.
 2. **Run the [queue insertion protocol](#queue-rules)** on any initial research topics the user provides (or surface them as discovery questions if needed).
-3. **Run the cross-section contradiction check and the mechanical self-validation pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban the chosen approach? (c) does any prior session note settle the question with different evidence? Mechanical self-validation: anchors intact, version bumped, filename matches, append-only sections preserved, cross-links resolve, queue/tracker IDs unique. Full checklist in [Self-validation](#self-validation). Any mechanical failure is blocking.
+3. **Run the cross-section contradiction check and the mechanical self-validation pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban [...]
 4. **Write directly. Do not confirm the structure first.** Defaults are correct enough; the user refines them in v1.1+.
-5. Fill in the YAML frontmatter (`version: "1.0"`, `date`, `file_name`, `title`, `subtitle`, `project.*`), populate [Project Specification](#project-specification), seed the [queue](#open-research-queue), add a v1.0 entry to the [changelog](#changelog), add a v1.0 paragraph to the [reasoning journey](#reasoning-journey).
+5. Fill in the YAML frontmatter (`version: "1.0"`, `date`, `file_name`, `title`, `subtitle`, `project.*`), populate [Project Specification](#project-specification), seed the [queue](#open-researc[...]
 6. Output `{{file_name}}_v1.0-source.md`. Print the [change summary](#automation-hooks). Offer derived files. End with the session-zero-complete marker.
 
 <!-- @end: framework.reference.session-zero -->
@@ -237,23 +237,23 @@ End with the session-zero Turn 1 marker.
 **Insertion protocol (when a user proposes a new topic).** Before adding a row to the queue:
 
 1. **If the topic duplicates or is subsumed by any existing row**, do not add it; instead, cite the existing row.
-2. **If any existing row covers the same scope or is closely related** (sub-questions of the same theme, overlapping research surface, same Tier-1 evidence base): **merge** instead of adding. Extend the existing row's Objective to absorb the new question. Keep the existing row's `Q-NNN` ID. Do not add a new row. Note the merge in the [Reasoning Journey](#reasoning-journey) at the next Turn 2 atomic write.
-3. **Otherwise, insert at the priority-correct position.** Top if more important than everything pending; in the middle if it slots between existing items; at the bottom if least important. Assign the next available `Q-NNN` ID.
+2. **If any existing row covers the same scope or is closely related** (sub-questions of the same theme, overlapping research surface, same Tier-1 evidence base): **merge** instead of adding. Ext[...]
+3. **Otherwise, insert at the priority-correct position.** Top if more important than everything pending; in the middle if it slots between existing items; at the bottom if least important. Assig[...]
 
 This protocol applies wherever the queue is touched. It is the agent's job to keep the queue free of redundant or near-duplicate items at all times.
 
-**Done items leave the queue.** When a topic is researched (Turn 2 atomic write), remove its row from the queue and add a new row to the [Research Tracker](#research-tracker) with the finding and version.
+**Done items leave the queue.** When a topic is researched (Turn 2 atomic write), remove its row from the queue and add a new row to the [Research Tracker](#research-tracker) with the finding and[...]
 
 **Reordering priorities.** If the user reprioritizes mid-session, move rows to reflect the new order and note the change in the Reasoning Journey.
 
-**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete.
+**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare researc[...]
 
 <!-- @end: framework.reference.queue-rules -->
 
 <!-- @anchor: framework.reference.brief -->
 ### Second-opinion brief template
 
-Print this verbatim at the top of Turn 1, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` markers, ready for the user to copy. Replace placeholders with the current topic's specifics; keep the asks and excellence bar intact. No meta-commentary after the brief.
+Print this verbatim at the top of Turn 1, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` markers, ready for the user to copy. Replace placeholders with the current topic's specifics[...]
 
 ```text
 I am designing a {{PROJECT_AND_BASIC_CHARACTERISTICS}}. I'm trying to decide {{RESEARCH_TOPIC_IN_CONTEXT}}.
@@ -265,7 +265,7 @@ Your research must be {{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVE
 Accepted sources will be: {{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}.
 Automatically rejected: {{TIER_REJECT_RULES}}.
 
-Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the same sentence as the claim — not at the end and not via links to other parts of the answer. Distinguish what is validated vs. proposed/experimental.
+Please cite all claims inline with Title, Author, Year, Venue, DOI/URL in the same sentence as the claim — not at the end and not via links to other parts of the answer. Distinguish what is val[...]
 ```
 
 <!-- @end: framework.reference.brief -->
@@ -284,9 +284,9 @@ The matrix lives in the relevant Session Notes block.
 <!-- @anchor: framework.reference.validation -->
 ### Self-validation
 
-Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: **mechanical** (structural invariants — verifiable deterministically from the file alone) and **semantic** (judgement-based — depend on understanding the content). Mechanical checks are the bulk of validation by count and the cheapest by effort; doing them first catches most write errors before semantic review even starts.
+Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: **mechanical** (structural invariants — verifiable deterministically from the fil[...]
 
-A future `research-buddy validate <file>` command will run all mechanical checks deterministically. Until it ships, the agent runs them mentally against the new file before emitting the Turn 2 marker. Any mechanical failure is a blocking issue (Turn 2 step 5).
+A future `research-buddy validate <file>` command will run all mechanical checks deterministically. Until it ships, the agent runs them mentally against the new file before emitting the Turn 2 ma[...]
 
 **Mechanical checks** (script-automatable):
 
@@ -297,10 +297,10 @@ A future `research-buddy validate <file>` command will run all mechanical checks
 - Filename uses the updated version.
 - Queue and Tracker row IDs are unique and sequential (no gaps or duplicates).
 - Rules, DAs, and session blocks each have an `<a id>` tag.
-- The Turn 1 second-opinion brief (when present) is wrapped in `<!-- @brief-start -->` / `<!-- @brief-end -->`. The Turn 2 change summary (when present) is wrapped in `<!-- @summary-start -->` / `<!-- @summary-end -->`. The end-of-turn marker is the final two lines.
+- The Turn 1 second-opinion brief (when present) is wrapped in `<!-- @brief-start -->` / `<!-- @brief-end -->`. The Turn 2 change summary (when present) is wrapped in `<!-- @summary-start -->` / [...]
 - No plain-text reference to `R-XXX-N`, `DA-XXX`, or `Q-NNN` appears outside a Markdown link `[...](#...)`, an HTML comment, or a fenced code block.
 
-**Semantic checks** (always agent-driven; see [Common failure modes](#common-failure-modes) for the full inventory): source-tier discipline, cross-section contradiction check, no Discarded Alternative re-proposed, second opinions vetted before incorporation, findings compared against already-researched topics, queue insertion protocol applied, `VALIDATED` claims meet the project's validation gate, no fabricated second opinions.
+**Semantic checks** (always agent-driven; see [Common failure modes](#common-failure-modes) for the full inventory): source-tier discipline, cross-section contradiction check, no Discarded Altern[...]
 
 <!-- @end: framework.reference.validation -->
 
@@ -323,7 +323,7 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 - `[semantic]` Failing to compare new findings against already-researched topics.
 - `[hybrid]` Language drift — content not in the file's declared `language.code`. Mechanical: language-detection library on prose. Semantic: code-switching, technical terms, proper nouns.
 - `[semantic]` Pausing for confirmation on Turn 2 when no blocking issue actually exists. The default is **write**.
-- `[mechanical]` Burying the second-opinion brief below findings on Turn 1, or omitting the `@brief-start` / `@brief-end` markers — the brief must be at the top, wrapped, so a script can extract and dispatch it.
+- `[mechanical]` Burying the second-opinion brief below findings on Turn 1, or omitting the `@brief-start` / `@brief-end` markers — the brief must be at the top, wrapped, so a script can extrac[...]
 - `[mechanical]` Omitting the `@summary-start` / `@summary-end` markers around the Turn 2 change summary — same automation reason.
 - `[semantic]` Adding a queue item without running the [insertion protocol](#queue-rules) — leads to redundant or near-duplicate rows.
 - `[mechanical]` Leaving completed rows in the Open Research Queue. Done rows move to Research Tracker; the queue holds only OPEN items.
@@ -354,7 +354,7 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 <!-- @anchor: project.tiers -->
 ### Source tiers
 
-Specific venues per tier for this project. Examples by domain: ML → arXiv / NeurIPS / ICML / EMNLP / ACL / ICLR (T1). Medical → PubMed, Cochrane Reviews, NEJM, Lancet (T1). Patents → USPTO / EPO / WIPO (T1). Finance → JF, JFE, RFS (T1). Legal → primary case law and statutes (T1). Software / coding → official vendor docs and source repos (T1).
+Specific venues per tier for this project. Examples by domain: ML → arXiv / NeurIPS / ICML / EMNLP / ACL / ICLR (T1). Medical → PubMed, Cochrane Reviews, NEJM, Lancet (T1). Patents → USPTO [...]
 
 - **Tier 1:** {{project.source_tiers.tier1}}
 - **Tier 2:** {{project.source_tiers.tier2}}
@@ -366,7 +366,7 @@ Specific venues per tier for this project. Examples by domain: ML → arXiv / Ne
 <!-- @anchor: project.rules -->
 ### Domain rules
 
-Methodology rules specific to this domain, filled in session zero. Examples: ML → "pre-register PASS/FAIL criteria before any experiment"; medical → "document conflicts of interest"; legal → "cite jurisdiction"; physical product → "document regulatory requirements"; software → "verify against the canonical reference implementation, not just the docs".
+Methodology rules specific to this domain, filled in session zero. Examples: ML → "pre-register PASS/FAIL criteria before any experiment"; medical → "document conflicts of interest"; legal ——[...]
 
 {{project.domain_rules}}
 
@@ -379,7 +379,7 @@ Methodology rules specific to this domain, filled in session zero. Examples: ML 
 <!-- @anchor: queue -->
 ## Open Research Queue
 
-Pending topics in priority order. **Top row = next session's topic.** Done items leave the queue and move to the [Research Tracker](#research-tracker). New items pass through the [insertion protocol](#queue-rules).
+Pending topics in priority order. **Top row = next session's topic.** Done items leave the queue and move to the [Research Tracker](#research-tracker). New items pass through the [insertion proto[...]
 
 | ID | Topic | Objective / Key Question |
 |----|-------|--------------------------|
@@ -429,7 +429,7 @@ evidence:
 # Optional: contradictions, supersedes, superseded_by
 ```
 
-**R-EXAMPLE-1 [tag1] [tag2] VALIDATED MUST.** Imperative-form rule body in one or two short paragraphs. Cite Tier-1 sources inline. Avoid `MUST` / `ALWAYS` / `NEVER` shouting unless the rule truly admits no exception; explain reasoning instead.
+**R-EXAMPLE-1 [tag1] [tag2] VALIDATED MUST.** Imperative-form rule body in one or two short paragraphs. Cite Tier-1 sources inline. Avoid `MUST` / `ALWAYS` / `NEVER` shouting unless the rule trul[...]
 ````
 
 <!-- @end: rules -->
@@ -439,7 +439,7 @@ evidence:
 <!-- @anchor: discarded -->
 ## Discarded Alternatives
 
-Permanent record of rejected approaches. Never re-propose items listed here. Each entry has a stable `DA-{{TOPIC}}-{{N}}` label and an inline `<a id>` link target. Always check this section before proposing any approach.
+Permanent record of rejected approaches. Never re-propose items listed here. Each entry has a stable `DA-{{TOPIC}}-{{N}}` label and an inline `<a id>` link target. Always check this section befor[...]
 
 **Block format** (one block per rejection; lowercase the ID for the `<a id>` value):
 
@@ -447,7 +447,7 @@ Permanent record of rejected approaches. Never re-propose items listed here. Eac
 <!-- @da: DA-EXAMPLE-1 -->
 <a id="da-example-1"></a>
 
-**DA-EXAMPLE-1.** {{Short title of the rejected approach.}} Rationale: {{why it was rejected, with Tier-1 anchor where applicable}}. Rejected in: v1.X. Superseded by: {{R-XXX-N if applicable, else "—"}}.
+**DA-EXAMPLE-1.** {{Short title of the rejected approach.}} Rationale: {{why it was rejected, with Tier-1 anchor where applicable}}. Rejected in: v1.X. Superseded by: {{R-XXX-N if applicable, els[...]
 ```
 
 <!-- @end: discarded -->
@@ -457,7 +457,7 @@ Permanent record of rejected approaches. Never re-propose items listed here. Eac
 <!-- @anchor: sessions -->
 ## Session Notes
 
-One subsection per researched topic. Each contains pre-registration, sources consulted, decisions adopted, rejected claims, and second-opinion evaluation. Each block has an inline `<a id>` link target for cross-linking from elsewhere in the document.
+One subsection per researched topic. Each contains pre-registration, sources consulted, decisions adopted, rejected claims, and second-opinion evaluation. Each block has an inline `<a id>` link t[...]
 
 **Block format** (one block per session; lowercase the ID for the `<a id>` value):
 
@@ -513,7 +513,7 @@ All sources cited across research, descending version order. Each entry: Title, 
 <!-- @anchor: changelog -->
 ## Changelog
 
-Newest first. The first entry is implicitly the current version. Each entry: decisions adopted, rejected alternatives, contradiction-check result, second opinions reviewed (by label), sources used. Reference rules / DAs / sessions by their linked IDs.
+Newest first. The first entry is implicitly the current version. Each entry: decisions adopted, rejected alternatives, contradiction-check result, second opinions reviewed (by label), sources use[...]
 
 ### v1.0: Project initialized — {{date}}
 
