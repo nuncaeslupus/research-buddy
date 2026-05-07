@@ -57,28 +57,25 @@
   updated to match (v2 default; `--v1` legacy fallback).
   `main.py` module docstring changed from "init still scaffolds
   v1" to "init defaults to v2 Markdown".
-- **Release.** `v1.7.0` git tag pushed to GitHub on the `[#77]`
-  merge commit. PyPI upload deferred — see Next steps.
+- **Release.** `v1.7.0` tagged on the `[#77]` merge commit and
+  pushed to GitHub; **wheel + sdist published to PyPI**
+  (https://pypi.org/project/research-buddy/1.7.0/).
+- **Headless publish setup.** `~/.pypirc` now holds a
+  PyPI API token (`username = __token__`, `chmod 600`), so
+  `make publish` works without a TTY going forward. First attempt
+  in this session failed with 403 because the pasted token was
+  truncated (length 41 — real PyPI tokens are ~200 chars; the
+  wrap on PyPI's display tripped the copy). After regenerating
+  and pasting the full token (length 215), upload succeeded.
 
 ### Next steps
 
-1. **Publish 1.7.0 to PyPI.** The wheel + sdist are already built
-   in `dist/research_buddy-1.7.0.{whl,tar.gz}`; tag is already
-   on GitHub. The actual upload needs a real terminal (Claude
-   Code's `!` prefix has no TTY for `getpass`, so the prompt
-   raises EOFError). From a real terminal:
-   ```
-   cd ~/dev/research-buddy && uv run twine upload dist/research_buddy-1.7.0*
-   ```
-   Or one-time stage a token in the keyring
-   (`uv run keyring set https://upload.pypi.org/legacy/ __token__`)
-   so `make publish` works headlessly going forward.
-2. **Backport forward-only version policy to v1 `upgrade.py`** —
+1. **Backport forward-only version policy to v1 `upgrade.py`** —
    carried from session 13. The v1 path still blindly overwrites
    `meta.research_buddy_version` (silent downgrade hazard same as
    v2 had). Cheap fix (~10 lines + one test). Lands as 1.8.0 or
    gets deferred until someone hits it.
-3. **Carry-overs**: v2 build fidelity vs v1 `starter.html`
+2. **Carry-overs**: v2 build fidelity vs v1 `starter.html`
    (callouts, fixed-width tables, numbered subheadings); roadmap
    step #6 — coverage on `main.py` / `validator.py`. Roadmap
    #7/#8/#9 (mutmut, coverage gate, split `main.py`) deferred
@@ -86,8 +83,7 @@
 
 ### Blockers
 
-- PyPI upload blocked on real-TTY access; not a real blocker, just
-  a "do it from a different terminal" task.
+- None.
 
 [#76]: https://github.com/nuncaeslupus/research-buddy/pull/76
 [#77]: https://github.com/nuncaeslupus/research-buddy/pull/77
