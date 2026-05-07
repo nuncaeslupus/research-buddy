@@ -164,11 +164,15 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   protects. `validate --prior` enforces append-only invariants
   (anchors / DAs / changelog / references never disappear). Renaming
   an anchor is a breaking change.
-- **`format_version` vs `research_buddy_version`.** The frontmatter
-  field `format_version: 2` is the *format generation* — it bumps when
-  v2 itself changes shape (rare). `research_buddy_version` is the
+- **`doc_format_version` vs `research_buddy_version`.** The frontmatter
+  field `doc_format_version: 2` is the *format generation* — it bumps
+  when v2 itself changes shape (rare). `research_buddy_version` is the
   *tool version* and tracks `pyproject.toml`. Today's correct state is
-  `format_version: 2` + `research_buddy_version: 1.5.0`.
+  `doc_format_version: 2` + `research_buddy_version: 1.5.0`.
+  The legacy `format_version` key is still accepted by `validator_md.py`
+  and `clean_md.py` but emits a `deprecated-format-version-key`
+  warning; the planned `upgrade-md` command will rename it on existing
+  v2 docs (see `status/next-session.md` session 12).
 - **`*.md` ships in the wheel.** `[tool.setuptools.package-data]`
   globs include `*.md` so `starter.md` is available via
   `importlib.resources` after `pip install`. Without this glob,

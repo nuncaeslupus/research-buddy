@@ -49,7 +49,7 @@ import yaml
 # ---------------------------------------------------------------------------
 
 REQUIRED_FRONTMATTER_FIELDS: list[str | tuple[str, ...]] = [
-    "format_version",
+    "doc_format_version",
     "research_buddy_version",
     "version",
     "date",
@@ -187,13 +187,26 @@ def _check_frontmatter(text: str, path: Path) -> list[Issue]:
         )
         return issues
 
-    fmt_ver = fm.get("format_version")
+    fmt_ver = fm.get("doc_format_version")
+    legacy_ver = fm.get("format_version")
+    if fmt_ver is None and legacy_ver is not None:
+        issues.append(
+            Issue(
+                "warning",
+                "deprecated-format-version-key",
+                "frontmatter uses the deprecated key 'format_version'; "
+                "rename to 'doc_format_version' (same value).",
+                end_line,
+            )
+        )
+        fmt_ver = legacy_ver
+        fm["doc_format_version"] = legacy_ver  # satisfy required-fields check
     if fmt_ver != 2:
         issues.append(
             Issue(
                 "error",
                 "wrong-format-version",
-                f"format_version is {fmt_ver!r}, expected 2 "
+                f"doc_format_version is {fmt_ver!r}, expected 2 "
                 "(this validator handles v2 Markdown only)",
                 end_line,
             )
@@ -633,6 +646,78 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
 
 
 # ---------------------------------------------------------------------------
+# Brief-context-slot vs. live-section preflight check
+# ---------------------------------------------------------------------------
+
+
+# Maps the brief context-slot heading (case-insensitive prefix match) to the
+# anchor ID of the source section whose entries it summarizes.
+_BRIEF_SLOT_TO_ANCHOR: list[tuple[str, str, str]] = [
+    ("Already-rejected approaches", "discarded", "@da"),
+    ("Related prior research already settled", "tracker", "tracker-rows"),
+    ("Active rules that constrain new conclusions", "rules", "@rule"),
+]
+
+
+def _section_has_entries(text: str, anchor: str, marker: str) -> bool:
+    """True if the named section contains at least one live entry."""
+    section = _extract_section(text, anchor)
+    if section is None:
+        return False
+    if marker == "tracker-rows":
+        # Count tracker rows that are not the seed T-000 placeholder.
+        ids = _extract_table_first_column(section)
+        return any(re.match(r"^[QT]-\w+$", i) and i != "T-000" for i in ids)
+    # @rule / @da entries: just count the comment markers
+    return bool(re.search(rf"^\s*<!-- {re.escape(marker)}:\s*\S+\s*-->\s*$", section, re.MULTILINE))
+
+
+def _check_brief_context_slots(text: str, lines: list[str]) -> list[Issue]:
+    """If the document includes a Turn 1 brief, verify that any context slot
+    filled with a literal "None." actually corresponds to an empty source
+    section. Mismatch suggests the agent skipped preflight."""
+    issues: list[Issue] = []
+    m = re.search(r"<!--\s*@brief-start\s*-->(.*?)<!--\s*@brief-end\s*-->", text, re.DOTALL)
+    if not m:
+        return issues
+    brief = m.group(1)
+    brief_start_line = text[: m.start()].count("\n") + 1
+
+    for slot_heading, anchor, marker in _BRIEF_SLOT_TO_ANCHOR:
+        # Find the heading line and the value line(s) immediately after.
+        # The brief template uses a single-line value; "None." on its own
+        # line is the trigger.
+        heading_re = re.compile(
+            rf"^{re.escape(slot_heading)}.*?$\s*(.*?)(?:^\s*$|\Z)",
+            re.MULTILINE | re.DOTALL,
+        )
+        slot_match = heading_re.search(brief)
+        if not slot_match:
+            continue
+        value = slot_match.group(1).strip()
+        # "None." or a placeholder still reading "{{...}}" both count as empty
+        if value not in {"None.", "None", ""} and not value.startswith("{{"):
+            continue
+        if value.startswith("{{"):
+            # Unfilled placeholder is a different kind of failure; skip here
+            continue
+        if _section_has_entries(text, anchor, marker):
+            issues.append(
+                Issue(
+                    "warning",
+                    "brief-slot-empty-but-section-non-empty",
+                    f"second-opinion brief context slot '{slot_heading}' is "
+                    f"'None.' but [{anchor}] contains live entries — preflight "
+                    "may have been skipped (or the agent decided none of the "
+                    "live entries are relevant; if so, replace 'None.' with "
+                    "'None relevant.' plus a one-line reason)",
+                    brief_start_line,
+                )
+            )
+    return issues
+
+
+# ---------------------------------------------------------------------------
 # Top-level entry point
 # ---------------------------------------------------------------------------
 
@@ -643,9 +728,12 @@ def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
 
     issues: list[Issue] = []
     issues.extend(_check_frontmatter(text, path))
-    # If frontmatter is unparseable or wrong format_version, bail early — the
-    # other checks assume v2 structure.
-    if any(i.code in {"frontmatter-parse", "wrong-format-version"} for i in issues):
+    # If frontmatter is unparseable or wrong doc_format_version, bail early —
+    # the other checks assume v2 structure.
+    if any(
+        i.code in {"frontmatter-parse", "wrong-format-version"} and i.severity == "error"
+        for i in issues
+    ):
         return issues
 
     issues.extend(_check_anchor_pairing(lines))
@@ -653,6 +741,7 @@ def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
     issues.extend(_check_cross_links(text, lines))
     issues.extend(_check_filename_version(path, text))
     issues.extend(_check_id_uniqueness(text, lines))
+    issues.extend(_check_brief_context_slots(text, lines))
 
     if prior is not None:
         prior_text = prior.read_text(encoding="utf-8")

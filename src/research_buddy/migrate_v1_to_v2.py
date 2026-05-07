@@ -67,7 +67,7 @@ def build_frontmatter(doc: Doc) -> str:
         version_str = str(version) if version else None
 
     fm: Doc = {
-        "format_version": 2,
+        "doc_format_version": 2,
         "research_buddy_version": __version__,
         "version": version_str,
         "date": meta.get("date"),

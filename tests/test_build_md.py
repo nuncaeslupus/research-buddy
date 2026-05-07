@@ -19,7 +19,7 @@ from research_buddy.build_md import (
 
 _FM = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: "1.0"
 date: "2026-05-07"

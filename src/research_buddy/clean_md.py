@@ -233,9 +233,10 @@ def clean_md(source_path: Path, output_path: Path | None = None) -> Path:
     fm, _ = parse_frontmatter(text)
     if fm is None:
         raise ValueError(f"{source_path}: missing or invalid YAML frontmatter")
-    if fm.get("format_version") != 2:
+    fmt_ver = fm.get("doc_format_version", fm.get("format_version"))
+    if fmt_ver != 2:
         raise ValueError(
-            f"{source_path}: format_version is not 2 (this tool processes v2 Markdown only)"
+            f"{source_path}: doc_format_version is not 2 (this tool processes v2 Markdown only)"
         )
     if (fm.get("project") or {}).get("domain") is None:
         raise ValueError(
@@ -286,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.print:
         text = args.file.read_text(encoding="utf-8")
         fm, _ = parse_frontmatter(text)
-        if fm is None or fm.get("format_version") != 2:
+        if fm is None or fm.get("doc_format_version", fm.get("format_version")) != 2:
             print(f"Error: {args.file} is not a v2 Markdown document", file=sys.stderr)
             return 2
         if (fm.get("project") or {}).get("domain") is None:

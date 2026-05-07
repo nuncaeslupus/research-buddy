@@ -1,5 +1,5 @@
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.5.0"
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -59,6 +59,8 @@ Read the YAML frontmatter at the top.
 - If `project.domain` is `null` → run **session zero** (project initialization). See [Session zero](#session-zero) for the full flow.
 - Otherwise → run **standard session** (research one queue topic at a time).
 
+**Version compatibility check (run before any work).** Compare the document's `research_buddy_version` against the framework version you have loaded (the one shown in the [research-buddy](https://github.com/nuncaeslupus/research-buddy) project at the time of the session). If the MAJOR component differs, surface a one-line warning at the top of Turn 1 and pause for the user to confirm before continuing — a MAJOR mismatch means framework semantics may have changed in incompatible ways. If only MINOR differs (doc older than framework), proceed but note "framework newer than doc, refresh recommended" in the change summary. Same-MAJOR-newer-doc or PATCH-only differences proceed silently. The check is informational only on the first session that surfaces it; do not block.
+
 Both flows are exactly **2 turns**, with no confirmation gate between them.
 
 ### Turn 1: brief + research
@@ -83,7 +85,7 @@ The order below is **not negotiable**. The second-opinion brief is composed and 
 
 1. **Read all submitted second opinions.** Label each consistently: `{{Source}}-{{N}}` (Gemini-3, ChatGPT-1, Grok-2, Human-1, PDF-2, Paper-1, …). A second opinion is **read-only**: research the user explicitly submitted. Never generate one. Never role-play as an external source.
 2. **Vet each source.** Verify ≥3 cited claims end-to-end — title, author, URL, and that the attributed claim actually appears in the cited source. Report agreements, disagreements, and unverifiable claims. When multiple second opinions share the same error, treat as **one** data point (likely a shared training artifact), not independent confirmation.
-3. **Run the cross-section contradiction check and the [compliance validation](#self-validation) pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban the chosen approach? (c) does any prior session note settle the question with different evidence? Compliance validation (mechanical): anchors intact, version bumped, filename matches, append-only sections preserved, cross-links resolve, queue/tracker IDs unique. Full checklist in [Self-validation](#self-validation). **Compliance validation is a precondition for file delivery.** If shell access is available AND `research-buddy` is installed, the agent SHOULD invoke `research-buddy validate {{file_name}}_v{{version}}-source.md` and treat its exit code as authoritative. Any mechanical failure is blocking.
+3. **Run the cross-section contradiction check and the [compliance validation](#self-validation) pass.** Cross-section check (semantic): (a) does any rule contradict a new decision? (b) does any DA already ban the chosen approach? (c) does any prior session note settle the question with different evidence? Compliance validation (mechanical): anchors intact, version bumped, filename matches, append-only sections preserved, cross-links resolve, queue/tracker IDs unique. Full checklist in [Self-validation](#self-validation). **Compliance validation is a precondition for file delivery.** The agent MUST invoke `research-buddy validate {{file_name}}_v{{version}}-source.md` (or paste a verbatim mental-simulation pass that lists every mechanical check from [Self-validation](#self-validation) and its outcome) and treat the exit code as authoritative. The agent MUST paste the validator's full output (or the simulated checklist) inside the message *before* delivering the file artifact, so the user has visible evidence the gate ran. Any mechanical failure is blocking.
 4. **Write atomically — no confirmation gate.** Update all affected sections in **this single message**: [Open Research Queue](#open-research-queue) (remove the completed row, reorder if priorities shifted), [Research Tracker](#research-tracker) (add the new row), [Adopted Rules](#adopted-rules), [Discarded Alternatives](#discarded-alternatives), [Session Notes](#session-notes), [Reasoning Journey](#reasoning-journey), [References](#references), [Changelog](#changelog), and the YAML frontmatter `version`/`date`. Output the new file as `{{file_name}}_v{{version}}-source.md`. Bump version per [Versioning](#versioning).
 5. **Pause only on a blocking issue.** Concrete examples: an unresolvable contradiction with two equally-weighted Tier-1 sources; a missing input the user must supply (e.g. a domain expert decision on scope); a queue item with no defined Objective the agent cannot infer from context; **a compliance-validation failure**. Compliance failures are always blocking — the agent MUST NOT deliver the file artifact when validation fails. In any other case, write — do not ask. If blocked, emit the `status=blocked` marker and describe the issue concisely.
 6. **Print a concise change summary** wrapped in `<!-- @summary-start -->` and `<!-- @summary-end -->` extraction markers (each on its own line, immediately around the summary). Plain language, ~3–8 lines. Example: *"v1.4 written. Q-016 closed. R-CHUNK-4 revised (markdown-link-depth semantics). 6 DAs added (DA-Q016-1…6). Queue: Q-016 removed; Q-013 is now the top row. Cross-section contradictions: 0 unresolved. Compliance validation: PASS."*
@@ -326,13 +328,13 @@ The matrix lives in the relevant Session Notes block.
 
 Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: **mechanical / compliance** (structural invariants — verifiable deterministically from the file alone) and **semantic** (judgement-based — depend on understanding the content). Mechanical checks are the bulk of validation by count and the cheapest by effort; doing them first catches most write errors before semantic review even starts.
 
-The `research-buddy validate <file>` command runs all mechanical checks deterministically. When shell access AND `research-buddy` are available, the agent SHOULD invoke it and treat its exit code as authoritative; mental simulation is a fallback, not a substitute. **Compliance validation passing is a precondition for delivering the file artifact** (Turn 2 step 3). A failing validation is a blocking issue per Turn 2 step 5; the agent emits the `status=blocked:reason=validation_failed` marker and does not deliver the file.
+The `research-buddy validate <file>` command runs all mechanical checks deterministically. When shell access AND `research-buddy` are available, the agent MUST invoke it and treat its exit code as authoritative. When shell access is unavailable, the agent MUST instead paste a mental-simulation checklist that names every mechanical check below and gives each a PASS/FAIL outcome — no shortcuts, no "all good" summaries. **Compliance validation passing is a precondition for delivering the file artifact** (Turn 2 step 3); the validator output (real or simulated) MUST appear in the Turn 2 message before the file. A failing validation is a blocking issue per Turn 2 step 5; the agent emits the `status=blocked:reason=validation_failed` marker and does not deliver the file.
 
 Validation runs at the end of Turn 2 (against the file the agent has just composed), not at the start of Turn 1 (where the input file is presumed already-valid from the prior session's exit).
 
 **Mechanical checks** (script-automatable):
 
-- YAML frontmatter parses; required fields present (`format_version`, `version`, `date`, `file_name`, `title`, `language.code`, `project.domain`).
+- YAML frontmatter parses; required fields present (`doc_format_version`, `version`, `date`, `file_name`, `title`, `language.code`, `project.domain`).
 - Every `<!-- @anchor: X -->` has a matching `<!-- @end: X -->` and vice versa. No orphan markers.
 - Every `<!-- @rule: R-XXX-N -->` is followed by an `<a id="r-xxx-n"></a>` line whose ID equals the rule ID lowercased. Same for `@da` / `<a id="da-xxx">` and `@session` / `<a id="q-nnn">`.
 - All cross-links `[text](#anchor)` resolve to a real heading slug or `<a id>` tag in the document.
@@ -374,7 +376,8 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 - `[mechanical]` Writing plain-text references to rules / DAs / sessions when a stable link target exists. Always link.
 - `[semantic]` **Composing the second-opinion brief after research** — even if every placeholder is filled with project-given context, the agent's choice of how to phrase the questions, which DAs to surface, and which rules to flag is biased by what they've just found. The structural fix is to compose the brief in Turn 1 step 5 (before research) and emit it verbatim in step 7 — do not re-edit. (Hybrid: a script can detect a brief that mentions specific Tier-1 source titles, statuses like `VALIDATED`/`REJECTED`, or claim verdicts that wouldn't be available before research; semantic review catches subtler leakage.)
 - `[semantic]` **Brief omits relevant rejected alternatives, prior tracker rows, or active constraining rules.** The second researcher then either duplicates work or proposes a previously-rejected approach. The brief template's three context slots are mandatory; "None." is an acceptable value if preflight surfaced nothing relevant, but the slots must not be silently dropped.
-- `[mechanical]` **Delivering the file artifact without compliance validation passing.** Turn 2 step 3 gates step 4. A failing validation triggers `status=blocked:reason=validation_failed`, not delivery.
+- `[mechanical]` **Delivering the file artifact without compliance validation passing — or without the validator output pasted in the Turn 2 message.** Turn 2 step 3 gates step 4: the validator output (or the mental-simulation checklist) MUST be present in the message *before* the file. A failing validation triggers `status=blocked:reason=validation_failed`, not delivery.
+- `[hybrid]` **Brief context slot says "None." but the corresponding section has live entries.** If [Discarded Alternatives](#discarded-alternatives) holds DAs but `{{RELEVANT_DISCARDED_ALTERNATIVES}}` is filled with "None.", the agent skipped preflight; same for `{{RELATED_PRIOR_TRACKER_ROWS}}` vs the tracker, and `{{ACTIVE_CONSTRAINING_RULES}}` vs Adopted Rules. Mechanical: a script can detect "None." in a brief slot whose source section is non-empty and emit a candidate-mismatch warning; semantic: the agent decides whether the live entries are actually *relevant* to this turn's topic ("None relevant." with reasoning is fine; bare "None." plus a non-empty section is a red flag).
 
 <!-- @end: framework.reference.failure-modes -->
 
@@ -428,6 +431,15 @@ Pending topics in priority order. **Top row = next session's topic.** Done items
 | ID | Topic | Objective / Key Question |
 |----|-------|--------------------------|
 | Q-001 | {{queue.row1.topic}} | {{queue.row1.objective}} |
+
+<!-- @example-rows: filled in session zero, replace the templated row above and these examples with real queue items. Examples illustrate good Objective shape: a concrete *question* the agent can answer in one session, not an open-ended task. -->
+
+<!--
+Example shapes (delete after session zero):
+
+| Q-EX1 | Token-efficient skill structure | What is the *minimum* SKILL.md anatomy (sections, frontmatter fields) that Tier-1 sources agree on, and what is the per-skill token budget that keeps a multi-skill index loadable in a 200K-token context? |
+| Q-EX2 | Skill discovery contract | Which discovery mechanisms (filesystem scan, name match, frontmatter description) are documented as canonical for Claude Code, and which are observed-but-undocumented? |
+-->
 
 <!-- @end: queue -->
 
