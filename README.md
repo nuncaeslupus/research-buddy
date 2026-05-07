@@ -87,24 +87,24 @@ The JSON file is always the source of truth — never the HTML.
 ## Quick start
 
 ```bash
-# Scaffold a new project
+# Scaffold a new project — v2 Markdown by default
 research-buddy init my-project/
 
-# Upload my-project/source/research-document.json to your AI assistant
-# The agent runs session_zero and produces [file_name]_v1.0.json
+# Upload my-project/source/research-document.md to your AI assistant
+# The agent runs session_zero and produces {file_name}_v1.0-source.md
 
 # Build HTML from the versioned output
-research-buddy build my-project_v1.0.json
+research-buddy build my-project/source/my-project_v1.0-source.md
 
 # Or point at the project directory — it finds the latest version automatically
 research-buddy build my-project/
 
-# Watch for changes
-research-buddy build my-project/ --watch
-
 # Open the result
-open [file_name].html
+open my-project.html
 ```
+
+For an existing v1 JSON project, pass `--v1` to `init` and use the v1
+flow (versioned `.json` files, `--watch`/`--pdf` available on `build`).
 
 ## Research protocol
 
@@ -148,10 +148,14 @@ research-buddy build v1.0.json v1.1.json v1.2.json
 
 ### `research-buddy init <dir>`
 
-Scaffold a new project. Creates `source/research-document.json` (Research Buddy v1.0 template) and `versions/`.
+Scaffold a new project. Defaults to the recommended **v2 Markdown** form:
+creates `source/research-document.md` (the bundled v2 starter, frontmatter
+patched with `--title`/`--subtitle` if provided) and `versions/`. Pass
+`--v1` to scaffold a legacy v1 JSON project instead (`source/research-document.json`).
 
 ```
 research-buddy init my-project/ [--title "Project Name"] [--subtitle "..."]
+research-buddy init legacy-project/ --v1 --title "..."   # legacy JSON
 ```
 
 ### `research-buddy build <path...>`

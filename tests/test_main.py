@@ -23,21 +23,79 @@ class _Args:
         self.ver = "1.0"
         self.theme = None
         self.output = None
+        self.v1 = False
         for k, v in kwargs.items():
             setattr(self, k, v)
 
 
-class TestInit:
-    def test_creates_research_document(self, tmp_path: Path) -> None:
+class TestInitV2:
+    """Default scaffolding path: v2 Markdown."""
+
+    def test_creates_v2_markdown_document(self, tmp_path: Path) -> None:
         target = tmp_path / "docs"
         result = cmd_init(_Args(path=str(target)))
         assert result == 0
+        md_path = target / "source" / "research-document.md"
+        assert md_path.exists()
+        assert (target / "versions").is_dir()
+        # v1 JSON must NOT have been created.
+        assert not (target / "source" / "research-document.json").exists()
+
+    def test_created_file_has_v2_frontmatter(self, tmp_path: Path) -> None:
+        from research_buddy import __version__
+
+        target = tmp_path / "docs"
+        cmd_init(_Args(path=str(target)))
+        text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
+        assert text.startswith("---\n"), "missing leading frontmatter delimiter"
+        # doc_format_version: 2 + research_buddy_version pinned to the wheel
+        assert "doc_format_version: 2" in text
+        assert f'research_buddy_version: "{__version__}"' in text
+
+    def test_created_file_keeps_framework_markers(self, tmp_path: Path) -> None:
+        target = tmp_path / "docs"
+        cmd_init(_Args(path=str(target)))
+        text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
+        assert "<!-- @anchor: framework.core -->" in text
+        assert "<!-- @end: framework.reference -->" in text
+
+    def test_init_with_title_patches_frontmatter(self, tmp_path: Path) -> None:
+        target = tmp_path / "docs"
+        result = cmd_init(_Args(path=str(target), title="My Project"))
+        assert result == 0
+        text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
+        # Top-level `title:` line should now carry the chosen value as a
+        # double-quoted string. Other frontmatter values must remain null.
+        assert '\ntitle: "My Project"' in text
+        assert "\nsubtitle: null" in text
+        assert "\nversion: null" in text
+
+    def test_init_with_subtitle_patches_frontmatter(self, tmp_path: Path) -> None:
+        target = tmp_path / "docs"
+        cmd_init(_Args(path=str(target), subtitle="A short tagline"))
+        text = (target / "source" / "research-document.md").read_text(encoding="utf-8")
+        assert '\nsubtitle: "A short tagline"' in text
+
+    def test_refuses_existing(self, tmp_project: Path) -> None:
+        result = cmd_init(_Args(path=str(tmp_project)))
+        assert result == 1
+
+
+class TestInitV1:
+    """Legacy JSON scaffolding via `--v1`."""
+
+    def test_creates_v1_json_document(self, tmp_path: Path) -> None:
+        target = tmp_path / "docs"
+        result = cmd_init(_Args(path=str(target), v1=True))
+        assert result == 0
         assert (target / "source" / "research-document.json").exists()
         assert (target / "versions").is_dir()
+        # v2 Markdown must NOT have been created.
+        assert not (target / "source" / "research-document.md").exists()
 
     def test_created_file_is_valid_json(self, tmp_path: Path) -> None:
         target = tmp_path / "docs"
-        cmd_init(_Args(path=str(target)))
+        cmd_init(_Args(path=str(target), v1=True))
         doc_path = target / "source" / "research-document.json"
         with doc_path.open() as f:
             doc = json.load(f)
@@ -49,19 +107,15 @@ class TestInit:
         from research_buddy import __version__
 
         target = tmp_path / "docs"
-        cmd_init(_Args(path=str(target)))
+        cmd_init(_Args(path=str(target), v1=True))
         doc_path = target / "source" / "research-document.json"
         with doc_path.open() as f:
             doc = json.load(f)
         assert doc["meta"].get("research_buddy_version") == __version__
 
-    def test_refuses_existing(self, tmp_project: Path) -> None:
-        result = cmd_init(_Args(path=str(tmp_project)))
-        assert result == 1
-
     def test_init_with_title(self, tmp_path: Path) -> None:
         target = tmp_path / "docs"
-        result = cmd_init(_Args(path=str(target), title="My Project"))
+        result = cmd_init(_Args(path=str(target), title="My Project", v1=True))
         assert result == 0
         doc_path = target / "source" / "research-document.json"
         with doc_path.open() as f:
@@ -133,7 +187,7 @@ class TestBuild:
     def test_build_unversioned_template(self, tmp_path: Path) -> None:
         """research-document.json (no version in name) should be found and built."""
         target = tmp_path / "docs"
-        cmd_init(_Args(path=str(target)))
+        cmd_init(_Args(path=str(target), v1=True))
         json_path = target / "source" / "research-document.json"
         base = self._get_base_name(json_path)
         # research-document.json exists, no *_v*.json

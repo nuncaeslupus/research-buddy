@@ -135,15 +135,19 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
 
 ## 2-turn agent workflow (what the tool supports)
 
-1. User runs `research-buddy init my-project/` → produces `source/research-document.json`.
-2. User uploads that JSON to an LLM chatbot.
-3. Agent runs session_zero (uses `agent_guidelines` inside the JSON), returns
-   `[meta.file_name]_v1.0.json`.
-4. User saves that JSON, runs `research-buddy build my-project/` →
+1. User runs `research-buddy init my-project/` → produces
+   `source/research-document.md` (the bundled v2 starter). For legacy
+   projects, `research-buddy init my-project/ --v1` produces
+   `source/research-document.json` instead.
+2. User uploads that source file to an LLM chatbot.
+3. Agent runs session_zero (reads the in-file framework), returns the
+   versioned source — `{file_name}_v1.0-source.md` (v2) or
+   `[meta.file_name]_v1.0.json` (v1).
+4. User saves that file, runs `research-buddy build my-project/` →
    produces `versions/[file_name]_v1.0.html` + stable `[file_name].html`.
-5. Subsequent sessions: upload latest JSON, say "Continue research". Agent does
-   one research topic per session in exactly two turns, then writes a new
-   versioned JSON + HTML.
+5. Subsequent sessions: upload latest source, say "Continue research".
+   Agent does one research topic per session in exactly two turns, then
+   writes a new versioned source + HTML.
 
 ## Optional extras
 

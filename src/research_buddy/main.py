@@ -5,8 +5,8 @@ the v2 Markdown pipeline (`build_md`, `validator_md`, `upgrade_md`); other
 paths use the v1 JSON pipeline. `validate --prior FILE` enables diff-based
 checks (anchor preservation + append-only invariants) on `.md` files.
 
-`init` still scaffolds v1 JSON projects. `clean` and `migrate-v1-to-v2` are
-v2-only by definition.
+`init` defaults to v2 Markdown scaffolding; pass `--v1` for the legacy JSON
+form. `clean` and `migrate-v1-to-v2` are v2-only by definition.
 """
 
 from __future__ import annotations
@@ -673,35 +673,62 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    """Scaffold a new documentation project."""
-    target = Path(args.path).resolve()
+    """Scaffold a new documentation project.
 
+    Default: v2 Markdown. Pass `--v1` for the legacy JSON form.
+    """
+    if getattr(args, "v1", False):
+        return _init_v1(args)
+    return _init_v2(args)
+
+
+def _prepare_init_dirs(args: argparse.Namespace) -> tuple[Path, Path] | None:
+    """Validate and create source/ + versions/ under the target directory.
+
+    Returns (source_dir, versions_dir) on success, or None when the target
+    already contains a populated source/ (in which case the helper has
+    already printed the error and the caller should return 1).
+    """
+    target = Path(args.path).resolve()
     source_dir = target / "source"
     versions_dir = target / "versions"
 
     if source_dir.exists() and any(source_dir.iterdir()):
         print(f"Error: {source_dir} already contains files.", file=sys.stderr)
-        return 1
+        return None
 
     source_dir.mkdir(parents=True, exist_ok=True)
     versions_dir.mkdir(parents=True, exist_ok=True)
+    return source_dir, versions_dir
 
-    # Load template
+
+def _rel_to_cwd(p: Path) -> str:
+    try:
+        return str(p.relative_to(Path.cwd()))
+    except ValueError:
+        return str(p)
+
+
+def _init_v1(args: argparse.Namespace) -> int:
+    """Legacy JSON scaffolding (`--v1`)."""
+    dirs = _prepare_init_dirs(args)
+    if dirs is None:
+        return 1
+    source_dir, _ = dirs
+
     try:
         doc = _load_starter_template()
     except Exception as e:
         print(f"Error loading starter template: {e}", file=sys.stderr)
         return 1
 
-    # Fill in metadata from args if provided
     if args.title:
         doc["meta"]["title"] = args.title
-        # Also update the first section title of the first tab to match the project title
-        # We must preserve the dictionary order (Objective before Quick Links)
+        # Keep the first section's title aligned with the project title while
+        # preserving sibling order (Objective before Quick Links).
         overview_sections = doc["tabs"][0]["sections"]
         if overview_sections:
             old_title = next(iter(overview_sections))
-            # Rebuild the dict to keep order
             new_sections = {args.title: overview_sections.pop(old_title)}
             new_sections.update(overview_sections)
             doc["tabs"][0]["sections"] = new_sections
@@ -718,23 +745,91 @@ def cmd_init(args: argparse.Namespace) -> int:
         json.dump(doc, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    def _rel(p: Path) -> str:
-        try:
-            return str(p.relative_to(Path.cwd()))
-        except ValueError:
-            return str(p)
-
-    print(f"Created {_rel(target)}/")
+    target = Path(args.path).resolve()
     rb_ver = doc["meta"].get("research_buddy_version", "?")
-    print(f"  source/research-document.json  (Research Buddy v{rb_ver} template)")
+    print(f"Created {_rel_to_cwd(target)}/")
+    print(f"  source/research-document.json  (Research Buddy v{rb_ver} v1 JSON template)")
     print("  versions/")
     print()
     print("Next steps:")
-    print(f"  1. Upload {_rel(doc_path)} to your AI assistant")
+    print(f"  1. Upload {_rel_to_cwd(doc_path)} to your AI assistant")
     print("  2. The agent will run session_zero and produce [meta.file_name]_v1.0.json")
     print("  3. research-buddy build [meta.file_name]_v1.0.json")
     print("  4. Open [meta.file_name].html in a browser")
     return 0
+
+
+def _init_v2(args: argparse.Namespace) -> int:
+    """v2 Markdown scaffolding (default)."""
+    from research_buddy import __version__
+
+    dirs = _prepare_init_dirs(args)
+    if dirs is None:
+        return 1
+    source_dir, _ = dirs
+
+    try:
+        text = _load_starter_md_text()
+    except Exception as e:
+        print(f"Error loading starter.md: {e}", file=sys.stderr)
+        return 1
+
+    if args.title:
+        text = _set_frontmatter_scalar(text, "title", args.title)
+    if args.subtitle:
+        text = _set_frontmatter_scalar(text, "subtitle", args.subtitle)
+
+    doc_path = source_dir / "research-document.md"
+    doc_path.write_text(text, encoding="utf-8")
+
+    target = Path(args.path).resolve()
+    print(f"Created {_rel_to_cwd(target)}/")
+    print(f"  source/research-document.md  (Research Buddy v{__version__} v2 Markdown template)")
+    print("  versions/")
+    print()
+    print("Next steps:")
+    print(f"  1. Upload {_rel_to_cwd(doc_path)} to your AI assistant")
+    print("  2. The agent will run session_zero and produce {file_name}_v1.0-source.md")
+    print("  3. research-buddy build source/{file_name}_v1.0-source.md")
+    print("  4. Open {file_name}.html in a browser")
+    return 0
+
+
+def _set_frontmatter_scalar(text: str, key: str, value: str) -> str:
+    """Set a top-level frontmatter scalar to a double-quoted string value.
+
+    Operates line-based to preserve YAML comments and surrounding formatting.
+    Only mutates the first occurrence of `^{key}:` between the leading and
+    closing `---` delimiters; no-op when the frontmatter or key is absent.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].rstrip() != "---":
+        return text
+    fm_end = -1
+    for i in range(1, len(lines)):
+        if lines[i].rstrip() == "---":
+            fm_end = i
+            break
+    if fm_end < 0:
+        return text
+
+    prefix = f"{key}:"
+    for i in range(1, fm_end):
+        line = lines[i]
+        if not line.startswith(prefix):
+            continue
+        after_colon = line.split(":", 1)[1]
+        comment = ""
+        if " #" in after_colon:
+            _, comment_body = after_colon.split(" #", 1)
+            comment = "  # " + comment_body.lstrip()
+        lines[i] = f'{key}: "{value}"{comment}'.rstrip()
+        break
+
+    out = "\n".join(lines)
+    if text.endswith("\n") and not out.endswith("\n"):
+        out += "\n"
+    return out
 
 
 def main() -> None:
@@ -827,11 +922,23 @@ def main() -> None:
     )
 
     # init
-    p_init = sub.add_parser("init", help="Scaffold a new documentation project")
+    p_init = sub.add_parser(
+        "init",
+        help="Scaffold a new documentation project (v2 Markdown by default; --v1 for legacy JSON)",
+    )
     p_init.add_argument("path", help="Target directory")
     p_init.add_argument("--title", help="Project title")
     p_init.add_argument("--subtitle", help="Project subtitle")
-    p_init.add_argument("--ver", default="1.0", help="Initial version (default: 1.0)")
+    p_init.add_argument(
+        "--ver",
+        default="1.0",
+        help="Initial version (default: 1.0). Applied to v1 JSON only; v2 starts null.",
+    )
+    p_init.add_argument(
+        "--v1",
+        action="store_true",
+        help="Scaffold a legacy v1 JSON project instead of the default v2 Markdown",
+    )
 
     # upgrade
     p_up = sub.add_parser(
