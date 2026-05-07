@@ -44,6 +44,7 @@ src/research_buddy/
   build.py             # v1 JSON → HTML (block renderers, table widths, lang resolution)
   build_md.py          # v2 MD  → HTML (reuses v1 chrome via base.html.j2)
   upgrade.py           # v1 template refresh: re-sync agent_guidelines from starter.json
+  upgrade_md.py        # v2 framework refresh: re-sync framework block + frontmatter from starter.md
   validator.py         # v1 jsonschema + reference ordering + doc/tool version compat
   validator_md.py      # v2 mechanical validator (frontmatter, anchors, links, IDs, prior diff)
   clean_md.py          # v2 source MD → clean MD (strip framework, regen title)
@@ -167,12 +168,12 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
 - **`doc_format_version` vs `research_buddy_version`.** The frontmatter
   field `doc_format_version: 2` is the *format generation* — it bumps
   when v2 itself changes shape (rare). `research_buddy_version` is the
-  *tool version* and tracks `pyproject.toml`. Today's correct state is
-  `doc_format_version: 2` + `research_buddy_version: 1.5.0`.
-  The legacy `format_version` key is still accepted by `validator_md.py`
-  and `clean_md.py` but emits a `deprecated-format-version-key`
-  warning; the planned `upgrade-md` command will rename it on existing
-  v2 docs (see `status/next-session.md` session 12).
+  *tool version* and tracks `pyproject.toml`. The legacy `format_version`
+  key is still accepted by `validator_md.py` and `clean_md.py` but emits
+  a `deprecated-format-version-key` warning; `research-buddy upgrade
+  <file>.md --apply` renames it (and refreshes the framework block
+  + adds missing `project.source_tiers` / `project.domain_rules`
+  frontmatter fields) on existing v2 docs.
 - **`*.md` ships in the wheel.** `[tool.setuptools.package-data]`
   globs include `*.md` so `starter.md` is available via
   `importlib.resources` after `pip install`. Without this glob,
