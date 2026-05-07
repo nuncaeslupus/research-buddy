@@ -525,3 +525,4 @@ Newest first. The first entry is implicitly the current version. Each entry: dec
 ### v1.0: Project initialized — {{date}}
 
 {{What was set up: domain, tiers, initial queue, section structure, domain rules.}}
+
