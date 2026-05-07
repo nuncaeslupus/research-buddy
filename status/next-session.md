@@ -1,5 +1,102 @@
 # Next session
 
+## Session 2026-05-07 (session 13)
+
+### What was done
+
+- **PR [#75] merged** — *framework hardening: write second-opinion
+  brief before any research tool call.* Convert the brief guarantee
+  from temporal ("compose before research, emit after") to spatial
+  ("write into the outgoing response buffer before any tool call").
+  Turn 1 step 5 now says "write the brief into the response, with
+  `@brief-start`/`@brief-end` markers, BEFORE invoking any research
+  tool" plus a pre-tool-call self-check; step 7 appends findings
+  beneath the already-emitted brief and adds an explicit "do not
+  re-emit / re-edit / move" guard. Brief-template Composition rule
+  reframed; failure-modes list got a sharper entry naming the actual
+  failure mode (drafted in reasoning, never written into the
+  response). No version bump — iterating before release.
+- **`research-buddy upgrade` v2 dispatch shipped on branch
+  `feat/upgrade-md`.** Closes the long-standing "upgrade-md" gap
+  from session 12. `cmd_upgrade` now dispatches on file extension
+  (`.json` → v1 path; `.md` → new `upgrade_md.py`). The v2 path
+  replaces the framework block (between `<!-- @anchor: framework.core
+  -->` and `<!-- @end: framework.reference -->`) with the installed
+  starter's block, bumps `research_buddy_version` *forward only*,
+  renames legacy `format_version` → `doc_format_version`, and inserts
+  missing `project.source_tiers` / `project.domain_rules` frontmatter
+  blocks with null values. Edits are line-based on the frontmatter
+  so YAML comments survive. Atomic-write semantics + dry-run/
+  `--apply`/`--no-validate` mirror the v1 contract.
+- **Forward-only version policy is the one v1↔v2 semantic
+  divergence.** v1 `upgrade.py` blindly overwrites
+  `meta.research_buddy_version` with the installed value (downgrades
+  silently). The v2 path raises `UpgradeError` when the doc is
+  AHEAD of the installed tool, with a message telling the user to
+  either upgrade the tool or manually edit the field. Surfaced
+  during smoke-test on a real downstream doc that had been
+  deliberately stamped at `2.0.0` to mark "framework version this
+  doc was authored against" — silent downgrade would have lost user
+  intent. Tested via `test_doc_ahead_of_tool_raises`.
+- **New module `src/research_buddy/upgrade_md.py`** (~280 lines,
+  pure logic); CLI helper `_upgrade_md_file` in `main.py`. 17 new
+  tests in `tests/test_upgrade_md.py` (framework swap + frontmatter
+  migrations + ahead-of-tool guard + CLI dry-run/apply/idempotent-
+  apply). Full suite: 254 pass, lint clean.
+- **Smoke-tested end-to-end on `claude-skill-system_v1.16-source.md`**
+  (4793 lines). After resolving the version skew (2.0.0 → 1.6.0
+  manually per the new error-path UX), `--apply` swapped the
+  framework block cleanly: new step-5 spatial-guarantee wording
+  landed, all 23+ project-specific terms preserved, post-write
+  `validate` reported 6 broken-cross-link warnings — all
+  pre-existing in the user's content, not caused by the upgrade.
+  All 6 were also fixed in this session (cross-links repointed at
+  the correct anchors; three flat-table rule rows gained inline
+  `<a id>` tags so `[R-XXX-N](#r-xxx-n)` links resolve without
+  promoting the rules to canonical `<!-- @rule: -->` blocks). Doc
+  now validates clean.
+- **Documentation refreshed:**
+  - `README.md` — "How does it work" paragraph now says `build`,
+    `validate`, **and `upgrade`** dispatch on extension; the
+    `upgrade` command section documents both v1 and v2 modes with
+    examples for each.
+  - `CLAUDE.md` — layout adds `upgrade_md.py`; the stale
+    "doc_format_version vs research_buddy_version" note now points
+    at `research-buddy upgrade <file>.md --apply` as the official
+    path for renaming legacy `format_version` and refreshing the
+    framework block (the old wording said "planned upgrade-md
+    command, see session 12").
+  - `main.py` module docstring — the "remain JSON-only until the
+    parallel MD scripts ship" note is gone; argparse help for
+    `upgrade` documents both dispatch modes.
+
+### Next steps
+
+1. **Merge the upgrade-md PR**, then bump 1.6.0 → 1.7.0 (MINOR — new
+   `.md` dispatch path on `upgrade`, additive on the v1 side, plus
+   the new forward-only semver guard). Run `make version-sync`,
+   `make regen-md-example` (no-op expected since framework is
+   stripped from the rendered example), tag, `make publish`.
+2. **Decide whether to backport the forward-only version policy to
+   v1 `upgrade.py`.** The v1 path still blindly overwrites
+   `meta.research_buddy_version` — same hazard. Cheap fix
+   (~10 lines + one test) but a behavioural change for v1 users;
+   could land as 1.8.0 or be deferred until someone hits it.
+3. **Carry-overs** from session 12 still live: `init` should default
+   to v2 MD scaffolding (currently v1 JSON only); v2 build fidelity
+   vs v1 starter.html (callouts, fixed-width tables, numbered
+   subheadings); roadmap step #6 — raise coverage on `main.py` /
+   `validator.py`. Roadmap items #7/#8/#9 (mutmut, coverage gate,
+   split `main.py`) deferred again.
+
+### Blockers
+
+- None.
+
+[#75]: https://github.com/nuncaeslupus/research-buddy/pull/75
+
+---
+
 ## Session 2026-05-07 (session 12)
 
 ### What was done

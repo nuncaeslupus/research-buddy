@@ -21,9 +21,8 @@ path; new features land on v2 first.
   `*_v*.json`. Continue using for projects already on v1; migrate to
   v2 with `research-buddy migrate-v1-to-v2`.
 
-`build` and `validate` dispatch on file extension. `migrate-v1-to-v2`
-and `clean` operate on v2 only. `upgrade` is v1-only — v2 framework
-updates ship by editing `starter.md` and re-deriving downstream files.
+`build`, `validate`, and `upgrade` dispatch on file extension.
+`migrate-v1-to-v2` and `clean` operate on v2 only.
 
 ## How it works
 
@@ -232,17 +231,22 @@ Refuses to overwrite an existing output unless `--force` is passed.
 After migration, run `research-buddy validate <output>.md` to confirm
 the result.
 
-### `research-buddy upgrade <path...>` (v1 only)
+### `research-buddy upgrade <path...>`
 
-Re-sync a project JSON against the installed `starter.json`: replaces `agent_guidelines.framework` and `agent_guidelines.session_protocol` wholesale, preserves `session_zero.note` so initialized projects do not re-run session zero, leaves `agent_guidelines.project_specific` untouched, and bumps `meta.research_buddy_version`. Appends a dated migration entry to `meta.format_note` only when something actually changed.
+Re-sync a project source against the installed starter template. Dispatches on file extension:
+
+- `.json` → v1 path. Replaces `agent_guidelines.framework` and `agent_guidelines.session_protocol` wholesale, preserves `session_zero.note` so initialized projects do not re-run session zero, leaves `agent_guidelines.project_specific` untouched, and bumps `meta.research_buddy_version`. Appends a dated entry to `meta.format_note` only when something actually changed.
+- `.md` → v2 path. Replaces the framework block (everything between `<!-- @anchor: framework.core -->` and `<!-- @end: framework.reference -->`) with the installed `starter.md`'s block, preserves all project-owned content (frontmatter values, project specification, queue, tracker, rules, DAs, sessions, journey, references, changelog), bumps `research_buddy_version`, renames legacy `format_version` → `doc_format_version`, and inserts missing `project.source_tiers` / `project.domain_rules` frontmatter fields with null values.
 
 ```
-research-buddy upgrade my-project/                # dry-run (exit 1 if changes needed)
-research-buddy upgrade my-project/ --apply        # write + validate (exit 0 on clean apply)
-research-buddy upgrade my-project/ --apply --no-validate
+research-buddy upgrade my-project/                                     # v1 dry-run
+research-buddy upgrade my-project/ --apply                             # v1 write + validate
+research-buddy upgrade my-project/source/foo_v1.0-source.md            # v2 dry-run
+research-buddy upgrade my-project/source/foo_v1.0-source.md --apply    # v2 write + validate
+research-buddy upgrade ... --apply --no-validate                       # skip post-write validation
 ```
 
-Exit codes: `0` clean (no changes or applied), `1` dry-run found changes, `2` error (bad path, validation failed, starter missing).
+Exit codes: `0` clean (no changes or applied), `1` dry-run found changes, `2` error (bad path, validation failed, starter missing, malformed framework block).
 
 ## Project layout
 

@@ -1,12 +1,12 @@
-"""CLI entry point — research-docs build|init|validate|upgrade.
+"""CLI entry point — research-docs build|init|validate|upgrade|clean|migrate-v1-to-v2.
 
-v2 update: `validate` now dispatches on file extension. `.md` files are routed
-to `research_buddy.validator_md.validate_md` (v2 Markdown format); all other
-files use the existing JSON validator. `--prior FILE` enables diff-based
-checks (anchor preservation + append-only invariants) for `.md` files.
+`build`, `validate`, and `upgrade` dispatch on file extension. `.md` paths use
+the v2 Markdown pipeline (`build_md`, `validator_md`, `upgrade_md`); other
+paths use the v1 JSON pipeline. `validate --prior FILE` enables diff-based
+checks (anchor preservation + append-only invariants) on `.md` files.
 
-The `build`, `init`, and `upgrade` subcommands remain JSON-only until the
-parallel MD scripts ship.
+`init` still scaffolds v1 JSON projects. `clean` and `migrate-v1-to-v2` are
+v2-only by definition.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from research_buddy.migrate_v1_to_v2 import (
     migrate as migrate_v1_to_v2,
 )
 from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
+from research_buddy.upgrade_md import UpgradeError, upgrade_md
 from research_buddy.validator import validate
 from research_buddy.validator_md import validate_md
 
@@ -530,8 +531,74 @@ def _load_starter_template() -> dict[str, Any]:
         return json.load(f)  # type: ignore[no-any-return]
 
 
+def _load_starter_md_text() -> str:
+    """Load the v2 starter Markdown text from package assets."""
+    ref = resources.files("research_buddy") / "starter.md"
+    with ref.open("r", encoding="utf-8") as f:
+        return f.read()
+
+
+def _upgrade_md_file(path: Path, args: argparse.Namespace) -> int:
+    """Upgrade a single v2 Markdown source file. Returns exit code (0/1/2)."""
+    from research_buddy import __version__
+
+    try:
+        starter_text = _load_starter_md_text()
+    except Exception as e:
+        print(f"Error loading starter.md: {e}", file=sys.stderr)
+        return 2
+
+    if not path.exists():
+        print(f"Error: {path} does not exist", file=sys.stderr)
+        return 2
+
+    print(f"── {path.name} ──")
+    source_text = path.read_text(encoding="utf-8")
+
+    try:
+        upgraded, changes = upgrade_md(source_text, starter_text, __version__)
+    except UpgradeError as e:
+        print(f"  Error: {e}", file=sys.stderr)
+        return 2
+
+    if not changes:
+        print("  Already in sync with starter.md.")
+        print()
+        return 0
+
+    for line in changes:
+        print(f"  {line}")
+
+    if not args.apply:
+        print("  (dry-run — pass --apply to write)")
+        print()
+        return 1
+
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(upgraded, encoding="utf-8")
+    tmp.replace(path)
+    print(f"  → wrote {path}")
+
+    exit_code = 0
+    if not args.no_validate:
+        issues = validate_md(path)
+        errors = [i for i in issues if i.severity == "error"]
+        if errors:
+            print(f"  ⚠  {len(errors)} validation error(s) after upgrade:")
+            for issue in errors:
+                print(f"     {issue}")
+            exit_code = 2
+    print()
+    return exit_code
+
+
 def cmd_upgrade(args: argparse.Namespace) -> int:
-    """Refresh project JSON(s) against the installed starter template."""
+    """Refresh project source(s) against the installed starter template.
+
+    Dispatches on file extension: `.md` paths use the v2 Markdown upgrade
+    (framework block + frontmatter migration); other paths use the v1 JSON
+    upgrade (agent_guidelines refresh + key reordering).
+    """
     from research_buddy import __version__
 
     try:
@@ -543,14 +610,8 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
     exit_code = 0
     for p in args.paths:
         path = Path(p).resolve()
-        # Friendly error if a .md file is passed — MD upgrade not yet implemented.
         if path.suffix == ".md":
-            print(
-                f"Error: `upgrade` does not yet support v2 Markdown files ({path.name}). "
-                f"v2 framework updates ship by replacing the Framework block in starter.md.",
-                file=sys.stderr,
-            )
-            exit_code = 1
+            exit_code = max(exit_code, _upgrade_md_file(path, args))
             continue
 
         res = _resolve_source(path)
@@ -775,12 +836,19 @@ def main() -> None:
     # upgrade
     p_up = sub.add_parser(
         "upgrade",
-        help="Refresh agent_guidelines from the installed starter template",
+        help=(
+            "Refresh project source(s) against the installed starter template. "
+            ".json → v1 agent_guidelines refresh; .md → v2 framework block + "
+            "frontmatter migration."
+        ),
     )
     p_up.add_argument(
         "paths",
         nargs="+",
-        help="JSON file(s) or directory(ies) containing source/",
+        help=(
+            "Path(s) to upgrade. JSON file or directory containing source/ for "
+            "v1; .md source file for v2."
+        ),
     )
     p_up.add_argument(
         "--apply",
