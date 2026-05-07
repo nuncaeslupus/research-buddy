@@ -1,5 +1,99 @@
 # Next session
 
+## Session 2026-05-07 (session 14)
+
+### What was done
+
+- **PR [#76] merged** — *upgrade-md dispatch* (the v2 path
+  authored in session 13). One Gemini MEDIUM landed before merge:
+  `_find_framework_bounds` was matching marker lines by stripped
+  equality only, so a fenced code example showing
+  `<!-- @anchor: framework.core -->` or
+  `<!-- @end: framework.reference -->` would shadow the real
+  boundaries (end-detection's last-match rule means a bogus end
+  inside a later fence wins). Fixed by reusing
+  `validator_md._line_in_fence`; new test
+  `test_ignores_marker_lines_inside_fenced_code_blocks` locks it
+  in. Docstring on `_replace_framework_block` corrected — it had
+  *claimed* to ignore in-fence markers but didn't.
+- **PR [#77] merged** — *init defaults to v2 Markdown + bump
+  1.7.0*. Two changes bundled because both ship in the same MINOR:
+  - `research-buddy init <dir>` now scaffolds
+    `source/research-document.md` (the bundled v2 starter) by
+    default; `--v1` falls back to the legacy JSON scaffold. The
+    starter's frontmatter is patched in place — `title` / `subtitle`
+    set when `--title` / `--subtitle` are passed, every other
+    value stays null for session zero. `cmd_init` is now a thin
+    dispatcher; legacy logic lives in `_init_v1`, v2 in `_init_v2`.
+    Frontmatter editing uses a small line-based helper
+    (`_set_frontmatter_scalar`) that preserves YAML comments — same
+    convention `upgrade_md` already uses for the same file shape.
+  - **Version bump 1.6.0 → 1.7.0** (MINOR — additive: new `.md`
+    dispatch on `upgrade` with the forward-only semver guard, and
+    v2-default scaffolding on `init`).
+- **Gemini review on [#77]** — two MEDIUMs, both accepted:
+  1. **Quote escaping in `_set_frontmatter_scalar`.** A title with
+     embedded `"` (e.g. `My "Awesome" Project`) would have produced
+     invalid YAML. Fix backslash-escapes `\` and `"` before wrapping
+     in YAML's double-quoted form. New
+     `test_init_escapes_double_quotes_in_title` round-trips through
+     `yaml.safe_load`. The `# inside an existing quoted value`
+     sub-concern was documented as a precondition rather than coded
+     against — `init`'s only call sites operate on the fresh
+     starter's `null` lines (no embedded `#`), so the helper's naive
+     ` #` comment-split is safe in practice.
+  2. **Placeholder style alignment.** v1 init's success message uses
+     `[meta.file_name]`; v2 was using `{file_name}`. Aligned v2 to
+     `[file_name]_v1.0-source.md` so the square-bracket "substitute
+     this" idiom is consistent across both paths.
+- **Tests / lint.** 254 → 261 pass (+1 for fence-skip on PR 76,
+  +6 for v2 init / -2 from v1 reframing on PR 77, +1 for
+  quote-escape regression on the Gemini fix). Lint clean.
+  `make regen-examples` ran clean (only version-footer diff in the
+  rendered HTML).
+- **Docs.** README quick-start now leads with the v2 flow and
+  points at `--v1` for legacy projects; the `init` section
+  documents both paths. CLAUDE.md's 2-turn workflow narrative
+  updated to match (v2 default; `--v1` legacy fallback).
+  `main.py` module docstring changed from "init still scaffolds
+  v1" to "init defaults to v2 Markdown".
+- **Release.** `v1.7.0` git tag pushed to GitHub on the `[#77]`
+  merge commit. PyPI upload deferred — see Next steps.
+
+### Next steps
+
+1. **Publish 1.7.0 to PyPI.** The wheel + sdist are already built
+   in `dist/research_buddy-1.7.0.{whl,tar.gz}`; tag is already
+   on GitHub. The actual upload needs a real terminal (Claude
+   Code's `!` prefix has no TTY for `getpass`, so the prompt
+   raises EOFError). From a real terminal:
+   ```
+   cd ~/dev/research-buddy && uv run twine upload dist/research_buddy-1.7.0*
+   ```
+   Or one-time stage a token in the keyring
+   (`uv run keyring set https://upload.pypi.org/legacy/ __token__`)
+   so `make publish` works headlessly going forward.
+2. **Backport forward-only version policy to v1 `upgrade.py`** —
+   carried from session 13. The v1 path still blindly overwrites
+   `meta.research_buddy_version` (silent downgrade hazard same as
+   v2 had). Cheap fix (~10 lines + one test). Lands as 1.8.0 or
+   gets deferred until someone hits it.
+3. **Carry-overs**: v2 build fidelity vs v1 `starter.html`
+   (callouts, fixed-width tables, numbered subheadings); roadmap
+   step #6 — coverage on `main.py` / `validator.py`. Roadmap
+   #7/#8/#9 (mutmut, coverage gate, split `main.py`) deferred
+   again.
+
+### Blockers
+
+- PyPI upload blocked on real-TTY access; not a real blocker, just
+  a "do it from a different terminal" task.
+
+[#76]: https://github.com/nuncaeslupus/research-buddy/pull/76
+[#77]: https://github.com/nuncaeslupus/research-buddy/pull/77
+
+---
+
 ## Session 2026-05-07 (session 13)
 
 ### What was done
