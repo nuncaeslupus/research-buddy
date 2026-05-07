@@ -19,7 +19,7 @@ from research_buddy.clean_md import (
 
 _FM = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: "1.0"
 date: "2026-05-07"
@@ -162,11 +162,21 @@ class TestRefusalGates:
             clean_md(path)
 
     def test_wrong_format_version_raises(self, tmp_path: Path) -> None:
-        bad = _FM.replace("format_version: 2", "format_version: 1")
+        bad = _FM.replace("doc_format_version: 2", "doc_format_version: 1")
         path = tmp_path / "x.md"
         path.write_text(bad + "\n# body\n", encoding="utf-8")
-        with pytest.raises(ValueError, match="format_version"):
+        with pytest.raises(ValueError, match="doc_format_version"):
             clean_md(path)
+
+    def test_legacy_format_version_key_still_accepted(self, tmp_path: Path) -> None:
+        # The clean tool reads either `doc_format_version` (current) or the
+        # legacy `format_version` so files written by older toolchain don't
+        # break before they're upgraded.
+        legacy_doc = _full_doc().replace("doc_format_version: 2", "format_version: 2")
+        path = tmp_path / "demo_v1.0-source.md"
+        path.write_text(legacy_doc, encoding="utf-8")
+        out = clean_md(path)
+        assert out.exists()
 
     def test_output_overwriting_source_raises(self, tmp_path: Path) -> None:
         path = tmp_path / "demo_v1.0-source.md"

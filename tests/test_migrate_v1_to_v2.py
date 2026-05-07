@@ -29,7 +29,7 @@ class TestFrontmatterBuild:
         assert fm_text.endswith("---")
         body = fm_text[4:-3]
         fm = yaml.safe_load(body)
-        assert fm["format_version"] == 2
+        assert fm["doc_format_version"] == 2
         assert fm["research_buddy_version"] == __version__
         assert "language" in fm
         assert "project" in fm
@@ -245,7 +245,7 @@ class TestCli:
 
         rc = main([str(in_path), "-o", str(out_path), "--force"])
         assert rc == 0
-        assert "format_version: 2" in out_path.read_text(encoding="utf-8")
+        assert "doc_format_version: 2" in out_path.read_text(encoding="utf-8")
 
     def test_missing_input_returns_2(self, tmp_path: Path) -> None:
         rc = main([str(tmp_path / "does-not-exist.json")])

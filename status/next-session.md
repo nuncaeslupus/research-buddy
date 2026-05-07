@@ -1,5 +1,96 @@
 # Next session
 
+## Session 2026-05-07 (session 12)
+
+### What was done
+
+- **Closed PR [#71] and replaced with PR [#72]** (`refresh-starter-framework`).
+  PR 71 was a GitHub-UI direct edit that:
+  (a) accidentally truncated 18 long lines in `starter.md` to `[...]`
+  (paste-from-Read-tool artifact in commit `2441fce`), and
+  (b) used `tier1_contradiction` / `FALSIFIED` (Gemini caught both).
+  PR 72 starts from `67ef215` (last clean commit) and folds in 22
+  surgical instruction updates from the user's draft.
+- **Substantive framework changes** in `starter.md` (PR 72):
+  - Turn 1 reorders to **brief + research**: brief is composed in step 5
+    *after* hypotheses are pre-registered in step 4 (Gemini caught the
+    initial 4↔5 ordering — both pre-reg and brief reference each other).
+    The brief is emitted verbatim and can never be re-edited after
+    research.
+  - Turn 2 becomes **vet + validate + atomic write**. Validation moved
+    from `SHOULD` → `MUST`: the agent MUST invoke
+    `research-buddy validate` (or paste a mental-simulation checklist
+    when shell access is missing) and the validator output MUST appear
+    in the message *before* the file artifact.
+  - New **session-start version-compatibility check**: agent compares
+    the doc's `research_buddy_version` against the loaded framework
+    version, surfaces MAJOR mismatch as a one-line warning before any
+    work, advisory only.
+  - **`format_version` renamed to `doc_format_version`** to disambiguate
+    from `research_buddy_version`. Deprecation fallback in
+    `validator_md.py` and `clean_md.py` so v2 files predating the
+    rename still validate (with a `deprecated-format-version-key`
+    warning).
+  - Frontmatter now declares `project.source_tiers`
+    (tier_1 / tier_2 / discovery) and `project.domain_rules` — fixes
+    the previously-dangling `{{project.source_tiers.tier1}}`
+    references.
+  - Adopted Rules gain `Status lifecycle` + `Force keywords (RFC 2119/8174)`.
+  - Queue rules gain `Stable IDs` + `Re-queuing`. Open Research Queue
+    has two ghosted example rows so session zero has Objective shape
+    to pattern-match.
+  - New **mechanical check** in `validator_md.py`:
+    `brief-slot-empty-but-section-non-empty` — fires when the Turn 1
+    brief context slot says "None." but the corresponding section
+    (Discarded Alternatives / Tracker / Adopted Rules) has live
+    entries. Tested in `TestBriefContextSlots`.
+  - Synthesis matrix keeps `UNVERIFIABLE` alongside SUPPORTS /
+    CONTRADICTS / SILENT (Gemini caught its removal from PR 72 commit 1).
+- **Recovered the `[...]`-truncated lines** from `2441fce`. Identified
+  the bad commit by diffing against `67ef215`. Process note: GitHub UI
+  paste from a Read tool's truncated display is the likely cause —
+  worth a guardrail.
+- **Updated `claude-skill-system_v1.14.md`** (the user's research doc):
+  re-injected the new framework block (334 lines, ~34 KB), added the
+  agent-read directive to the title, renamed `format_version` →
+  `doc_format_version`, populated `project.source_tiers` in
+  frontmatter from the body content. All anchors balanced.
+
+### Next steps
+
+1. **Wait for CI on PR [#72]** and merge once green. After merge, bump
+   to 1.6.0 (MINOR — new mechanical check, frontmatter additions,
+   doc_format_version rename with deprecation fallback). Tag, publish.
+2. **`upgrade-md` command — promoted from "lower priority" to active
+   work.** With the framework just gaining substantive new directives
+   (validation MUST, version-drift check, Stable IDs, Status
+   lifecycle, brief composition timing), every existing v2 source
+   document in the wild is now framework-stale. Need a dedicated
+   command that mirrors `upgrade.py`'s contract for v1: re-sync the
+   framework block (everything between
+   `<!-- @anchor: framework.core -->` and
+   `<!-- @end: framework.reference -->`) from the installed
+   `starter.md` into an existing `*_v*-source.md`, leaving the project
+   sections (and the title-section *body* below the framework
+   directive) untouched. Should also rename `format_version` →
+   `doc_format_version` if the legacy key is present, and add
+   `project.source_tiers` / `project.domain_rules` placeholders to
+   frontmatter if missing. Same atomic-write semantics as `upgrade`
+   for JSON: one message, all changes, or report what would change
+   with `--dry-run`.
+3. **Carry-over** items from session 11 below remain valid (init
+   scaffolding v1, build fidelity, coverage). The session-11 item #4
+   about `upgrade-md` is superseded by the session-12 entry above.
+
+### Blockers
+
+- None. PR [#72] open with two commits + Gemini fixes folded in.
+
+[#71]: https://github.com/nuncaeslupus/research-buddy/pull/71
+[#72]: https://github.com/nuncaeslupus/research-buddy/pull/72
+
+---
+
 ## Session 2026-05-07 (session 11)
 
 ### What was done

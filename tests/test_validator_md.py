@@ -20,7 +20,7 @@ def _codes(issues: list[Issue]) -> list[str]:
 # (project.domain set). Body sections are added per-test as needed.
 _PROJECT_FM = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: "1.0"
 date: "2026-05-07"
@@ -56,17 +56,47 @@ class TestFrontmatter:
         assert "frontmatter-parse" in codes
 
     def test_wrong_format_version_short_circuits(self, tmp_path: Path) -> None:
-        text = "---\nformat_version: 1\n---\n# body\n"
+        text = "---\ndoc_format_version: 1\n---\n# body\n"
         path = _write(tmp_path / "x.md", text)
         issues = validate_md(path)
         assert any(i.code == "wrong-format-version" for i in issues)
         # Should not run other checks (no anchor/cross-link/etc. issues).
-        assert all(i.code in {"wrong-format-version", "frontmatter-parse"} for i in issues)
+        assert all(
+            i.code in {"wrong-format-version", "frontmatter-parse", "deprecated-format-version-key"}
+            for i in issues
+        )
+
+    def test_legacy_format_version_key_is_deprecated_warning(self, tmp_path: Path) -> None:
+        # Files predating the rename use `format_version` instead of
+        # `doc_format_version`. The validator accepts the legacy key but
+        # emits a warning so the user knows to rename.
+        text = """\
+---
+format_version: 2
+research_buddy_version: "1.4.0"
+version: "1.0"
+date: "2026-05-07"
+file_name: "demo"
+title: "Demo"
+language:
+  code: en
+project:
+  domain: "demo"
+---
+"""
+        path = _write(tmp_path / "demo_v1.0.md", text)
+        issues = validate_md(path)
+        codes = {i.code for i in issues}
+        assert "deprecated-format-version-key" in codes
+        # The legacy key satisfies the required-fields check — no
+        # spurious "missing doc_format_version" alongside the deprecation.
+        assert "frontmatter-missing-field" not in codes
+        assert "wrong-format-version" not in codes
 
     def test_missing_required_field_in_project_mode(self, tmp_path: Path) -> None:
         text = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: "1.0"
 date: "2026-05-07"
@@ -87,7 +117,7 @@ project:
     def test_null_field_in_project_mode_errors(self, tmp_path: Path) -> None:
         text = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: null
 date: "2026-05-07"
@@ -106,7 +136,7 @@ project:
     def test_starter_mode_allows_nulls(self, tmp_path: Path) -> None:
         text = """\
 ---
-format_version: 2
+doc_format_version: 2
 research_buddy_version: "1.4.0"
 version: null
 date: null
@@ -295,3 +325,74 @@ class TestStarterFile:
             "bundled starter.md must pass all mechanical checks at error level; "
             f"found: {[i.format() for i in errors]}"
         )
+
+
+class TestBriefContextSlots:
+    """`_check_brief_context_slots` flags briefs that say 'None.' for a
+    context slot whose source section actually has live entries — that's a
+    preflight-skipped tell."""
+
+    _SECTIONS_WITH_LIVE_DA = """\
+<!-- @anchor: discarded -->
+## Discarded Alternatives
+
+<!-- @da: DA-Q1-1 -->
+<a id="da-q1-1"></a>
+
+**DA-Q1-1.** Some rejected approach.
+
+<!-- @end: discarded -->
+
+<!-- @anchor: tracker -->
+## Tracker
+
+| ID | Topic | Decision | Version |
+|----|-------|----------|---------|
+| T-000 | Project init | Done | v1.0 |
+
+<!-- @end: tracker -->
+
+<!-- @anchor: rules -->
+## Adopted Rules
+
+(none yet)
+
+<!-- @end: rules -->
+"""
+
+    def _doc_with_brief(self, slot_value: str) -> str:
+        brief = (
+            "<!-- @brief-start -->\n"
+            "Context that bounds the answer space:\n\n"
+            "Already-rejected approaches (do not re-propose):\n"
+            f"{slot_value}\n\n"
+            "Related prior research already settled in this project:\n"
+            "None.\n\n"
+            "Active rules that constrain new conclusions:\n"
+            "None.\n"
+            "<!-- @brief-end -->\n"
+        )
+        return _project_doc(brief + "\n" + self._SECTIONS_WITH_LIVE_DA)
+
+    def test_none_in_slot_with_live_section_warns(self, tmp_path: Path) -> None:
+        path = _write(tmp_path / "demo_v1.0-source.md", self._doc_with_brief("None."))
+        codes = _codes(validate_md(path))
+        assert "brief-slot-empty-but-section-non-empty" in codes
+
+    def test_none_relevant_with_reasoning_does_not_warn(self, tmp_path: Path) -> None:
+        # "None relevant." (with anything other than literal "None.") is
+        # the agent's escape hatch when DAs exist but none are relevant
+        # to this turn's topic.
+        path = _write(
+            tmp_path / "demo_v1.0-source.md",
+            self._doc_with_brief("None relevant. (DA-Q1-1 covers a different domain.)"),
+        )
+        codes = _codes(validate_md(path))
+        assert "brief-slot-empty-but-section-non-empty" not in codes
+
+    def test_no_brief_no_check(self, tmp_path: Path) -> None:
+        # Source files (Turn 2 output) typically lack the brief markers;
+        # the check must not fire on them.
+        path = _write(tmp_path / "demo_v1.0-source.md", _project_doc(self._SECTIONS_WITH_LIVE_DA))
+        codes = _codes(validate_md(path))
+        assert "brief-slot-empty-but-section-non-empty" not in codes
