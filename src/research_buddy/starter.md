@@ -1,6 +1,6 @@
 ---
 format_version: 2
-research_buddy_version: 1.5.0
+research_buddy_version: "1.5.0"
 version:
 date:
 file_name:
