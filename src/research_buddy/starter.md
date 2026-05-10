@@ -174,14 +174,14 @@ The closed list of presentation primitives the agent MAY use. Plain Markdown alo
 | EL-06 | Code blocks | fenced ` ``` ` with language hint; syntax-highlighted via highlight.js |
 | EL-07 | Tables | GFM `\|...\|`; widths auto-derived from content (never tune manually) |
 | EL-08 | Horizontal rule | `---` on its own line |
-| EL-09 | Inline SVG / raw HTML | `<svg>...</svg>`. Use `currentColor` and theme variables (`var(--text)`, `var(--bg)`, `var(--blue)`, `var(--green)`, `var(--amber)`, `var(--red)`) where colour should follow the active theme; hard-coded hex renders the same in light and dark. |
+| EL-09 | Inline SVG | `<svg>...</svg>`. Use `currentColor` and theme variables (`var(--text)`, `var(--bg)`, `var(--blue)`, `var(--green)`, `var(--amber)`, `var(--red)`) where colour should follow the active theme; hard-coded hex renders the same in light and dark. |
 | EL-10 | Callouts | `> [!KIND]` blockquote. Kinds: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, `LIMITATION`, `HYPOTHESIS`. The last two are research-specific. |
 | EL-11 | Verdict badge | ` ```rb-verdict <kind> ` fenced block with prose body. Kinds: `supports`, `contradicts`, `unverifiable`, `silent`. |
 | EL-12 | Card grid | ` ```rb-cards ` fenced block; YAML list of `{title, body, icon?}`. |
 | EL-13 | Banner | ` ```rb-banner <kind> ` fenced block. Kinds: `usage`, `agnostic`, `cc`. Use sparingly — prefer the `banners` frontmatter for top-of-doc chrome. |
 | EL-14 | References anchor | `<!-- @anchor: references -->` (already present on the [References](#references) section); styles the next list as a references list. |
 | EL-15 | Entity anchors | `<!-- @rule: ... -->`, `<!-- @da: ... -->`, `<!-- @session: ... -->`. See [File editing](#file-editing) rule 1. |
-| EL-16 | Status chips | `<span class="rb-ok\|rb-bad\|rb-flag">…</span>` — green / red / amber inline chip; readable as plain text in non-HTML viewers. |
+| EL-16 | Status chips | `<span class="CLASS">…</span>` where CLASS is one of `rb-ok` (green), `rb-bad` (red), `rb-flag` (amber). Readable as plain text in non-HTML viewers. |
 | EL-17 | `banners` frontmatter | List of `usage` / `agnostic` / `cc`; rendered above the first tab. |
 | EL-18 | `theme_css` frontmatter | Optional path to extra CSS appended after the default stylesheet. |
 
