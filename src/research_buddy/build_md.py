@@ -22,6 +22,7 @@ import re
 from typing import Any
 
 from markdown_it import MarkdownIt
+from markdown_it.token import Token
 from mdit_py_plugins.anchors import anchors_plugin
 
 from research_buddy.build import (
@@ -38,6 +39,7 @@ from research_buddy.clean_md import (
     strip_framework_block,
     unwrap_framework_links,
 )
+from research_buddy.table_layout import TableLayout, compute_layouts
 from research_buddy.validator_md import _line_in_fence
 
 # ---------------------------------------------------------------------------
@@ -53,11 +55,83 @@ def _md_renderer() -> MarkdownIt:
     free, and `build_md_html` is called once per document. `html=True` lets
     raw HTML (`<a id>`, anchor comments, inline images) flow through. The
     anchors plugin assigns slug IDs to H1-H6 so sidebar links resolve.
+
+    Custom render rules wrap each `<table>` in `<div class="table-wrap">` and
+    apply per-table layouts (colgroup widths, `t-fixed` class, per-cell `nw`
+    nowrap class) read from `env["_rb_layouts"]`. The layouts are computed
+    globally across all tabs so structurally similar tables align — see
+    `build_md_html`.
     """
     md = MarkdownIt("commonmark", {"html": True})
     md.enable("table")
     md.use(anchors_plugin, max_level=6, permalink=False)
+    _install_table_layout_rules(md)
     return md
+
+
+# ---------------------------------------------------------------------------
+# Render rules: wrap tables and apply pre-computed layouts
+# ---------------------------------------------------------------------------
+
+
+def _install_table_layout_rules(md: MarkdownIt) -> None:
+    """Override table_open, table_close, tr_open, td_open, th_open render
+    rules so the rendered HTML carries the layouts stashed in `env`.
+
+    Render-time state (current table index, current column index, current
+    layout) flows through `env`, never closure-captured — the cached `md`
+    instance is reused across builds, so each call must initialise its own
+    counters.
+    """
+
+    # `add_render_rule` binds these as methods on the renderer, so each gets
+    # the renderer as the first positional arg (we ignore it).
+
+    def table_open(
+        _self: Any, _tokens: list[Any], _idx: int, _opts: Any, env: dict[str, Any]
+    ) -> str:
+        layouts: list[TableLayout] = env.get("_rb_layouts") or []
+        i = env.get("_rb_table_idx", 0)
+        layout = layouts[i] if i < len(layouts) else None
+        env["_rb_cur_layout"] = layout
+        env["_rb_table_idx"] = i + 1
+        cls = ' class="t-fixed"' if (layout and layout.use_fixed) else ""
+        out = [f'<div class="table-wrap"><table{cls}>']
+        if layout and layout.col_widths:
+            ncols = len(layout.nowrap)
+            out.append("<colgroup>")
+            for j in range(ncols):
+                w = layout.col_widths.get(j)
+                out.append(f'<col style="width:{w}">' if w else "<col>")
+            out.append("</colgroup>")
+        return "".join(out) + "\n"
+
+    def table_close(
+        _self: Any, _tokens: list[Any], _idx: int, _opts: Any, _env: dict[str, Any]
+    ) -> str:
+        return "</table></div>\n"
+
+    def tr_open(_self: Any, _tokens: list[Any], _idx: int, _opts: Any, env: dict[str, Any]) -> str:
+        env["_rb_col_idx"] = 0
+        return "<tr>"
+
+    def td_open(_self: Any, _tokens: list[Any], _idx: int, _opts: Any, env: dict[str, Any]) -> str:
+        layout: TableLayout | None = env.get("_rb_cur_layout")
+        col = env.get("_rb_col_idx", 0)
+        env["_rb_col_idx"] = col + 1
+        if layout and col < len(layout.nowrap) and layout.nowrap[col]:
+            return '<td class="nw">'
+        return "<td>"
+
+    def th_open(_self: Any, _tokens: list[Any], _idx: int, _opts: Any, env: dict[str, Any]) -> str:
+        env["_rb_col_idx"] = env.get("_rb_col_idx", 0) + 1
+        return "<th>"
+
+    md.add_render_rule("table_open", table_open)
+    md.add_render_rule("table_close", table_close)
+    md.add_render_rule("tr_open", tr_open)
+    md.add_render_rule("td_open", td_open)
+    md.add_render_rule("th_open", th_open)
 
 
 # ---------------------------------------------------------------------------
@@ -109,29 +183,79 @@ def split_into_tabs(body: str) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def _extract_nav_entries(tokens: list[Any]) -> list[dict[str, Any]]:
-    """Walk a parsed token stream and return a list of {level, id, title}
-    dicts for every H3/H4 heading.
+def _process_headings(tokens: list[Any], tab_num: str) -> list[dict[str, Any]]:
+    """Walk tokens once, prepend `<span class="num">N.M</span>` to H3/H4
+    inline content (matching v1's `<span class="num">` numbering), and return
+    nav entries `{level, id, title, num}` for the sidebar.
 
-    The caller parses once and passes the tokens to both `md.renderer.render`
-    and this helper, so we don't pay for parsing twice. The anchors plugin
-    has already assigned `id` attributes by the time this runs.
+    Counters reset per tab and within a tab as expected: H3 is `{tab}.{n}`,
+    H4 is `{tab}.{n}.{m}` with `m` resetting at each new H3. An H4 appearing
+    before any H3 (malformed nesting) is left unnumbered rather than
+    fabricating a parent.
     """
     out: list[dict[str, Any]] = []
-    i = 0
-    while i < len(tokens):
-        tok = tokens[i]
-        if tok.type == "heading_open" and tok.tag in ("h3", "h4"):
-            level = int(tok.tag[1])
-            sid = (tok.attrs.get("id") or "") if tok.attrs else ""
-            # The next token is `inline` with the heading content.
-            title = ""
-            if i + 1 < len(tokens) and tokens[i + 1].type == "inline":
-                title = tokens[i + 1].content
-            if sid:
-                out.append({"level": level, "id": str(sid), "title": title})
-        i += 1
+    h3 = 0
+    h4 = 0
+    for i, tok in enumerate(tokens):
+        if tok.type != "heading_open" or tok.tag not in ("h3", "h4"):
+            continue
+        level = int(tok.tag[1])
+        if tok.tag == "h3":
+            h3 += 1
+            h4 = 0
+            num = f"{tab_num}.{h3}"
+        elif h3 == 0:
+            num = ""
+        else:
+            h4 += 1
+            num = f"{tab_num}.{h3}.{h4}"
+        sid = (tok.attrs.get("id") or "") if tok.attrs else ""
+        if i + 1 >= len(tokens) or tokens[i + 1].type != "inline":
+            continue
+        inline = tokens[i + 1]
+        if num:
+            span = Token("html_inline", "", 0)
+            span.content = f'<span class="num">{num}</span> '
+            inline.children = [span, *(inline.children or [])]
+        if sid:
+            out.append({"level": level, "id": str(sid), "title": inline.content, "num": num})
     return out
+
+
+def _extract_table_cells(tokens: list[Any]) -> list[list[list[str]]]:
+    """Return a list of tables; each table is a list of rows; each row is a
+    list of cell-content strings, in render order.
+
+    Headers and body rows are both included — width profiling treats every
+    visible cell as content. The caller passes the resulting tables (across
+    all tabs, in render order) to `compute_layouts`.
+    """
+    tables: list[list[list[str]]] = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        if tokens[i].type != "table_open":
+            i += 1
+            continue
+        rows: list[list[str]] = []
+        current: list[str] = []
+        in_row = False
+        j = i + 1
+        while j < n and tokens[j].type != "table_close":
+            t = tokens[j]
+            if t.type == "tr_open":
+                current = []
+                in_row = True
+            elif t.type == "tr_close":
+                if in_row:
+                    rows.append(current)
+                in_row = False
+            elif t.type == "inline":
+                current.append(t.content)
+            j += 1
+        tables.append(rows)
+        i = j + 1
+    return tables
 
 
 def _dedupe_heading_ids(tokens: list[Any], state: BuildState) -> None:
@@ -253,25 +377,41 @@ def build_md_html(
         + "</div>\n"
     )
 
-    # ── per-tab content + sidebar nav ──────────────────────────────────────
+    # ── parse pass: tokenize each tab, dedupe heading IDs, number H3/H4,
+    # collect every table's cells globally so layouts can group similar
+    # tables across the whole document ────────────────────────────────────
+    parsed: list[tuple[list[Any], list[dict[str, Any]], int, int]] = []
+    all_tables: list[list[list[str]]] = []
+    for i, (label, tab_md) in enumerate(tabs):
+        tab_num = str(i + 1)
+        tokens = md.parse(tab_md)
+        _dedupe_heading_ids(tokens, state)
+        nav_entries = _process_headings(tokens, tab_num)
+        tab_tables = _extract_table_cells(tokens)
+        layout_start = len(all_tables)
+        all_tables.extend(tab_tables)
+        parsed.append((tokens, nav_entries, layout_start, len(all_tables)))
+        del label, tab_md  # avoid accidental reuse — see render pass below
+
+    global_layouts = compute_layouts(all_tables)
+
+    # ── render pass: emit per-tab content + sidebar nav ────────────────────
     nav_html_parts: list[str] = []
     tab_contents: list[str] = []
 
-    for i, ((label, tab_md), tid, rendered_label) in enumerate(
-        zip(tabs, tab_ids, rendered_labels, strict=True)
+    for i, ((label, _tab_md), tid, rendered_label, (tokens, nav_entries, lo, hi)) in enumerate(
+        zip(tabs, tab_ids, rendered_labels, parsed, strict=True)
     ):
         is_active = i == 0
         active_cls = " active" if is_active else ""
         tab_num = str(i + 1)
         tab_hdr_id = state.unique_id(f"tab-hdr-{tid}")
 
-        # Parse once — the same tokens feed both the renderer and the nav
-        # extractor. `_dedupe_heading_ids` rewrites collisions with the
-        # shared `state` so IDs are globally unique across tabs.
-        tokens = md.parse(tab_md)
-        _dedupe_heading_ids(tokens, state)
-        body_html = md.renderer.render(tokens, md.options, {})
-        nav_entries = _extract_nav_entries(tokens)
+        env: dict[str, Any] = {
+            "_rb_layouts": global_layouts[lo:hi],
+            "_rb_table_idx": 0,
+        }
+        body_html = md.renderer.render(tokens, md.options, env)
 
         tab_body = (
             f'<h1 id="{tab_hdr_id}">{tab_num}. {rendered_label}</h1>\n'
@@ -285,7 +425,8 @@ def build_md_html(
         nav_html.append(f'<a href="#{tab_hdr_id}">{tab_num}. {rendered_label}</a>\n')
         for entry in nav_entries:
             cls = ' class="sub"' if entry["level"] == 3 else ' class="subsub"'
-            nav_html.append(f'<a href="#{entry["id"]}"{cls}>{entry["title"]}</a>\n')
+            num_prefix = f"{entry['num']}. " if entry["num"] else ""
+            nav_html.append(f'<a href="#{entry["id"]}"{cls}>{num_prefix}{entry["title"]}</a>\n')
         nav_html.append("</nav>\n")
         nav_html_parts.append("".join(nav_html))
 

@@ -12,6 +12,8 @@ from typing import Any
 
 import jinja2
 
+from research_buddy.table_layout import TableLayout, compute_layouts
+
 # ── Type aliases ────────────────────────────────────────────────────────────
 
 Block = dict[str, Any]
@@ -34,8 +36,6 @@ VALID_TAG_CLASSES = frozenset(
         "tag",
     }
 )
-
-MAX_NOWRAP_COLUMN_LENGTH = 30
 
 # Mapping of human-readable language names to BCP-47 codes, for documents that use
 # `meta.language` as a plain string (e.g. "English") instead of the preferred
@@ -312,108 +312,57 @@ def r_verdict(b: Block, _state: BuildState) -> str:
     )
 
 
-def _nowrap_cols(headers: list[str], rows: list[list[str]]) -> list[bool]:
-    ncols = len(headers) or (len(rows[0]) if rows else 0)
-    if ncols == 0:
-        return []
-    maxes = [0] * ncols
-    for row in rows:
-        for i, cell in enumerate(row[:ncols]):
-            maxes[i] = max(maxes[i], len(cell))
-    return [mx < MAX_NOWRAP_COLUMN_LENGTH for mx in maxes]
-
-
-def _table_col_widths(headers: list[str], ncols: int) -> tuple[dict[int, str], bool]:
-    if not headers or ncols == 0:
-        return {}, False
-    h = " ".join(headers).lower()
-
-    # # | Build | Test condition to pass | Time
-    if "build" in h and "test condition" in h:
-        return {0: "4%", 1: "26%", 3: "10%"}, True
-
-    # # | Build | Activation condition  (Phase 2 table)
-    if "build" in h and "activation condition" in h:
-        return {0: "4%", 1: "20%"}, True
-
-    # Phase / barrier control
-    if "phase" in h and "who controls barriers" in h:
-        return {1: "22%"}, True
-
-    # Problem / root-cause  OR  proposal / rationale
-    if ("problem" in h and "root" in h) or ("proposal" in h and "rationale" in h):
-        return {0: "25%", 1: "25%"}, True
-
-    # Source | Tier | Relevance  (research session citation tables)
-    if h.strip().startswith("source") and "tier" in h and "relevance" in h:
-        return {0: "48%", 1: "8%", 2: "44%"}, True
-
-    # Source | Tier | Adopted claims | Rejected/flagged claims
-    if "source" in h and "tier" in h and "adopted" in h:
-        return {0: "28%", 1: "7%", 2: "32%", 3: "33%"}, True
-
-    # Source | Role in system  (reference role tables)
-    if "source" in h and "role" in h and ncols == 2:
-        return {0: "45%", 1: "55%"}, True
-
-    # Reference | Used for
-    if "reference" in h and "used for" in h:
-        return {0: "42%", 1: "58%"}, True
-
-    # Citation | What it supports
-    if "citation" in h and "supports" in h:
-        return {0: "42%", 1: "58%"}, True
-
-    # Concept (full name) | What it does | Why ...  (Concept Map tables)
-    if "concept" in h and "what it does" in h:
-        return {0: "22%", 1: "39%", 2: "39%"}, True
-
-    # Concept | Status | Session finding  (Tracker tables)
-    if "concept" in h and "status" in h and "session" in h:
-        return {0: "28%", 1: "12%", 2: "60%"}, True
-
-    # Decision | Adopted spec | Rationale
-    if "decision" in h and "adopted spec" in h:
-        return {0: "18%", 1: "42%", 2: "40%"}, True
-
-    # Verdict / rejection tables (Discarded Alternatives etc.)
-    REJECTION_WORDS = (
-        "rejected",
-        "verdict",
-        "alternative",
-        "discarded",
-        "approach",
-        "why",
-        "decision",
-        "status",
-    )
-    if any(w in h for w in REJECTION_WORDS):
-        if ncols == 2:
-            return {0: "35%", 1: "65%"}, True
-        if ncols == 3:
-            return {0: "30%", 1: "18%", 2: "52%"}, True
-        if ncols == 4:
-            return {0: "26%", 1: "14%", 2: "14%", 3: "46%"}, True
-
-    return {}, False
-
-
 def r_table(b: Block, _state: BuildState) -> str:
     headers = b.get("headers", [])
     rows = b.get("rows", [])
     ncols = len(headers) or (len(rows[0]) if rows else 0)
-    nowrap = _nowrap_cols(headers, rows)
-    col_widths, use_fixed = _table_col_widths(headers, ncols)
+
+    # Layouts are normally pre-computed by `_annotate_table_layouts` so that
+    # tables sharing a structural signature share one width vector. When
+    # `r_table` is called outside `build_html` (notably from unit tests),
+    # fall back to a standalone computation.
+    layout: TableLayout | None = b.get("_layout")
+    if layout is None:
+        layout = compute_layouts([[[str(c) for c in row] for row in rows]])[0]
+
     return str(
         _block_macros().table(
             headers=headers,
             rows=rows,
-            nowrap=nowrap,
-            col_widths=col_widths,
+            nowrap=list(layout.nowrap),
+            col_widths=layout.col_widths,
             ncols=ncols,
-            use_fixed=use_fixed,
+            use_fixed=layout.use_fixed,
         )
     )
+
+
+def _annotate_table_layouts(doc: Doc) -> None:
+    """Walk the doc tree, collect all table blocks in render order, compute
+    grouped layouts, and stash each layout back onto its block as `_layout`.
+
+    Tables sharing a structural signature (column count + bucket+token-flag
+    profile) get a unified width vector — see `table_layout.compute_layouts`.
+    """
+    table_blocks: list[Block] = []
+
+    def visit_blocks(blocks: list[Block]) -> None:
+        for b in blocks:
+            if b.get("type") == "table":
+                table_blocks.append(b)
+
+    def walk_section(sec: Doc) -> None:
+        visit_blocks(sec.get("blocks", []))
+        for sub in sec.get("subsections", {}).values():
+            walk_section(sub)
+
+    for tab in doc.get("tabs", []):
+        for sec in tab.get("sections", {}).values():
+            walk_section(sec)
+
+    raw_tables = [[[str(c) for c in row] for row in b.get("rows", [])] for b in table_blocks]
+    for b, layout in zip(table_blocks, compute_layouts(raw_tables), strict=True):
+        b["_layout"] = layout
 
 
 def r_svg(b: Block, _state: BuildState) -> str:
@@ -659,6 +608,7 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
         theme_css: Optional extra CSS appended after the default stylesheet.
     """
     state = BuildState()
+    _annotate_table_layouts(doc)
     meta = doc["meta"]
     tabs = doc["tabs"]
 

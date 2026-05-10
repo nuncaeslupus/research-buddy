@@ -11,8 +11,8 @@ import pytest
 from research_buddy.build import BuildState
 from research_buddy.build_md import (
     _dedupe_heading_ids,
-    _extract_nav_entries,
     _md_renderer,
+    _process_headings,
     build_md_html,
     split_into_tabs,
 )
@@ -71,18 +71,41 @@ class TestBodySplit:
 class TestNavExtraction:
     def test_h3_and_h4_collected(self) -> None:
         tokens = _md_renderer().parse("### Section One\n\ntext\n\n#### Sub\n")
-        entries = _extract_nav_entries(tokens)
+        entries = _process_headings(tokens, "1")
         assert [e["level"] for e in entries] == [3, 4]
         assert [e["title"] for e in entries] == ["Section One", "Sub"]
 
     def test_h2_not_collected(self) -> None:
         # H2s become tab labels; sidebar nav only carries H3+.
         tokens = _md_renderer().parse("## Nope\n\n### Yes\n")
-        assert [e["title"] for e in _extract_nav_entries(tokens)] == ["Yes"]
+        assert [e["title"] for e in _process_headings(tokens, "1")] == ["Yes"]
 
     def test_anchor_ids_present(self) -> None:
         tokens = _md_renderer().parse("### Hello World\n")
-        assert _extract_nav_entries(tokens)[0]["id"] == "hello-world"
+        assert _process_headings(tokens, "1")[0]["id"] == "hello-world"
+
+    def test_numbering_per_tab(self) -> None:
+        tokens = _md_renderer().parse("### A\n\n### B\n\n#### B1\n\n#### B2\n\n### C\n")
+        entries = _process_headings(tokens, "2")
+        assert [e["num"] for e in entries] == ["2.1", "2.2", "2.2.1", "2.2.2", "2.3"]
+
+    def test_h4_before_h3_left_unnumbered(self) -> None:
+        tokens = _md_renderer().parse("#### Orphan\n\n### Real\n")
+        entries = _process_headings(tokens, "1")
+        assert entries[0]["num"] == ""
+        assert entries[1]["num"] == "1.1"
+
+    def test_numbering_injected_into_inline_html(self) -> None:
+        tokens = _md_renderer().parse("### Domain\n\ntext\n")
+        _process_headings(tokens, "1")
+        # Find the inline token that follows heading_open
+        for i, tok in enumerate(tokens):
+            if tok.type == "heading_open" and tok.tag == "h3":
+                inline = tokens[i + 1]
+                assert inline.children
+                assert inline.children[0].type == "html_inline"
+                assert '<span class="num">1.1</span>' in inline.children[0].content
+                break
 
 
 class TestHeadingIDDedup:
@@ -106,7 +129,9 @@ class TestHeadingIDDedup:
     def test_repeated_headings_in_full_build_have_unique_ids(self) -> None:
         body = "## Tab A\n\n### Domain\n\nfirst\n\n## Tab B\n\n### Domain\n\nsecond\n"
         html = build_md_html(_doc(body))
-        ids = re.findall(r'<h3 id="([^"]+)">Domain</h3>', html)
+        # Auto-numbering injects `<span class="num">N.M</span>` before the
+        # title text, so match flexibly between the id and the literal title.
+        ids = re.findall(r'<h3 id="([^"]+)">[^<]*<span[^>]*>[^<]*</span>\s*Domain</h3>', html)
         assert len(ids) == 2
         assert len(set(ids)) == 2, f"heading IDs collided: {ids}"
 
@@ -114,9 +139,12 @@ class TestHeadingIDDedup:
 class TestRenderedHTML:
     def test_gfm_table_renders(self) -> None:
         html = build_md_html(_doc("## Tab\n\n| A | B |\n|---|---|\n| 1 | 2 |\n"))
-        assert "<table>" in html
+        assert '<div class="table-wrap">' in html
+        assert "<table" in html
         assert "<th>A</th>" in html
-        assert "<td>1</td>" in html
+        # Token columns (single-char cells, no spaces) get `nw` for nowrap.
+        assert ">1</td>" in html
+        assert ">2</td>" in html
 
     def test_raw_html_preserved(self) -> None:
         html = build_md_html(_doc('## Tab\n\n<a id="my-target"></a>\n\nbody\n'))
