@@ -4,8 +4,11 @@ Replaces the English-keyword-based heuristic that lived in `build.py` (matching
 phrases like "build", "test condition", "rejected" in headers) with a
 deterministic, language-independent algorithm:
 
-1. **Column profile** — p50/p90/max length per column, plus has-spaces and
-   is-token flags derived from cell content alone (never headers).
+1. **Column profile** — p50 / p90 / max length per column, plus has-spaces
+   and is-token flags. Headers are included alongside body rows when the
+   caller passes them (both v1 and v2 pipelines do); the algorithm reads
+   only the *length* and *whitespace* of each cell — never any specific
+   header word — so it works in any language.
 2. **Signature** — bucketed p90 + token flag per column. Tables sharing the
    same signature within one document get a unified width vector so visually
    similar tables align across the document.
