@@ -1,5 +1,106 @@
 # Next session
 
+## Session 2026-05-10 (session 15)
+
+### What was done
+
+- **Three-PR series shipping the v2 element catalog.** Single
+  MINOR (1.7.0 → 1.8.0) at the end of γ, as agreed up-front so
+  vocabulary teaching, algorithmic chrome, and renderers all
+  arrive in one tagged release.
+  - **PR [#79] α — element-catalog teaching.** Single compact
+    table in `framework.reference` listing 18 elements + 7 callout
+    kinds + 2 algorithmic items. Closed list — `Anything not
+    listed here should be expressed as ordinary prose, lists, or
+    tables`. The catalog is the renderer contract.
+  - **PR [#80] β — algorithmic items.** New shared
+    `table_layout.py` (content-based, language-independent column
+    widths via per-column `p50/p90/has_spaces/is_token` profile,
+    with structural signature grouping so similar tables align).
+    Numbered H3/H4 in v2 matching v1's `<span class="num">`
+    chrome. Both pipelines reuse the same module. 18 new
+    `test_table_layout.py` tests + 5 nav-numbering tests; 282
+    total. Replaced the English-keyword heuristic
+    (`build/test condition/rejected` header matching) — works in
+    any language, never matches words.
+  - **PR [#81] γ — renderers.** GFM admonitions (`> [!KIND]`)
+    for the 7 catalog kinds (NOTE/TIP/IMPORTANT/WARNING/CAUTION
+    + research-specific LIMITATION/HYPOTHESIS); `rb-verdict`,
+    `rb-cards`, `rb-banner` fenced-block renderers (YAML body
+    where structured); references-anchor styling (compact `<ul
+    class="references">` after `<!-- @anchor: references -->`,
+    with anchor-before-H2 detection so the framework convention
+    of placing the anchor *outside* the H2 still works);
+    `.rb-ok` / `.rb-bad` / `.rb-flag` inline chip CSS (raw
+    `<span class>` passes through markdown-it's `html=True`,
+    needs no renderer); frontmatter `banners` (rendered above
+    the first tab) and `theme_css` (cascade: CLI flag > FM
+    field > conventional `theme.css`). 37 new tests; 319 total.
+- **Single MINOR bump** 1.7.0 → 1.8.0 covers all three. The
+  starter / API stays backwards-compatible: a 1.7.x doc still
+  renders cleanly under 1.8.x because the renderers fail-closed
+  on unknown fence kinds (unknown `rb-verdict <kind>` falls
+  through to a plain code block, never crashes).
+- **Gemini review on [#81] — three MEDIUMs, all accepted.** All
+  three flagged the same root cause: wrapping rendered Markdown
+  body in `<p>` produced invalid `<p><p>…</p><p>…</p></p>` when
+  the input had multiple paragraphs (`_md_render_inline` only
+  strips the outer `<p>` for single-paragraph results). Fix
+  splits the helper into two: `_md_render_inline` (inline-context
+  slots like `<li>`) and `_md_render_body` (block-context slots
+  like card / banner / verdict bodies, keeping the `<p>` wrapping
+  intact). Cards / agnostic / cc banners switched from `<p>{body}</p>`
+  to `<div class="card-body|banner-body">{body}</div>`. Three
+  regression tests pin `<p><p>` and `</p></p>` are absent across
+  cards / agnostic / cc banner outputs.
+- **Why text-level admonition expansion vs. token-level.**
+  markdown-it-py's inline `children` aren't trivially re-parseable
+  after stripping the `[!KIND]` prefix; a regex-driven text
+  rewrite (respecting fence state via `_line_in_fence`) is
+  simpler and equally correct. Token-level is used for `rb-*`
+  fences because their YAML bodies need structured parsing.
+- **Why a `_references_tab_index` pre-scan.** The framework
+  convention places `<!-- @anchor: NAME -->` *before* the
+  `## NAME` heading. After tab splitting, the comment is
+  filtered out of the next tab's body. Detecting the
+  comment→H2 mapping up front and arming the right tab is
+  cheaper than moving the comment in the source (which would
+  break the file-editing rule "anchors are sacred").
+
+- **Release.** `v1.8.0` tagged and pushed; **wheel + sdist
+  published to PyPI** via `make publish` (the headless setup
+  from session 14's `~/.pypirc` API token still works — no
+  re-auth needed).
+
+[#79]: https://github.com/nuncaeslupus/research-buddy/pull/79
+[#80]: https://github.com/nuncaeslupus/research-buddy/pull/80
+[#81]: https://github.com/nuncaeslupus/research-buddy/pull/81
+
+### Next steps
+
+1. **Roadmap forward.** Step #1 of the v2 polish run was the
+   element catalog (now done). The pre-existing roadmap items
+   in `status/plan.md` are the next pickup — pre-commit hooks
+   were shipped in session 12, so the next outstanding item is
+   whatever sits below that in `plan.md`.
+2. **Dogfood**: agents using v1.8.0 should pick up the catalog
+   from `framework.reference`. Worth surfacing a one-line
+   "what's new" pointer in the next standard-session change
+   summary so the discovery isn't silent.
+3. **Existing-doc upgrade smoke test passed.** Mid-session
+   verified `research-buddy upgrade` on a real downstream
+   `claude-skill-system_v1.17-source.md` (1.6.0 → 1.8.0
+   framework swap), and `research-buddy build` produced a
+   1202 KB HTML cleanly. One pre-existing broken cross-link
+   warning surfaced — content issue in the user's tracker, not
+   a build regression.
+
+### Blockers
+
+- None.
+
+---
+
 ## Session 2026-05-07 (session 14)
 
 ### What was done
