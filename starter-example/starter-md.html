@@ -316,9 +316,9 @@ code { font-family: var(--mono); }
 <div class="sidebar-hdr">[FILL in session_zero: Project Name]<span>v[FILL in session_zero] · [FILL in session_zero]</span></div>
 <nav class="tab-nav active" data-for="project-specification">
 <a href="#tab-hdr-project-specification">1. Project Specification</a>
-<a href="#domain" class="sub">Domain</a>
-<a href="#source-tiers" class="sub">Source tiers</a>
-<a href="#domain-rules" class="sub">Domain rules</a>
+<a href="#domain" class="sub">1.1. Domain</a>
+<a href="#source-tiers" class="sub">1.2. Source tiers</a>
+<a href="#domain-rules" class="sub">1.3. Domain rules</a>
 </nav>
 <nav class="tab-nav" data-for="open-research-queue">
 <a href="#tab-hdr-open-research-queue">2. Open Research Queue</a>
@@ -340,11 +340,11 @@ code { font-family: var(--mono); }
 </nav>
 <nav class="tab-nav" data-for="references">
 <a href="#tab-hdr-references">8. References</a>
-<a href="#v10--date" class="sub">v1.0 — {{date}}</a>
+<a href="#v10--date" class="sub">8.1. v1.0 — {{date}}</a>
 </nav>
 <nav class="tab-nav" data-for="changelog">
 <a href="#tab-hdr-changelog">9. Changelog</a>
-<a href="#v10-project-initialized--date" class="sub">v1.0: Project initialized — {{date}}</a>
+<a href="#v10-project-initialized--date" class="sub">9.1. v1.0: Project initialized — {{date}}</a>
 </nav>
 </div>
 <div id="main">
@@ -352,7 +352,7 @@ code { font-family: var(--mono); }
 <div class="content">
 <h1 id="tab-hdr-project-specification">1. Project Specification</h1>
 <!-- Filled in session zero. Modifications to project-specific values go here. Do not modify the Framework sections. -->
-<h3 id="domain">Domain</h3>
+<h3 id="domain"><span class="num">1.1</span> Domain</h3>
 <ul>
 <li><strong>Domain:</strong> {{project.domain}}</li>
 <li><strong>Deliverable type:</strong> {{project.deliverable_type}}</li>
@@ -361,7 +361,7 @@ code { font-family: var(--mono); }
 <li><strong>Validation gate:</strong> {{project.validation_gate}}</li>
 </ul>
 <!-- @anchor: project.tiers -->
-<h3 id="source-tiers">Source tiers</h3>
+<h3 id="source-tiers"><span class="num">1.2</span> Source tiers</h3>
 <p>Specific venues per tier for this project. Examples by domain: ML → arXiv / NeurIPS / ICML / EMNLP / ACL / ICLR (T1). Medical → PubMed, Cochrane Reviews, NEJM, Lancet (T1). Patents → USPTO / EPO / WIPO (T1). Finance → JF, JFE, RFS (T1). Legal → primary case law and statutes (T1). Software / coding → official vendor docs and source repos (T1).</p>
 <ul>
 <li><strong>Tier 1:</strong> {{project.source_tiers.tier_1}}</li>
@@ -371,7 +371,7 @@ code { font-family: var(--mono); }
 </ul>
 <!-- @end: project.tiers -->
 <!-- @anchor: project.rules -->
-<h3 id="domain-rules">Domain rules</h3>
+<h3 id="domain-rules"><span class="num">1.3</span> Domain rules</h3>
 <p>Methodology rules specific to this domain, filled in session zero. Examples: ML → &quot;pre-register PASS/FAIL criteria before any experiment&quot;; medical → &quot;document conflicts of interest&quot;; legal → &quot;cite jurisdiction&quot;; physical product → &quot;document regulatory requirements&quot;; software → &quot;verify against the canonical reference implementation, not just the docs&quot;.</p>
 <p>{{project.domain_rules}}</p>
 <!-- @end: project.rules -->
@@ -384,22 +384,20 @@ code { font-family: var(--mono); }
 <div class="content">
 <h1 id="tab-hdr-open-research-queue">2. Open Research Queue</h1>
 <p>Pending topics in priority order. <strong>Top row = next session's topic.</strong> Done items leave the queue and move to the <a href="#research-tracker">Research Tracker</a>. New items pass through the insertion protocol.</p>
-<table>
+<div class="table-wrap"><table class="t-fixed"><colgroup><col style="width:110px"><col style="width:48%"><col style="width:52%"></colgroup>
 <thead>
-<tr>
-<th>ID</th>
+<tr><th>ID</th>
 <th>Topic</th>
 <th>Objective / Key Question</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Q-001</td>
+<tr><td class="nw">Q-001</td>
 <td>{{queue.row1.topic}}</td>
 <td>{{queue.row1.objective}}</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <!-- @example-rows: filled in session zero, replace the templated row above and these examples with real queue items. Examples illustrate good Objective shape: a concrete *question* the agent can answer in one session, not an open-ended task. -->
 <!--
 Example shapes (delete after session zero):
@@ -416,24 +414,22 @@ Example shapes (delete after session zero):
 <div class="content">
 <h1 id="tab-hdr-research-tracker">3. Research Tracker</h1>
 <p>Living status board — one row per researched topic. Rows are appended as topics complete; never deleted.</p>
-<table>
+<div class="table-wrap"><table class="t-fixed"><colgroup><col style="width:110px"><col style="width:37%"><col style="width:63%"><col style="width:110px"></colgroup>
 <thead>
-<tr>
-<th>ID</th>
+<tr><th>ID</th>
 <th>Topic</th>
 <th>Decision / Finding</th>
 <th>Version</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>T-000</td>
+<tr><td class="nw">T-000</td>
 <td>Project initialization</td>
 <td>Structure defined; tiers, queue, and rules populated.</td>
-<td>v1.0</td>
+<td class="nw">v1.0</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <!-- @end: tracker -->
 <hr />
 <!-- @anchor: rules -->
@@ -528,7 +524,7 @@ evidence:
 <div class="content">
 <h1 id="tab-hdr-references">8. References</h1>
 <p>All sources cited across research, descending version order. Each entry: Title, Author(s), Year, Venue, URL/DOI. Verify end-to-end before listing.</p>
-<h3 id="v10--date">v1.0 — {{date}}</h3>
+<h3 id="v10--date"><span class="num">8.1</span> v1.0 — {{date}}</h3>
 <ul>
 <li>Research Buddy template initialized. Project setup completed in session zero.</li>
 </ul>
@@ -541,7 +537,7 @@ evidence:
 <div class="content">
 <h1 id="tab-hdr-changelog">9. Changelog</h1>
 <p>Newest first. The first entry is implicitly the current version. Each entry: decisions adopted, rejected alternatives, contradiction-check result, second opinions reviewed (by label), sources used. Reference rules / DAs / sessions by their linked IDs.</p>
-<h3 id="v10-project-initialized--date">v1.0: Project initialized — {{date}}</h3>
+<h3 id="v10-project-initialized--date"><span class="num">9.1</span> v1.0: Project initialized — {{date}}</h3>
 <p>{{What was set up: domain, tiers, initial queue, section structure, domain rules.}}</p>
 <!-- @end: changelog -->
 <p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">[FILL in session_zero: Project Name] · Changelog · v[FILL in session_zero]</p>
