@@ -231,23 +231,35 @@ def _expand_admonitions(text: str) -> str:
 
 
 def _md_render_inline(md: MarkdownIt, text: str) -> str:
-    """Render Markdown body with `<p>` stripping when the result is a single
-    paragraph. Used for verdict / card / banner bodies where the wrapping
-    markup already provides block context.
+    """Render Markdown for an *inline* slot — strip the outer `<p>` when the
+    result is a single paragraph. Used for list items and verdict bodies that
+    drop straight into a `<li>` / span context.
+
+    NOT used for block-context bodies (cards, banners) — those go through
+    `_md_render_body` so multi-paragraph content stays valid HTML; wrapping
+    multiple `<p>` blocks in another `<p>` is invalid nesting.
     """
     if not text:
         return ""
     rendered = md.render(text).strip()
-    # markdown-it always wraps top-level prose in <p>…</p>. When the entire
-    # body is a single paragraph we unwrap it so the surrounding block markup
-    # (verdict-text span, card <p>, etc.) controls layout.
     m = re.fullmatch(r"<p>(.*?)</p>", rendered, re.DOTALL)
     return m.group(1) if m else rendered
 
 
+def _md_render_body(md: MarkdownIt, text: str) -> str:
+    """Render Markdown for a *block* slot — keep markdown-it's `<p>` wrapping
+    intact so multi-paragraph content stays well-formed inside the surrounding
+    `<div>` wrapper. The CSS targets `.card p`, `.agnostic p`, `.cc-banner p`
+    so single-paragraph and multi-paragraph bodies render identically.
+    """
+    return md.render(text).strip() if text else ""
+
+
 def _render_verdict(md: MarkdownIt, kind: str, body: str) -> str:
     badge = _VERDICT_KINDS.get(kind, kind.upper())
-    body_html = _md_render_inline(md, body)
+    # Verdict body sits inside `<div class="rb-verdict-body">` whose CSS
+    # styles direct `<p>` children — keep markdown-it's wrapping.
+    body_html = _md_render_body(md, body)
     return (
         f'<div class="rb-verdict {kind}">'
         f'<span class="verdict-badge {kind}">{badge}</span>'
@@ -271,14 +283,15 @@ def _render_cards(md: MarkdownIt, body: str) -> str:
         title = html_lib.escape(str(card.get("title", "")))
         icon = card.get("icon")
         body_md = str(card.get("body", ""))
-        body_html = _md_render_inline(md, body_md)
+        body_html = _md_render_body(md, body_md)
         if icon:
             icon_html = f'<span class="card-icon">{html_lib.escape(str(icon))}</span> '
             title_html = f"{icon_html}{title}"
         else:
             title_html = title
         parts.append(
-            f'<div class="card"><div class="card-title">{title_html}</div><p>{body_html}</p></div>'
+            f'<div class="card"><div class="card-title">{title_html}</div>'
+            f'<div class="card-body">{body_html}</div></div>'
         )
     parts.append("</div>")
     return "".join(parts)
@@ -295,18 +308,23 @@ def _render_banner(md: MarkdownIt, kind: str, body: str) -> str:
         data = {}
     title = html_lib.escape(str(data.get("title", "")))
     if kind == "usage":
+        # `<li>` is an inline-context slot; strip the outer `<p>` for a clean
+        # bullet line.
         items = data.get("items") or []
         items_html = "".join(f"<li>{_md_render_inline(md, str(i))}</li>" for i in items)
         return f'<div class="usage-banner"><h4>{title}</h4><ul>{items_html}</ul></div>'
     body_md = str(data.get("body", ""))
-    body_html = _md_render_inline(md, body_md)
+    body_html = _md_render_body(md, body_md)
     if kind == "agnostic":
         return (
             f'<div class="agnostic"><div class="ico">🌐</div>'
-            f"<div><h4>{title}</h4><p>{body_html}</p></div></div>"
+            f'<div><h4>{title}</h4><div class="banner-body">{body_html}</div></div></div>'
         )
     # kind == "cc"
-    return f'<div class="cc-banner"><div><h4>{title}</h4><p>{body_html}</p></div></div>'
+    return (
+        f'<div class="cc-banner"><div><h4>{title}</h4>'
+        f'<div class="banner-body">{body_html}</div></div></div>'
+    )
 
 
 def _transform_rb_fences(tokens: list[Any], md: MarkdownIt) -> None:

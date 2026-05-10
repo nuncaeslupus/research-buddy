@@ -151,6 +151,18 @@ class TestCardsRenderer:
         out = _render_cards(md, "not: valid: yaml:\n  bad")
         assert "<pre>" in out  # graceful fallback rather than crash
 
+    def test_multiparagraph_body_does_not_nest_p_in_p(self) -> None:
+        # Regression for Gemini PR #81 review: wrapping a multi-paragraph
+        # rendered body in <p> produced invalid <p><p>…</p><p>…</p></p>.
+        # The fix puts the rendered body inside a <div class="card-body">
+        # so the inner <p> tags stay at the right nesting level.
+        md = _md_renderer()
+        body = "- title: T\n  body: |\n    First paragraph.\n\n    Second paragraph.\n"
+        out = _render_cards(md, body)
+        assert "<p><p>" not in out  # no double-open
+        assert "</p></p>" not in out  # no double-close
+        assert "First paragraph." in out and "Second paragraph." in out
+
     def test_via_fenced_block(self) -> None:
         body = (
             "## Tab\n\n```rb-cards\n"
@@ -188,6 +200,22 @@ class TestBannerRenderer:
         md = _md_renderer()
         out = _render_banner(md, "frobnicate", "title: x\n")
         assert "<pre>" in out
+
+    def test_agnostic_multiparagraph_no_nested_p(self) -> None:
+        # Same Gemini-flagged nesting issue as cards, but for agnostic /cc
+        # banners. Body now sits in `<div class="banner-body">`.
+        md = _md_renderer()
+        body = "title: X\nbody: |\n  Para one.\n\n  Para two.\n"
+        out = _render_banner(md, "agnostic", body)
+        assert "<p><p>" not in out and "</p></p>" not in out
+        assert "Para one." in out and "Para two." in out
+
+    def test_cc_multiparagraph_no_nested_p(self) -> None:
+        md = _md_renderer()
+        body = "title: License\nbody: |\n  Line A.\n\n  Line B.\n"
+        out = _render_banner(md, "cc", body)
+        assert "<p><p>" not in out and "</p></p>" not in out
+        assert "Line A." in out and "Line B." in out
 
     def test_via_fenced_block(self) -> None:
         body = "## Tab\n\n```rb-banner usage\ntitle: How to use\nitems:\n  - First step\n```\n"
