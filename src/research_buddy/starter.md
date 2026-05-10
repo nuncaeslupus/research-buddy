@@ -142,7 +142,7 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 4. **YAML frontmatter** between `---` delimiters at the very top is the structured metadata. Add fields if needed; do not reorder existing ones.
 5. **Structured data uses fenced code blocks** with language hints `yaml rule`, `yaml da`, `yaml ref`. The Markdown body for the entry follows the code block.
 6. **Tables** for tabular data. Append rows immediately before the section's `@end` marker. Never delete rows from append-only sections; mark superseded by changing the Status column. The Open Research Queue is the exception: completed rows are removed (their finding lives in the Research Tracker).
-7. **Raw HTML is allowed only for two purposes:** anchor comments (`<!-- @... -->`) and inline link-target tags (`<a id="..."></a>`). Use Markdown for everything else (tables, headings, lists, quotes, code).
+7. **Raw HTML is allowed for the following purposes only:** anchor comments (`<!-- @... -->`), inline link-target tags (`<a id="..."></a>`), inline SVG illustrations, and inline status chips (`<span class="rb-ok|rb-bad|rb-flag">…</span>`). The full set of allowed presentation primitives lives in [Element catalog](#element-catalog). Use Markdown for prose, tables, headings, lists, quotes, and code; the catalog is a closed list — anything outside it should be expressed as plain Markdown rather than invented locally.
 8. **Avoid em-dashes (`—`) in headings.** Slug algorithms handle them inconsistently. Use colons, parentheses, or plain dashes inside headings; em-dashes are fine in body prose.
 
 **Atomic-write semantics.** A "write" is one message containing all changes to all affected sections. Either every applicable update target executes in that message, or the agent reports the blocking issue without writing partial state.
@@ -158,6 +158,53 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 If the agent has shell access AND `research-buddy` is installed, it MAY run `research-buddy clean ...` and/or `research-buddy build ...` after the user asks for derived files. Otherwise it prints the build commands verbatim.
 
 <!-- @end: framework.reference.editing -->
+
+<!-- @anchor: framework.reference.elements -->
+### Element catalog
+
+The closed list of presentation primitives the agent MAY use. Plain Markdown alone is a valid document; the catalog only enriches the HTML rendering when used. Anything not listed here should be expressed as ordinary prose, lists, or tables — the renderer recognises only what is catalogued.
+
+| ID | Element | Source form |
+|---|---|---|
+| EL-01 | Headings H1–H4 | `# Title`, `## Tab`, `### Sub`, `#### Sub-sub`. Avoid em-dashes — slug algorithms handle them inconsistently. |
+| EL-02 | Inline emphasis | `**bold**`, `*italic*`, `` `code` `` |
+| EL-03 | Lists | `- item`, `1. item`, nested with 2-space indent |
+| EL-04 | Task lists | `- [ ] todo`, `- [x] done` |
+| EL-05 | Links / images | `[text](#anchor)`, `![alt](url)` |
+| EL-06 | Code blocks | fenced ` ``` ` with language hint; syntax-highlighted via highlight.js |
+| EL-07 | Tables | GFM `\|...\|`; widths auto-derived from content (never tune manually) |
+| EL-08 | Horizontal rule | `---` on its own line |
+| EL-09 | Inline SVG | `<svg>...</svg>`. Use `currentColor` and theme variables (`var(--text)`, `var(--bg)`, `var(--blue)`, `var(--green)`, `var(--amber)`, `var(--red)`) where colour should follow the active theme; hard-coded hex renders the same in light and dark. |
+| EL-10 | Callouts | `> [!KIND]` blockquote. Kinds: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, `LIMITATION`, `HYPOTHESIS`. The last two are research-specific. |
+| EL-11 | Verdict badge | ` ```rb-verdict <kind> ` fenced block with prose body. Kinds: `supports`, `contradicts`, `unverifiable`, `silent`. |
+| EL-12 | Card grid | ` ```rb-cards ` fenced block; YAML list of `{title, body, icon?}`. |
+| EL-13 | Banner | ` ```rb-banner <kind> ` fenced block. Kinds: `usage`, `agnostic`, `cc`. Use sparingly — prefer the `banners` frontmatter for top-of-doc chrome. |
+| EL-14 | References anchor | `<!-- @anchor: references -->` (already present on the [References](#references) section); styles the next list as a references list. |
+| EL-15 | Entity anchors | `<!-- @rule: ... -->`, `<!-- @da: ... -->`, `<!-- @session: ... -->`. See [File editing](#file-editing) rule 1. |
+| EL-16 | Status chips | `<span class="CLASS">…</span>` where CLASS is one of `rb-ok` (green), `rb-bad` (red), `rb-flag` (amber). Readable as plain text in non-HTML viewers. |
+| EL-17 | `banners` frontmatter | List of `usage` / `agnostic` / `cc`; rendered above the first tab. |
+| EL-18 | `theme_css` frontmatter | Optional path to extra CSS appended after the default stylesheet. |
+
+**Fenced extensions in context.** Plain MD viewers show these as YAML code blocks; the HTML builder renders them rich.
+
+````
+```rb-verdict supports
+Two Tier-1 sources directly support the claim; no Tier-1 contradiction.
+```
+
+```rb-cards
+- title: Pre-registration
+  body: Hypotheses + PASS/FAIL metrics written before consulting sources.
+- title: Vetting
+  body: Verify ≥3 cited claims end-to-end before incorporating any second opinion.
+```
+````
+
+**Algorithmic, no source change.** H3 / H4 are auto-numbered per tab (`1.`, `1.1`, `2.`, `2.1` …). Table column widths are computed from cell content — no header-name keywords, no language-specific heuristics — and tables sharing a structural signature within one document align on a common width vector.
+
+If a presentation need arises that none of the above covers, raise it upstream rather than inventing local syntax — the catalog is the renderer contract.
+
+<!-- @end: framework.reference.elements -->
 
 <!-- @anchor: framework.reference.turns -->
 ### Turn markers
