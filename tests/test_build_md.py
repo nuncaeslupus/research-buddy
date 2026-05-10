@@ -277,6 +277,25 @@ class TestBuildMdCli:
         rc = perform_build_md(src, tmp_path, no_versioning=True)
         assert rc == 1
 
+    def test_frontmatter_theme_css_loaded(self, tmp_path: Path) -> None:
+        from research_buddy.main import perform_build_md
+
+        # frontmatter `theme_css: my-theme.css` resolves relative to the
+        # source file. Wins over the conventional `project_root/theme.css`
+        # but loses to an explicit `--theme` CLI flag.
+        (tmp_path / "my-theme.css").write_text("/* THEMED */ body{color:lime}", encoding="utf-8")
+        fm_with_theme = _FM.replace(
+            'title: "Demo Project"',
+            'title: "Demo Project"\ntheme_css: "my-theme.css"',
+        )
+        src = tmp_path / "demo_v1.0.md"
+        src.write_text(fm_with_theme + "\n## Tab\n\nbody\n", encoding="utf-8")
+        rc = perform_build_md(src, tmp_path, no_versioning=True)
+        assert rc == 0
+        html = (tmp_path / "demo.html").read_text(encoding="utf-8")
+        assert "/* THEMED */" in html
+        assert "body{color:lime}" in html
+
 
 @pytest.fixture(autouse=True)
 def _clear_md_renderer_cache() -> None:
