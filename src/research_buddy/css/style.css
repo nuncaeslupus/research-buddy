@@ -188,18 +188,70 @@ a.xlink:hover {
 .card p { font-size: 12.5px; margin: 0; line-height: 1.5; color: var(--text2); }
 
 .callout { padding: 16px 20px; margin: 24px 0; border-radius: var(--radius); border-left: 4px solid var(--blue); background: var(--bg2); }
-.callout-title { font-weight: 700; margin-bottom: 6px; font-size: 14px; }
+.callout-title { font-weight: 700; margin-bottom: 6px; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.callout-icon { font-size: 14px; line-height: 1; }
 .callout.green { border-left-color: var(--green); }
 .callout.amber { border-left-color: var(--amber); }
 .callout.red   { border-left-color: var(--red); }
+/* GFM admonition kinds (`> [!KIND]`). Colour follows the kind; the icon
+   character is inlined by the renderer so plain-text fallbacks degrade
+   readably. */
+.callout.note       { border-left-color: var(--blue);   }   .callout.note .callout-title       { color: var(--blue);   }
+.callout.tip        { border-left-color: var(--green);  }   .callout.tip .callout-title        { color: var(--green);  }
+.callout.important  { border-left-color: var(--purple); }   .callout.important .callout-title  { color: var(--purple); }
+.callout.warning    { border-left-color: var(--amber);  }   .callout.warning .callout-title    { color: var(--amber);  }
+.callout.caution    { border-left-color: var(--red);    }   .callout.caution .callout-title    { color: var(--red);    }
+.callout.limitation { border-left-color: var(--amber);  }   .callout.limitation .callout-title { color: var(--amber);  }
+.callout.hypothesis { border-left-color: var(--teal);   }   .callout.hypothesis .callout-title { color: var(--teal);   }
 
-.verdict { display: grid; grid-template-columns: 200px 70px 1fr; align-items: start; gap: 10px; background: var(--bg2); padding: 10px 16px; border-radius: var(--radius); margin: 8px 0; border: 1px solid var(--border); }
+.verdict { display: grid; grid-template-columns: 200px 90px 1fr; align-items: start; gap: 10px; background: var(--bg2); padding: 10px 16px; border-radius: var(--radius); margin: 8px 0; border: 1px solid var(--border); }
 .verdict-label { font-weight: 600; font-size: 13px; }
-.verdict-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-.verdict-badge.adopt { background: var(--green); color: #000; }
-.verdict-badge.reject { background: var(--red); color: #fff; }
-.verdict-badge.defer { background: var(--amber); color: #000; }
+.verdict-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; text-align: center; }
+.verdict-badge.adopt        { background: var(--green); color: #000; }
+.verdict-badge.reject       { background: var(--red);   color: #fff; }
+.verdict-badge.defer        { background: var(--amber); color: #000; }
+.verdict-badge.supports     { background: var(--green); color: #000; }
+.verdict-badge.contradicts  { background: var(--red);   color: #fff; }
+.verdict-badge.unverifiable { background: var(--amber); color: #000; }
+.verdict-badge.silent       { background: var(--text3); color: var(--bg); }
 .verdict-text { font-size: 13px; color: var(--text2); }
+
+/* v2 verdict (no label column — kind is on the badge). Used by the
+   `rb-verdict <kind>` fenced block. */
+.rb-verdict {
+  display: grid; grid-template-columns: 110px 1fr;
+  align-items: start; gap: 12px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px; margin: 14px 0;
+}
+.rb-verdict-body { font-size: 13px; color: var(--text2); }
+.rb-verdict-body p { margin: 0; }
+.rb-verdict-body p + p { margin-top: 8px; }
+.card-icon { margin-right: 6px; }
+
+/* Inline status chips — usable in tables, prose, and second-opinion
+   summaries. Plain-text viewers see the bare text, HTML viewers get
+   colour-coded pills. */
+.rb-ok, .rb-bad, .rb-flag {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; line-height: 1.5;
+  white-space: nowrap;
+}
+.rb-ok   { background: var(--green-d); color: var(--green); }
+.rb-bad  { background: var(--red-d);   color: var(--red);   }
+.rb-flag { background: var(--amber-d); color: var(--amber); }
+
+/* References list — applied to the <ul> immediately after
+   `<!-- @anchor: references -->`. Tighter spacing + monospace numerics
+   so a long bibliography stays scannable. */
+ul.references {
+  margin: 14px 0 24px 0;
+  padding-left: 22px;
+  list-style: square;
+}
+ul.references li { font-size: 12.5px; line-height: 1.55; margin-bottom: 4px; color: var(--text2); }
+ul.references li code, ul.references li a { word-break: break-word; }
 
 .usage-banner { background: var(--bg3); padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--border); margin: 20px 0; }
 .usage-banner h4 { margin: 0 0 10px; color: var(--text); font-size: 14px; }

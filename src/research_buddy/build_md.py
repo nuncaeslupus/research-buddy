@@ -17,10 +17,12 @@ Public entry point: `build_md_html(text, *, theme_css=None) -> str`.
 from __future__ import annotations
 
 import functools
+import html as html_lib
 import json
 import re
 from typing import Any
 
+import yaml
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 from mdit_py_plugins.anchors import anchors_plugin
@@ -132,6 +134,321 @@ def _install_table_layout_rules(md: MarkdownIt) -> None:
     md.add_render_rule("tr_open", tr_open)
     md.add_render_rule("td_open", td_open)
     md.add_render_rule("th_open", th_open)
+
+
+# ---------------------------------------------------------------------------
+# v2 element catalog — closed list of rb-* primitives. The shape is fixed by
+# starter.md's "Element catalog" section; this module is the renderer side of
+# that contract.
+# ---------------------------------------------------------------------------
+
+# GFM-style admonitions (`> [!KIND]`). Five kinds match the GitHub default
+# (NOTE/TIP/IMPORTANT/WARNING/CAUTION); LIMITATION and HYPOTHESIS are
+# research-specific additions documented in the catalog.
+_ADMONITION_KINDS: dict[str, tuple[str, str]] = {
+    # KIND -> (css_modifier, glyph). The glyphs are deliberate Unicode
+    # symbols (information sign, ballot check, star, warning sign, no entry,
+    # flag) chosen to read in plain-text fallbacks too.
+    "NOTE": ("note", "ℹ"),  # noqa: RUF001 — INFORMATION SOURCE, not Latin i
+    "TIP": ("tip", "✓"),
+    "IMPORTANT": ("important", "★"),
+    "WARNING": ("warning", "⚠"),
+    "CAUTION": ("caution", "⛔"),
+    "LIMITATION": ("limitation", "⚑"),
+    "HYPOTHESIS": ("hypothesis", "?"),
+}
+
+_VERDICT_KINDS = {
+    "supports": "SUPPORTS",
+    "contradicts": "CONTRADICTS",
+    "unverifiable": "UNVERIFIABLE",
+    "silent": "SILENT",
+}
+
+_BANNER_KINDS = {"usage", "agnostic", "cc"}
+
+_ADMONITION_OPENER = re.compile(r"^(\s*)>\s*\[!([A-Z]+)\]\s*$")
+
+
+def _expand_admonitions(text: str) -> str:
+    """Rewrite GFM-admonition blockquotes into wrapper `<div class="callout …">`
+    blocks containing plain Markdown body. The wrapper passes through markdown-it
+    via `html=True`; the body is parsed normally so prose, lists, code and links
+    inside an admonition keep working.
+
+    Done at the text level (not the token level) because markdown-it-py's inline
+    children can't be re-parsed cheaply after stripping the `[!KIND]` prefix —
+    rewriting the surface text is the simplest correct transform.
+
+    Lines inside fenced code blocks are left untouched.
+    """
+    lines = text.split("\n")
+    if not any("[!" in ln for ln in lines):
+        return text
+    in_fence = _line_in_fence(lines)
+    out: list[str] = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        if in_fence[i]:
+            out.append(lines[i])
+            i += 1
+            continue
+        m = _ADMONITION_OPENER.match(lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        kind_raw = m.group(2)
+        kind_meta = _ADMONITION_KINDS.get(kind_raw)
+        if kind_meta is None:
+            out.append(lines[i])
+            i += 1
+            continue
+        indent = m.group(1)
+        cls, icon = kind_meta
+        body_lines: list[str] = []
+        i += 1
+        while i < n and not in_fence[i]:
+            stripped = lines[i].lstrip()
+            if not stripped.startswith(">"):
+                break
+            body = stripped[1:]
+            if body.startswith(" "):
+                body = body[1:]
+            body_lines.append(body)
+            i += 1
+        out.append(f'{indent}<div class="callout {cls}">')
+        out.append(
+            f'{indent}<div class="callout-title">'
+            f'<span class="callout-icon">{icon}</span> {kind_raw}</div>'
+        )
+        out.append("")
+        out.extend(body_lines)
+        out.append("")
+        out.append(f"{indent}</div>")
+    return "\n".join(out)
+
+
+def _md_render_inline(md: MarkdownIt, text: str) -> str:
+    """Render Markdown for an *inline* slot — strip the outer `<p>` when the
+    result is a single paragraph. Used for list items and verdict bodies that
+    drop straight into a `<li>` / span context.
+
+    NOT used for block-context bodies (cards, banners) — those go through
+    `_md_render_body` so multi-paragraph content stays valid HTML; wrapping
+    multiple `<p>` blocks in another `<p>` is invalid nesting.
+    """
+    if not text:
+        return ""
+    rendered = md.render(text).strip()
+    m = re.fullmatch(r"<p>(.*?)</p>", rendered, re.DOTALL)
+    return m.group(1) if m else rendered
+
+
+def _md_render_body(md: MarkdownIt, text: str) -> str:
+    """Render Markdown for a *block* slot — keep markdown-it's `<p>` wrapping
+    intact so multi-paragraph content stays well-formed inside the surrounding
+    `<div>` wrapper. The CSS targets `.card p`, `.agnostic p`, `.cc-banner p`
+    so single-paragraph and multi-paragraph bodies render identically.
+    """
+    return md.render(text).strip() if text else ""
+
+
+def _render_verdict(md: MarkdownIt, kind: str, body: str) -> str:
+    badge = _VERDICT_KINDS.get(kind, kind.upper())
+    # Verdict body sits inside `<div class="rb-verdict-body">` whose CSS
+    # styles direct `<p>` children — keep markdown-it's wrapping.
+    body_html = _md_render_body(md, body)
+    return (
+        f'<div class="rb-verdict {kind}">'
+        f'<span class="verdict-badge {kind}">{badge}</span>'
+        f'<div class="rb-verdict-body">{body_html}</div>'
+        f"</div>"
+    )
+
+
+def _render_cards(md: MarkdownIt, body: str) -> str:
+    try:
+        cards = yaml.safe_load(body) or []
+    except yaml.YAMLError:
+        return f"<pre><code>{html_lib.escape(body)}</code></pre>"
+    if not isinstance(cards, list):
+        return f"<pre><code>{html_lib.escape(body)}</code></pre>"
+    cls = "card-grid three" if len(cards) >= 3 else "card-grid"
+    parts = [f'<div class="{cls}">']
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        title = html_lib.escape(str(card.get("title", "")))
+        icon = card.get("icon")
+        body_md = str(card.get("body", ""))
+        body_html = _md_render_body(md, body_md)
+        if icon:
+            icon_html = f'<span class="card-icon">{html_lib.escape(str(icon))}</span> '
+            title_html = f"{icon_html}{title}"
+        else:
+            title_html = title
+        parts.append(
+            f'<div class="card"><div class="card-title">{title_html}</div>'
+            f'<div class="card-body">{body_html}</div></div>'
+        )
+    parts.append("</div>")
+    return "".join(parts)
+
+
+def _render_banner(md: MarkdownIt, kind: str, body: str) -> str:
+    if kind not in _BANNER_KINDS:
+        return f"<pre><code>{html_lib.escape(body)}</code></pre>"
+    try:
+        data = yaml.safe_load(body) or {}
+    except yaml.YAMLError:
+        return f"<pre><code>{html_lib.escape(body)}</code></pre>"
+    if not isinstance(data, dict):
+        data = {}
+    title = html_lib.escape(str(data.get("title", "")))
+    if kind == "usage":
+        # `<li>` is an inline-context slot; strip the outer `<p>` for a clean
+        # bullet line.
+        items = data.get("items") or []
+        items_html = "".join(f"<li>{_md_render_inline(md, str(i))}</li>" for i in items)
+        return f'<div class="usage-banner"><h4>{title}</h4><ul>{items_html}</ul></div>'
+    body_md = str(data.get("body", ""))
+    body_html = _md_render_body(md, body_md)
+    if kind == "agnostic":
+        return (
+            f'<div class="agnostic"><div class="ico">🌐</div>'
+            f'<div><h4>{title}</h4><div class="banner-body">{body_html}</div></div></div>'
+        )
+    # kind == "cc"
+    return (
+        f'<div class="cc-banner"><div><h4>{title}</h4>'
+        f'<div class="banner-body">{body_html}</div></div></div>'
+    )
+
+
+def _transform_rb_fences(tokens: list[Any], md: MarkdownIt) -> None:
+    """Replace fence tokens whose info string starts with `rb-` with html_block
+    tokens carrying the rendered HTML.
+
+    Done at the token level (not the text level like admonitions) because the
+    YAML body of `rb-cards` / `rb-banner` needs structured parsing, and
+    `rb-verdict` body needs a recursive Markdown render that's easiest to drive
+    via the same `md` instance.
+    """
+    for tok in tokens:
+        if tok.type != "fence":
+            continue
+        info = (tok.info or "").strip()
+        if not info.startswith("rb-"):
+            continue
+        parts = info.split(maxsplit=1)
+        name = parts[0]
+        arg = parts[1].strip() if len(parts) > 1 else ""
+        rendered: str | None
+        if name == "rb-verdict" and arg in _VERDICT_KINDS:
+            rendered = _render_verdict(md, arg, tok.content or "")
+        elif name == "rb-cards":
+            rendered = _render_cards(md, tok.content or "")
+        elif name == "rb-banner" and arg in _BANNER_KINDS:
+            rendered = _render_banner(md, arg, tok.content or "")
+        else:
+            continue
+        tok.type = "html_block"
+        tok.tag = ""
+        tok.info = ""
+        tok.content = rendered + "\n"
+        tok.children = None
+
+
+_REFERENCES_ANCHOR_RE = re.compile(r"<!--\s*@anchor:\s*references\s*-->", re.IGNORECASE)
+
+
+def _references_tab_index(body: str) -> int | None:
+    """Return the index of the tab whose H2 is preceded by
+    `<!-- @anchor: references -->`, or None.
+
+    The anchor convention places `<!-- @anchor: NAME -->` immediately *before*
+    its `## NAME` heading. After splitting into tabs that comment lands at the
+    end of the previous tab — invisible to the per-tab rendering pass. Detect
+    the pattern up front and tell the right tab to start "armed" so the
+    references list inside picks up its compact styling.
+    """
+    lines = body.split("\n")
+    in_fence = _line_in_fence(lines)
+    h2_re = re.compile(r"^##\s+\S")
+    h2_count = 0
+    armed = False
+    for i, line in enumerate(lines):
+        if in_fence[i]:
+            continue
+        if _REFERENCES_ANCHOR_RE.search(line):
+            armed = True
+            continue
+        if h2_re.match(line):
+            if armed:
+                return h2_count
+            h2_count += 1
+            armed = False
+    return None
+
+
+def _mark_references_list(tokens: list[Any], *, initial_armed: bool = False) -> None:
+    """Add `class="references"` to the first `<ul>` after a
+    `<!-- @anchor: references -->` HTML comment.
+
+    The references anchor is part of the v2 framework — the agent has already
+    placed the comment; this function only surfaces it as a visual cue so the
+    renderer can give the bibliography compact list styling.
+
+    `initial_armed=True` covers the convention-driven case where the anchor
+    sits in the source *before* the tab's H2 and was therefore filtered out
+    by `split_into_tabs` (see `_references_tab_index`).
+    """
+    armed = initial_armed
+    for tok in tokens:
+        if tok.type == "html_block" and _REFERENCES_ANCHOR_RE.search(tok.content or ""):
+            armed = True
+            continue
+        if not armed:
+            continue
+        if tok.type == "bullet_list_open":
+            existing = tok.attrs.get("class", "") if tok.attrs else ""
+            new_cls = f"{existing} references".strip() if existing else "references"
+            tok.attrSet("class", new_cls)
+            armed = False
+        elif tok.type in ("table_open", "ordered_list_open"):
+            # If we hit another block-level element first, drop the arming —
+            # the anchor was for documentation rather than a list directly
+            # below it. Headings (H3 inside the references tab) are allowed
+            # because the framework writes `### v1.0 — date` above the list.
+            armed = False
+
+
+# ---------------------------------------------------------------------------
+# Frontmatter banners (top-of-doc chrome)
+# ---------------------------------------------------------------------------
+
+
+def _render_frontmatter_banners(md: MarkdownIt, banners: Any) -> str:
+    """Render the optional `banners` frontmatter as HTML to inject above the
+    first tab's content. Each entry is `{kind, title, body|items}` matching
+    the rb-banner fenced shape; unknown kinds are skipped silently.
+    """
+    if not isinstance(banners, list):
+        return ""
+    parts: list[str] = []
+    for entry in banners:
+        if not isinstance(entry, dict):
+            continue
+        kind = str(entry.get("kind", "")).strip().lower()
+        if kind not in _BANNER_KINDS:
+            continue
+        # The fenced renderer takes a YAML body string; serialise the dict
+        # back so a single _render_banner code path handles both.
+        payload = {k: v for k, v in entry.items() if k != "kind"}
+        parts.append(_render_banner(md, kind, yaml.safe_dump(payload, sort_keys=False)))
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +660,8 @@ def build_md_html(
     date = fm.get("date") or (fill_placeholder if starter_mode else "")
 
     body = "\n".join(text.splitlines()[body_start_idx:]) if body_start_idx else text
+    body = _expand_admonitions(body)
+    references_idx = _references_tab_index(body)
     tabs = split_into_tabs(body)
     if not tabs:
         # Nothing to render as a tab — emit a single tab carrying the whole
@@ -351,6 +670,7 @@ def build_md_html(
 
     state = BuildState()
     md = _md_renderer()
+    banners_html = _render_frontmatter_banners(md, fm.get("banners"))
 
     # ── tab bar ────────────────────────────────────────────────────────────
     # Tab IDs are derived from the raw label (data-tab attribute must be a
@@ -385,6 +705,8 @@ def build_md_html(
     for i, (label, tab_md) in enumerate(tabs):
         tab_num = str(i + 1)
         tokens = md.parse(tab_md)
+        _transform_rb_fences(tokens, md)
+        _mark_references_list(tokens, initial_armed=(i == references_idx))
         _dedupe_heading_ids(tokens, state)
         nav_entries = _process_headings(tokens, tab_num)
         tab_tables = _extract_table_cells(tokens)
@@ -413,8 +735,13 @@ def build_md_html(
         }
         body_html = md.renderer.render(tokens, md.options, env)
 
+        # Frontmatter `banners` render above the first tab's content only —
+        # they're top-of-doc chrome, not per-tab decoration.
+        banners_block = banners_html if (i == 0 and banners_html) else ""
+
         tab_body = (
             f'<h1 id="{tab_hdr_id}">{tab_num}. {rendered_label}</h1>\n'
+            f"{banners_block}"
             f"{body_html}\n"
             f'<p style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">'
             f"{doc_title} · {rendered_label} · v{ver}</p>\n"

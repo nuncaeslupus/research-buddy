@@ -174,8 +174,19 @@ def perform_build_md(
     fm, _ = parse_md_frontmatter(text)
     fm = fm or {}
 
+    # Theme cascade (highest priority first):
+    # 1. Explicit `--theme PATH` CLI flag
+    # 2. Frontmatter `theme_css` field (project-relative)
+    # 3. Conventional `theme.css` next to the project root
     theme_css = None
-    theme_path = Path(theme) if theme else project_root / "theme.css"
+    if theme:
+        theme_path = Path(theme)
+    elif fm.get("theme_css"):
+        theme_path = (md_path.parent / str(fm["theme_css"])).resolve()
+        if not theme_path.exists():
+            theme_path = (project_root / str(fm["theme_css"])).resolve()
+    else:
+        theme_path = project_root / "theme.css"
     if theme_path.exists():
         theme_css = theme_path.read_text(encoding="utf-8")
         print(f"Using theme: {theme_path.name}")
