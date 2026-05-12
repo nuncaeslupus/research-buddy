@@ -1,6 +1,7 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.8.0"
+research_buddy_version: "1.9.0"
+agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
 file_name: null          # base name for outputs, e.g. "my-research"
@@ -25,6 +26,25 @@ ui_strings:
   status_done: "✦ Researched"
   status_wip: "IN PROGRESS"
 ---
+
+<!--
+AGENT: STOP. Read this entire file before producing ANY output.
+
+The deliverable of every session is a NEW `.md` file at
+`{{file_name}}_v{{version}}-source.md` — a versioned source document.
+NOT a chat response. NOT an artifact. NOT a summary. NOT a free-form
+report. If you have not written the file, the session is not complete.
+
+State signal: the frontmatter field `agent_state` above tells you the
+mode. `needs_session_zero` → run [Session zero](#session-zero).
+`ready` → run a standard 2-turn research session.
+
+Read [Framework (Core)](#framework-core) and [Framework (Reference)](#framework-reference)
+in full before acting. Both are short. Both are required reading. The
+framework defines the 2-turn protocol, the second-opinion brief
+contract, the atomic write, and the validation gate that precedes
+file delivery.
+-->
 
 <!-- @anchor: title -->
 # {{title}} — Research Document
@@ -54,10 +74,11 @@ The Framework sections are generic across all Research Buddy projects. Do not mo
 
 ### Detect session state
 
-Read the YAML frontmatter at the top.
+Read the YAML frontmatter at the top. The authoritative signal is the top-level field `agent_state`:
 
-- If `project.domain` is `null` → run **session zero** (project initialization). See [Session zero](#session-zero) for the full flow.
-- Otherwise → run **standard session** (research one queue topic at a time).
+- `agent_state: needs_session_zero` → run **session zero** (project initialization). See [Session zero](#session-zero) for the full flow. Turn 2 of session zero overwrites this field to `ready`.
+- `agent_state: ready` → run **standard session** (research one queue topic at a time).
+- Field absent (pre-1.9 documents only) → fall back to the legacy signal: `project.domain` null ⇒ session zero, non-null ⇒ standard session. Set `agent_state` explicitly on the next atomic write.
 
 **Version compatibility check (run before any work).** Compare the document's `research_buddy_version` against the framework version you have loaded (the one shown in the [research-buddy](https://github.com/nuncaeslupus/research-buddy) project at the time of the session). If the MAJOR component differs, surface a one-line warning at the top of Turn 1 and pause for the user to confirm before continuing — a MAJOR mismatch means framework semantics may have changed in incompatible ways. If only MINOR differs (doc older than framework), proceed but note "framework newer than doc, refresh recommended" in the change summary. Same-MAJOR-newer-doc or PATCH-only differences proceed silently. The check is informational only on the first session that surfaces it; do not block.
 
@@ -267,7 +288,15 @@ Two turns, no confirmation between.
 
 **Turn 1: welcome + batched questions.** Print the welcome and all initialization questions in a single message. Do not ask follow-ups.
 
-Welcome (verbatim):
+**Before printing Turn 1, inspect the user's first message and choose a Turn-1 mode.** Three cases (mutually exclusive):
+
+- **(a) Standard Turn 1 — questions.** First message is a generic kickoff ("start a research project", "let's begin", or empty / a bare upload). Print the welcome + five questions verbatim. End with the session-zero Turn 1 marker. Wait for the user's answers, then proceed to Turn 2.
+- **(b) Pre-answered Turn 1 — skip to Turn 2.** First message already supplies enough information to fill the five answers (explicitly or by clear inference): project description, domain, deliverable type, timing, and language can all be derived from what the user wrote. Skip the questions entirely. Open with one short line that lists the five values you extracted ("Reading from your message: domain = X, deliverable = Y, timing = Z, language = English. Treating these as the session-zero answers — flag any I got wrong."), then proceed directly to Turn 2 actions (discovery research, structure, queue, atomic write). Do NOT emit the Turn 1 marker — both turns ship in one message under this branch.
+- **(c) Research-request-first — session zero with implicit spec, then enqueue.** First message is a research request ("research X for me", "I want to understand Y") rather than a project specification. Treat the request as the implicit project spec: domain and final goal come from the request itself; deliverable type defaults to `document`; timing defaults to `none`; language defaults to `en`. Run Turn 2 actions (discovery, structure, queue, atomic write), and seed the queue with the user's research request as **Q-001** so the next session can research it directly. Do NOT emit the Turn 1 marker.
+
+Modes (b) and (c) are the common shortcuts; mode (a) is the fallback when the message has no usable content. When unsure between (a) and (b), prefer (a) and ask — a one-turn round trip is cheap. Between (b) and (c) the distinction is "is the user describing a project or asking a question?" — a project description goes (b); a single research topic goes (c).
+
+Welcome text (mode (a) only — verbatim):
 
 > Welcome to your first Research Buddy session.
 >
@@ -277,7 +306,7 @@ Welcome (verbatim):
 >
 > Five questions to set up:
 
-Questions (ask all five at once):
+Questions (ask all five at once — mode (a) only):
 
 1. Describe your project: what do you want to build, study, solve, or understand? Include constraints and background you already have.
 2. Primary domain (e.g. machine learning, medical research, mechanical engineering, nutrition, mobile app development, financial analysis, chemistry, legal research)?
@@ -285,7 +314,7 @@ Questions (ask all five at once):
 4. Timeline, deadline, or delivery milestones?
 5. What language for this document? (Default: English.)
 
-End with the session-zero Turn 1 marker.
+End with the session-zero Turn 1 marker (mode (a) only).
 
 **Turn 2: discovery + atomic write.** When the user replies:
 
@@ -293,7 +322,7 @@ End with the session-zero Turn 1 marker.
 2. Choose: (a) section structure for this project — add domain-specific H2 sections after [Project Specification](#project-specification) when useful (examples: `## Theory`, `## Implementation`, `## Evidence`, `## Protocols`, `## Materials`); (b) source tiers with specific venues for the domain; (c) 3–5 initial queue items, each with a defined Objective / Key Question, in priority order; (d) any domain-specific methodology rules.
 3. **Run the [Queue insertion protocol](#queue-rules) on each proposed queue item** to set the priority position correctly. (For session zero, all items are new, so the protocol just orders them.)
 4. **Write directly. Do not confirm the structure first.** Defaults are correct enough; the user refines them in v1.1+.
-5. Fill in the YAML frontmatter (`version: "1.0"`, `date`, `file_name`, `title`, `subtitle`, `project.*`), populate [Project Specification](#project-specification), seed the [queue](#open-research-queue), add a v1.0 entry to the [changelog](#changelog), add a v1.0 paragraph to the [reasoning journey](#reasoning-journey).
+5. Fill in the YAML frontmatter: **overwrite `agent_state: needs_session_zero` → `agent_state: ready`** (this flips the state signal so future sessions detect standard-session mode); set `version: "1.0"`, `date`, `file_name`, `title`, `subtitle`, and the `project.*` fields. Populate [Project Specification](#project-specification), seed the [queue](#open-research-queue), add a v1.0 entry to the [changelog](#changelog), add a v1.0 paragraph to the [reasoning journey](#reasoning-journey).
 6. **Run compliance validation** before emitting the file (same precondition as standard Turn 2 step 3). On failure, emit the blocked marker and do not deliver.
 7. Output `{{file_name}}_v1.0-source.md`. Print the [change summary](#automation-hooks). Offer derived files. End with the session-zero-complete marker.
 
@@ -378,6 +407,8 @@ Before declaring Turn 2 complete, the agent runs a self-validation pass over the
 
 The `research-buddy validate <file>` command runs all mechanical checks deterministically. When shell access AND `research-buddy` are available, the agent MUST invoke it and treat its exit code as authoritative. When shell access is unavailable, the agent MUST instead paste a mental-simulation checklist that names every mechanical check below and gives each a PASS/FAIL outcome — no shortcuts, no "all good" summaries. **Compliance validation passing is a precondition for delivering the file artifact** (Turn 2 step 3); the validator output (real or simulated) MUST appear in the Turn 2 message before the file. A failing validation is a blocking issue per Turn 2 step 5; the agent emits the `status=blocked:reason=validation_failed` marker and does not deliver the file.
 
+**Self-install when shell access exists.** If the agent has shell access but `research-buddy` is not on PATH (`research-buddy --version` exits non-zero, or `which research-buddy` returns nothing), install it from PyPI first: `pip install research-buddy` (or `pip install --user research-buddy` when the environment is non-writable; `uv pip install research-buddy` inside a uv project; `pipx install research-buddy` to isolate it). The package is published at <https://pypi.org/project/research-buddy/>; source and issue tracker at <https://github.com/nuncaeslupus/research-buddy>. Real validation is strictly better than mental simulation — a one-time `pip install` removes the entire class of "simulated PASS, actual FAIL" mistakes. After install, verify with `research-buddy --version` and proceed. Skip the install step only when (a) no shell access, (b) install fails (sandbox / network / permission) — in which case fall back to mental simulation and note the install failure in the Turn 2 change summary so the user can install it themselves.
+
 Validation runs at the end of Turn 2 (against the file the agent has just composed), not at the start of Turn 1 (where the input file is presumed already-valid from the prior session's exit).
 
 **Mechanical checks** (script-automatable):
@@ -402,6 +433,7 @@ Validation runs at the end of Turn 2 (against the file the agent has just compos
 
 Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the agent must reason about it), or `[hybrid]` (mechanical detection is partial; semantic review for the rest).
 
+- `[mechanical]` **Producing the session's output as a chat response, artifact, summary, or any form other than the `{{file_name}}_v{{version}}-source.md` file.** The deliverable is the file — a downloadable, validated, versioned Markdown source document. A chat-only response means the session is not complete, regardless of how much research or reasoning it contains. The Turn 2 atomic write is what produces the file; if the agent ends Turn 2 without writing the file, the only valid output state is the `status=blocked` marker with a concrete blocking reason. Catches the meta-failure where the agent treats the user's "research X" request as a chat prompt instead of a session-zero or standard-session protocol invocation.
 - `[mechanical]` Renaming or deleting an anchor — breaks `str_replace` targeting from this and future sessions.
 - `[mechanical]` Skipping session zero when the frontmatter still has `null` placeholders.
 - `[semantic]` Using Discovery or Never-tier sources as primary evidence.
@@ -422,12 +454,77 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 - `[mechanical]` Leaving completed rows in the Open Research Queue. Done rows move to Research Tracker; the queue holds only OPEN items.
 - `[semantic]` Generating clean view or HTML by default at end of Turn 2 — wait for the user to ask, to keep context lean.
 - `[mechanical]` Writing plain-text references to rules / DAs / sessions when a stable link target exists. Always link.
+- `[hybrid]` **Forward-linking to a not-yet-researched queue item as if it were a stable target.** Pending queue rows (rows still in [Open Research Queue](#open-research-queue), not yet promoted to [Research Tracker](#research-tracker) or [Session Notes](#session-notes)) **do not have `<a id>` link targets** — their `Q-NNN` ID is allocated, but the linkable anchor `<a id="q-nnn">` only exists once the session block is written. The "always link when a stable target exists" rule therefore *excludes* pending queue items: reference them as **plain text `Q-NNN`** (no brackets, no parens), not as a Markdown link. Promotion to a Tracker row in Turn 2 atomic write is what creates the link target; from that write forward, all references to that ID render as links. Mechanical detection: `validate` flags any `[Q-NNN](#q-nnn)` whose target `<a id="q-nnn">` is absent.
 - `[semantic]` **Composing the second-opinion brief after research** — even if every placeholder is filled with project-given context, the agent's choice of how to phrase the questions, which DAs to surface, and which rules to flag is biased by what they've just found. The structural fix is to write the brief into the outgoing response in Turn 1 step 5 (before any research tool is invoked) and never re-edit it — findings append beneath it. (Hybrid: a script can detect a brief that mentions specific Tier-1 source titles, statuses like `VALIDATED`/`REJECTED`, or claim verdicts that wouldn't be available before research; semantic review catches subtler leakage.)
 - `[semantic]` **Brief omits relevant rejected alternatives, prior tracker rows, or active constraining rules.** The second researcher then either duplicates work or proposes a previously-rejected approach. The brief template's three context slots are mandatory; "None." is an acceptable value if preflight surfaced nothing relevant, but the slots must not be silently dropped.
 - `[mechanical]` **Delivering the file artifact without compliance validation passing — or without the validator output pasted in the Turn 2 message.** Turn 2 step 3 gates step 4: the validator output (or the mental-simulation checklist) MUST be present in the message *before* the file. A failing validation triggers `status=blocked:reason=validation_failed`, not delivery.
 - `[hybrid]` **Brief context slot says "None." but the corresponding section has live entries.** If [Discarded Alternatives](#discarded-alternatives) holds DAs but `{{RELEVANT_DISCARDED_ALTERNATIVES}}` is filled with "None.", the agent skipped preflight; same for `{{RELATED_PRIOR_TRACKER_ROWS}}` vs the tracker, and `{{ACTIVE_CONSTRAINING_RULES}}` vs Adopted Rules. Mechanical: a script can detect "None." in a brief slot whose source section is non-empty and emit a candidate-mismatch warning; semantic: the agent decides whether the live entries are actually *relevant* to this turn's topic ("None relevant." with reasoning is fine; bare "None." plus a non-empty section is a red flag).
 
 <!-- @end: framework.reference.failure-modes -->
+
+<!-- @anchor: framework.reference.templates -->
+### Templates
+
+Copy-paste blocks for the three entry-based sections — [Adopted Rules](#adopted-rules), [Discarded Alternatives](#discarded-alternatives), [Session Notes](#session-notes). The templates live here, outside the user sections, so the rule "append immediately before `@end`" is unambiguous: every str_replace target inside `## Adopted Rules` / `## Discarded Alternatives` / `## Session Notes` is real content, never a template fence to confuse with content.
+
+**When adding a new rule** — paste this into [Adopted Rules](#adopted-rules) immediately before its `<!-- @end: rules -->` marker. Replace `R-EXAMPLE-1` with the real rule ID (e.g. `R-CHUNK-4`) and lowercase it for the `<a id>` value:
+
+````
+<!-- @rule: R-EXAMPLE-1 -->
+<a id="r-example-1"></a>
+
+```yaml rule
+id: R-EXAMPLE-1
+status: VALIDATED
+force: MUST
+tags: [tag1, tag2]
+adopted_in: "v1.1"
+last_verified: "YYYY-MM-DD"
+evidence:
+  tier1:
+    - "{{Title}}, {{Author}}, {{Year}}, {{Venue}}, {{URL}}"
+  tier2: []
+# Optional: contradictions, supersedes, superseded_by
+```
+
+**R-EXAMPLE-1 [tag1] [tag2] VALIDATED MUST.** Imperative-form rule body in one or two short paragraphs. Cite Tier-1 sources inline. Avoid `MUST` / `ALWAYS` / `NEVER` shouting unless the rule truly admits no exception; explain reasoning instead.
+````
+
+**When adding a new discarded alternative** — paste this into [Discarded Alternatives](#discarded-alternatives) immediately before its `<!-- @end: discarded -->` marker. Replace `DA-EXAMPLE-1` with the real ID (e.g. `DA-Q016-3`) and lowercase it for the `<a id>` value:
+
+```
+<!-- @da: DA-EXAMPLE-1 -->
+<a id="da-example-1"></a>
+
+**DA-EXAMPLE-1.** {{Short title of the rejected approach.}} Rationale: {{why it was rejected, with Tier-1 anchor where applicable}}. Rejected in: v1.X. Superseded by: {{R-XXX-N if applicable, else "—"}}.
+```
+
+**When adding a new session note** — paste this into [Session Notes](#session-notes) immediately before its `<!-- @end: sessions -->` marker. Replace `Q-001` with the queue/tracker ID that just completed and lowercase it for the `<a id>` value:
+
+````
+<!-- @session: Q-001 -->
+<a id="q-001"></a>
+
+### Q-001: {{topic}} ({{date}})
+
+**Pre-registration.** Hypotheses, PASS metric, FAIL/REJECT metric — written before consulting sources.
+
+**Sources consulted.**
+
+| Source | Tier | Verification | Disposition |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+**Decisions adopted.** Bulleted list with rule IDs (linked: `[R-XXX-N](#r-xxx-n)`).
+
+**Rejected claims.** Bulleted list with DA IDs (linked: `[DA-XXX](#da-xxx)`).
+
+**Second-opinion evaluation.** Per submitted source, by label: main claims; ≥3-source verification; agreements / disagreements / unverifiables; incorporate-or-discard with rationale.
+````
+
+The three blocks above sit inside fenced code so they render as literal templates in any Markdown viewer and are skipped by the validator's anchor scan (fenced lines are not parsed as live anchors). Copy the *contents* of the fence — not the outer ```` or ``` fence delimiters themselves — when appending into a user section.
+
+<!-- @end: framework.reference.templates -->
 
 <!-- @end: framework.reference -->
 
@@ -515,28 +612,7 @@ Rules adopted during research. Each rule has a stable ID of the form `R-{{TOPIC}
 
 **Force keywords (RFC 2119 / 8174):** `MUST` / `MUST NOT` / `SHOULD` / `SHOULD NOT` / `MAY`. Force is orthogonal to status — a `SHOULD` rule may be `VALIDATED`; a `MUST` rule may be `PROPOSED`.
 
-**Block format** (one block per rule; copy this template when adding a new rule, lowercasing the ID for the `<a id>` value):
-
-````
-<!-- @rule: R-EXAMPLE-1 -->
-<a id="r-example-1"></a>
-
-```yaml rule
-id: R-EXAMPLE-1
-status: VALIDATED
-force: MUST
-tags: [tag1, tag2]
-adopted_in: "v1.1"
-last_verified: "2026-05-06"
-evidence:
-  tier1:
-    - "{{Title}}, {{Author}}, {{Year}}, {{Venue}}, {{URL}}"
-  tier2: []
-# Optional: contradictions, supersedes, superseded_by
-```
-
-**R-EXAMPLE-1 [tag1] [tag2] VALIDATED MUST.** Imperative-form rule body in one or two short paragraphs. Cite Tier-1 sources inline. Avoid `MUST` / `ALWAYS` / `NEVER` shouting unless the rule truly admits no exception; explain reasoning instead.
-````
+**Block format:** see [Templates → new rule](#templates) for the copy-paste block. Append new rule blocks immediately above the `<!-- @end: rules -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: rules -->
 
@@ -547,14 +623,7 @@ evidence:
 
 Permanent record of rejected approaches. Never re-propose items listed here. Each entry has a stable `DA-{{TOPIC}}-{{N}}` label and an inline `<a id>` link target. Always check this section before proposing any approach.
 
-**Block format** (one block per rejection; lowercase the ID for the `<a id>` value):
-
-```
-<!-- @da: DA-EXAMPLE-1 -->
-<a id="da-example-1"></a>
-
-**DA-EXAMPLE-1.** {{Short title of the rejected approach.}} Rationale: {{why it was rejected, with Tier-1 anchor where applicable}}. Rejected in: v1.X. Superseded by: {{R-XXX-N if applicable, else "—"}}.
-```
+**Block format:** see [Templates → new discarded alternative](#templates) for the copy-paste block. Append new DA blocks immediately above the `<!-- @end: discarded -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: discarded -->
 
@@ -565,28 +634,7 @@ Permanent record of rejected approaches. Never re-propose items listed here. Eac
 
 One subsection per researched topic. Each contains pre-registration, sources consulted, decisions adopted, rejected claims, and second-opinion evaluation. Each block has an inline `<a id>` link target for cross-linking from elsewhere in the document.
 
-**Block format** (one block per session; lowercase the ID for the `<a id>` value):
-
-````
-<!-- @session: Q-001 -->
-<a id="q-001"></a>
-
-### Q-001: {{topic}} ({{date}})
-
-**Pre-registration.** Hypotheses, PASS metric, FAIL/REJECT metric — written before consulting sources.
-
-**Sources consulted.**
-
-| Source | Tier | Verification | Disposition |
-|---|---|---|---|
-| ... | ... | ... | ... |
-
-**Decisions adopted.** Bulleted list with rule IDs (linked: `[R-XXX-N](#r-xxx-n)`).
-
-**Rejected claims.** Bulleted list with DA IDs (linked: `[DA-XXX](#da-xxx)`).
-
-**Second-opinion evaluation.** Per submitted source, by label: main claims; ≥3-source verification; agreements / disagreements / unverifiables; incorporate-or-discard with rationale.
-````
+**Block format:** see [Templates → new session note](#templates) for the copy-paste block. Append new session blocks immediately above the `<!-- @end: sessions -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: sessions -->
 

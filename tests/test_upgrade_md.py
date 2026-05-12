@@ -163,6 +163,21 @@ class TestFrontmatterMigration:
         assert "tier_2:" in fm_block
         assert "discovery:" in fm_block
 
+    def test_inserts_missing_agent_state(self) -> None:
+        starter = _starter_text()
+        # Simulate a pre-1.9 doc by stripping the agent_state line entirely.
+        stale_lines = [line for line in starter.splitlines() if not line.startswith("agent_state:")]
+        stale = "\n".join(stale_lines) + "\n"
+        assert "agent_state" not in stale.split("\n---\n", 2)[0]
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert any("agent_state added" in c for c in changes)
+        fm_block = upgraded.split("\n---\n", 2)[0]
+        assert "agent_state: ready" in fm_block
+        # Backfill value MUST be `ready`, not `needs_session_zero` — by the
+        # time a doc is being upgraded, session zero is necessarily complete.
+        assert "agent_state: needs_session_zero" not in fm_block
+
     def test_inserts_missing_project_domain_rules(self) -> None:
         starter = _starter_text()
         stale = starter.replace("  domain_rules: null", "", 1).replace("  domain_rules:", "", 1)

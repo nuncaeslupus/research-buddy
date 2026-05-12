@@ -1,5 +1,101 @@
 # Next session
 
+## Session 2026-05-12 (session 16)
+
+### What was done
+
+- **Starter hardening — 1.8.0 → 1.9.0 (single PR).** Eight
+  changes to `src/research_buddy/starter.md` driven by a postmortem
+  from a downstream agent that mis-ran session zero. All targeted
+  at making the first-touch experience harder for an LLM to
+  misread.
+  1. **Unmissable AGENT preamble** as the first content after the
+     YAML closing `---` — multi-line HTML comment (invisible to
+     human Markdown viewers, visible to any agent reading raw)
+     stating STOP, read the file, deliverable is a versioned `.md`
+     file, NOT a chat response. Survives clean view.
+  2. **New `agent_state` frontmatter field** with values
+     `needs_session_zero` | `ready`. Replaces "`project.domain`
+     null means session zero" with a literal state token the agent
+     must overwrite in session zero Turn 2. Backwards-compatible:
+     framework's "Detect session state" rule has a fallback for
+     pre-1.9 docs without the field. `upgrade_md.py` backfills
+     `agent_state: ready` for existing v2 docs (a doc reaching
+     upgrade is by definition post-session-zero).
+  3. **Chat-output anti-pattern** as the first bullet of
+     [Common failure modes] — `[mechanical]` catches the meta-
+     failure of producing the session output as a chat response,
+     artifact, or anything other than the versioned source file.
+  4. **Session-zero Turn 1 mode-switch (3 cases).** First message
+     is (a) generic kickoff → print welcome + 5 questions; (b)
+     already supplies the 5 answers explicitly or by inference →
+     skip the questions, both turns ship in one message; (c) a
+     research request rather than a project spec → run session
+     zero with the request as the implicit spec and seed it as
+     Q-001. (b) and (c) suppress the Turn 1 marker.
+  5. **Forward-reference convention** explicit: pending queue
+     items (rows still in the queue, not yet promoted to Tracker /
+     Session Notes) have NO `<a id>` target — reference them as
+     plain text `Q-NNN`, not as a Markdown link. The "always
+     link" rule excludes them. Mechanical detection via
+     `validate`.
+  6. **Templates extracted to a dedicated `### Templates`
+     subsection inside framework.reference.** The three quadruple-
+     backtick example blocks (rule, DA, session) used to live
+     inside `## Adopted Rules` / `## Discarded Alternatives` / `##
+     Session Notes`. They were a footgun for naive
+     `str_replace` — easy to wreck the template when "appending
+     before @end". Now the user sections are content-only
+     between anchor and @end; templates live in one canonical
+     place, fenced.
+  7. **Self-install instruction** in [Self-validation]: when the
+     agent has shell access but `research-buddy` is missing, run
+     `pip install research-buddy` first. Real validation beats
+     mental simulation; one-time install removes the "simulated
+     PASS, actual FAIL" failure class. Includes PyPI URL and
+     fallback notes.
+  8. **Version bump 1.8.0 → 1.9.0** (MINOR — additive, fully
+     backwards-compatible). `make version-sync` propagated; lint
+     clean; **320 tests pass** (319 + 1 new
+     `test_inserts_missing_agent_state` for the upgrade backfill).
+- **`upgrade_md.py` change.** New `_ensure_agent_state` helper
+  follows the existing `_ensure_project_*` pattern: inserts
+  `agent_state: ready` immediately after `research_buddy_version:`
+  when the field is absent (pre-1.9 docs). One test added; 18
+  upgrade tests green.
+- **Single-PR slicing was the user's call** at the start of the
+  session — bundled all eight changes (originally seven from the
+  postmortem + the self-install instruction added mid-session) so
+  the regen + version-sync + tagged release happen once, not
+  eight times.
+
+### Next steps
+
+1. **Open the PR** for `feat/starter-hardening-1.9.0` against
+   main. Branch is local-only at session end; commit is queued
+   but unpushed (user did not explicitly ask to push).
+2. **Tag + publish 1.9.0** after merge: `git tag v1.9.0 && git
+   push --tags`, then `make publish` (PyPI token in `~/.pypirc`
+   from session 14 still works headlessly).
+3. **Backport forward-only version policy to v1 `upgrade.py`** —
+   still carried from session 13/14. Cheap fix (~10 lines + one
+   test); the v1 path still blindly overwrites
+   `meta.research_buddy_version`.
+4. **Postmortem item #8** (the ~10k-token framework overhead) is
+   the unaddressed survivor from this batch — needs a real
+   design pass. Idea was "framework-cheatsheet.md alongside a
+   much shorter source file" so the per-session overhead drops.
+   Not in scope for 1.9.0; opens a separate work stream.
+5. **Carry-overs**: roadmap step #6 (coverage on `main.py` /
+   `validator.py`); roadmap #7/#8/#9 (mutmut, coverage gate,
+   split `main.py`) still deferred.
+
+### Blockers
+
+- None.
+
+---
+
 ## Session 2026-05-10 (session 15)
 
 ### What was done
