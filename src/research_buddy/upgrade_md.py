@@ -19,6 +19,11 @@ Frontmatter is migrated structurally:
   newer framework blocks.
 - Missing `project.domain_rules` is inserted with a null value for the same
   reason.
+- Missing top-level `agent_state` is inserted with value `ready` (since any
+  doc that exists for upgrade has already passed session zero — its
+  `project.domain` is non-null). Brand-new docs scaffolded by `init` start
+  with `agent_state: needs_session_zero` and overwrite to `ready` in the
+  Turn 2 atomic write of session zero.
 
 Edits are line-based to preserve YAML comments and value formatting wherever
 possible. Two helper passes handle the awkward cases:
@@ -173,6 +178,9 @@ def _migrate_frontmatter(source: str, tool_version: str) -> tuple[str, list[str]
     fm_lines, ver_changes = _bump_research_buddy_version(fm_lines, tool_version)
     changes.extend(ver_changes)
 
+    fm_lines, as_changes = _ensure_agent_state(fm_lines, fm_dict)
+    changes.extend(as_changes)
+
     fm_lines, st_changes = _ensure_project_source_tiers(fm_lines, fm_dict)
     changes.extend(st_changes)
 
@@ -298,6 +306,31 @@ def _replace_scalar_value(line: str, old_value: str, new_value: str) -> str:
     elif raw.startswith("'") and raw.endswith("'"):
         quote = "'"
     return f"{key_part}:{leading_ws}{quote}{new_value}{quote}{comment}"
+
+
+def _ensure_agent_state(
+    fm_lines: list[str], fm_dict: dict[str, Any]
+) -> tuple[list[str], list[str]]:
+    """Insert `agent_state: ready` near the top of the frontmatter if absent.
+
+    Any doc that reaches `upgrade` is by definition post-session-zero (it has
+    a non-null `project.domain`), so `ready` is the correct backfill value.
+    Inserted immediately after `research_buddy_version:` so it sits with the
+    other top-level state/identity fields rather than getting lost mid-block.
+    If `research_buddy_version:` is missing for some reason, inserted at the
+    top of the frontmatter.
+    """
+    if "agent_state" in fm_dict:
+        return fm_lines, []
+
+    insertion = "agent_state: ready"
+    out = list(fm_lines)
+    for i, line in enumerate(out):
+        if line.startswith("research_buddy_version:"):
+            out.insert(i + 1, insertion)
+            return out, ["frontmatter: agent_state added (ready)"]
+    # Fallback: prepend.
+    return [insertion, *out], ["frontmatter: agent_state added (ready)"]
 
 
 def _ensure_project_source_tiers(
