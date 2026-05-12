@@ -54,6 +54,19 @@ Pushing the tag triggers `.github/workflows/release.yml`:
 3. **github-release** — creates the GitHub release from the tag, uses
    `CHANGELOG.md` as the body, and attaches the built distributions.
 
+## Do not also `make publish` locally
+
+The workflow is the canonical publish path. `make publish` is a fallback for
+when the workflow is unavailable. To prevent the two from racing, `make
+publish` refuses when a `v<current-pyproject-version>` tag already exists on
+`origin` (it would race the workflow and fail with a PyPI 400 "File already
+exists" the moment whichever path uploads second). The guard's message
+points at `make publish-force` for explicit bypass — use that only when the
+workflow is genuinely broken and you know what you're doing.
+
+This is why pushing a tag is sufficient; you do not need to run anything
+locally after `git push origin vX.Y.Z`.
+
 ## Failure recovery
 
 - **Tag ↔ version mismatch**: the `build` job fails early. Delete the tag
@@ -64,6 +77,15 @@ Pushing the tag triggers `.github/workflows/release.yml`:
   UI.
 - **PyPI version already exists**: PyPI refuses to overwrite a published
   version. Bump to the next patch (`X.Y.Z+1`) and repeat the release flow.
+  Most common cause is the `make publish` / workflow race described above —
+  the guard added in 1.9.x makes this hard to hit by accident.
+- **Workflow's `publish-pypi` job failed but PyPI got the upload anyway**
+  (race between local `make publish` and the workflow, the situation that
+  motivated the guard): the workflow's `github-release` job is skipped as a
+  downstream of the failed `publish-pypi`. Recover by running
+  `gh release create vX.Y.Z --title 'vX.Y.Z — <title>' --notes-file <notes>
+  dist/research_buddy-X.Y.Z-py3-none-any.whl dist/research_buddy-X.Y.Z.tar.gz`
+  manually.
 
 ## What counts as each kind of bump
 
