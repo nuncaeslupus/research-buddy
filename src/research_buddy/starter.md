@@ -478,7 +478,7 @@ id: R-EXAMPLE-1
 status: VALIDATED
 force: MUST
 tags: [tag1, tag2]
-adopted_in: "v1.1"
+adopted_in: "v1.X"
 last_verified: "YYYY-MM-DD"
 evidence:
   tier1:
