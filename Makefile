@@ -15,7 +15,7 @@ build:
 publish:
 	@VER=$$(uv run python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"); \
 	TAG="v$$VER"; \
-	if git ls-remote --tags origin "$$TAG" 2>/dev/null | grep -q "refs/tags/$$TAG"; then \
+	if git ls-remote --exit-code --tags origin "$$TAG" >/dev/null 2>&1; then \
 		echo "ERROR: tag $$TAG already exists on origin."; \
 		echo "       .github/workflows/release.yml handles PyPI publishing on tag push."; \
 		echo "       Running 'twine upload' here would race the workflow and fail."; \

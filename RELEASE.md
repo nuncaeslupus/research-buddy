@@ -82,10 +82,7 @@ locally after `git push origin vX.Y.Z`.
 - **Workflow's `publish-pypi` job failed but PyPI got the upload anyway**
   (race between local `make publish` and the workflow, the situation that
   motivated the guard): the workflow's `github-release` job is skipped as a
-  downstream of the failed `publish-pypi`. Recover by running
-  `gh release create vX.Y.Z --title 'vX.Y.Z — <title>' --notes-file <notes>
-  dist/research_buddy-X.Y.Z-py3-none-any.whl dist/research_buddy-X.Y.Z.tar.gz`
-  manually.
+  downstream of the failed `publish-pypi`. Recover by running `gh release create vX.Y.Z --title 'vX.Y.Z — <title>' --notes-file <notes> dist/research_buddy-X.Y.Z-py3-none-any.whl dist/research_buddy-X.Y.Z.tar.gz` manually.
 
 ## What counts as each kind of bump
 
