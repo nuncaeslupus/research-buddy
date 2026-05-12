@@ -479,7 +479,7 @@ status: VALIDATED
 force: MUST
 tags: [tag1, tag2]
 adopted_in: "v1.1"
-last_verified: "2026-05-06"
+last_verified: "YYYY-MM-DD"
 evidence:
   tier1:
     - "{{Title}}, {{Author}}, {{Year}}, {{Venue}}, {{URL}}"
