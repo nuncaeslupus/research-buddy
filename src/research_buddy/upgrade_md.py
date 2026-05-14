@@ -1,11 +1,18 @@
 """Refresh a v2 Markdown source file's framework block from the installed starter.
 
-The framework block is everything between (inclusive) the lines:
-    <!-- @anchor: framework.core -->
-    <!-- @end: framework.reference -->
+Three template-owned regions are refreshed on upgrade:
 
-That block is template-owned and replaced wholesale on upgrade. Project-owned
-content (frontmatter values the user filled in, title body, project
+1. The **preamble** — everything between the frontmatter's closing `---` and
+   the first `<!-- @anchor: ... -->` line. Carries the agent operating manual
+   (no-tool-call gate, state signal, file-output deliverable).
+2. The **framework block** — everything between (inclusive) the lines:
+       <!-- @anchor: framework.core -->
+       <!-- @end: framework.reference -->
+3. The **agent-reminder blockquote** — the single visible blockquote inside
+   the title block that begins with `> **Agent:`.
+
+All three are template-owned and replaced wholesale on upgrade. Project-owned
+content (frontmatter values the user filled in, title heading body, project
 specification, queue, tracker, rules, DAs, sessions, journey, references,
 changelog) is preserved exactly.
 
@@ -67,16 +74,136 @@ def upgrade_md(source: str, starter: str, tool_version: str) -> tuple[str, list[
     changes: list[str] = []
 
     # 1. Frontmatter migration first — done on the unmodified source so we can
-    #    reason about indentation and existing keys without the framework
-    #    swap interfering.
+    #    reason about indentation and existing keys without subsequent swaps
+    #    interfering.
     source, fm_changes = _migrate_frontmatter(source, tool_version)
     changes.extend(fm_changes)
 
-    # 2. Framework block replacement.
+    # 2. Preamble (operating-manual HTML comment between frontmatter and the
+    #    first @anchor).
+    source, pre_changes = _replace_preamble(source, starter)
+    changes.extend(pre_changes)
+
+    # 3. Framework block replacement.
     source, body_changes = _replace_framework_block(source, starter)
     changes.extend(body_changes)
 
+    # 4. Visible agent-reminder blockquote inside the title block.
+    source, br_changes = _refresh_agent_reminder(source, starter)
+    changes.extend(br_changes)
+
     return source, changes
+
+
+# ---------------------------------------------------------------------------
+# Preamble (operating-manual HTML comment)
+# ---------------------------------------------------------------------------
+
+
+def _replace_preamble(source: str, starter: str) -> tuple[str, list[str]]:
+    """Swap the source's preamble with the starter's preamble.
+
+    The preamble is the template-owned content between the frontmatter close
+    and the first `<!-- @anchor: ... -->` line. Carries the agent operating
+    manual. Like the framework block, it is replaced wholesale on upgrade.
+    """
+    _, src_fm_end = _find_frontmatter_bounds(source)
+    _, star_fm_end = _find_frontmatter_bounds(starter)
+
+    src_lines = source.splitlines()
+    star_lines = starter.splitlines()
+
+    src_start, src_end = _find_preamble_bounds(src_lines, src_fm_end, "source")
+    star_start, star_end = _find_preamble_bounds(star_lines, star_fm_end, "starter")
+
+    src_block = src_lines[src_start : src_end + 1]
+    star_block = star_lines[star_start : star_end + 1]
+
+    if src_block == star_block:
+        return source, []
+
+    new_lines = src_lines[:src_start] + star_block + src_lines[src_end + 1 :]
+    out = "\n".join(new_lines)
+    if source.endswith("\n") and not out.endswith("\n"):
+        out += "\n"
+    return out, ["preamble ← starter.md"]
+
+
+def _find_preamble_bounds(lines: list[str], fm_end: int, label: str) -> tuple[int, int]:
+    """Return (start, end) inclusive line indexes of the preamble.
+
+    Starts at the first non-blank line after the frontmatter close. Ends at
+    the last non-blank line before the first `<!-- @anchor: ... -->` line.
+    Blank lines on either side stay put across replacement.
+    """
+    start = fm_end + 1
+    while start < len(lines) and lines[start].strip() == "":
+        start += 1
+
+    anchor_idx = -1
+    for i in range(start, len(lines)):
+        if lines[i].lstrip().startswith("<!-- @anchor:"):
+            anchor_idx = i
+            break
+    if anchor_idx < 0:
+        raise UpgradeError(f"{label}: no `<!-- @anchor: ... -->` line found after frontmatter")
+    if anchor_idx == start:
+        raise UpgradeError(
+            f"{label}: empty preamble (no content between frontmatter and "
+            "first `<!-- @anchor: ... -->`)"
+        )
+
+    end = anchor_idx - 1
+    while end > start and lines[end].strip() == "":
+        end -= 1
+    return start, end
+
+
+# ---------------------------------------------------------------------------
+# Agent-reminder blockquote
+# ---------------------------------------------------------------------------
+
+
+_AGENT_REMINDER_PREFIX = "> **Agent:"
+
+
+def _refresh_agent_reminder(source: str, starter: str) -> tuple[str, list[str]]:
+    """Replace the visible 'Agent: read framework first' blockquote with the
+    starter's version.
+
+    The blockquote is a single line starting with `> **Agent:`. If the source
+    has no such line, no change is made (older docs predate the reminder).
+    If the starter has no such line, that's a packaging error and we raise.
+    """
+    src_lines = source.splitlines()
+    star_lines = starter.splitlines()
+
+    star_idx = -1
+    for i, line in enumerate(star_lines):
+        if line.startswith(_AGENT_REMINDER_PREFIX):
+            star_idx = i
+            break
+    if star_idx < 0:
+        raise UpgradeError(
+            "starter: agent-reminder blockquote not found (bundled starter.md is malformed)"
+        )
+
+    src_idx = -1
+    for i, line in enumerate(src_lines):
+        if line.startswith(_AGENT_REMINDER_PREFIX):
+            src_idx = i
+            break
+    if src_idx < 0:
+        return source, []
+
+    if src_lines[src_idx] == star_lines[star_idx]:
+        return source, []
+
+    src_lines[src_idx] = star_lines[star_idx]
+    out = "\n".join(src_lines)
+    if source.endswith("\n") and not out.endswith("\n"):
+        out += "\n"
+    return out, ["agent-reminder blockquote ← starter.md"]
 
 
 # ---------------------------------------------------------------------------

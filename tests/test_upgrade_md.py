@@ -236,6 +236,83 @@ class TestFrontmatterMigration:
             upgrade_md(ahead, starter, __version__)
 
 
+class TestPreambleReplacement:
+    """The operating-manual HTML comment between frontmatter and the first
+    @anchor is template-owned and refreshed on upgrade."""
+
+    def _replace_preamble(self, starter: str, body: str) -> str:
+        """Swap the preamble (everything between frontmatter close and the
+        first `<!-- @anchor:` line) with `body`."""
+        lines = starter.splitlines()
+        fm_close = -1
+        for i in range(1, len(lines)):
+            if lines[i].rstrip() == "---":
+                fm_close = i
+                break
+        anchor = -1
+        for i in range(fm_close + 1, len(lines)):
+            if lines[i].lstrip().startswith("<!-- @anchor:"):
+                anchor = i
+                break
+        new_lines = [*lines[: fm_close + 1], "", body, "", *lines[anchor:]]
+        return "\n".join(new_lines) + "\n"
+
+    def test_swaps_stale_preamble(self) -> None:
+        starter = _starter_text()
+        stale = self._replace_preamble(starter, "<!-- OLD PREAMBLE -->")
+        assert "OLD PREAMBLE" in stale
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert "preamble ← starter.md" in changes
+        assert "OLD PREAMBLE" not in upgraded
+        # Starter's preamble landmark is present.
+        assert "DO NOT CALL ANY TOOL" in upgraded
+
+    def test_idempotent_when_preamble_already_in_sync(self) -> None:
+        starter = _starter_text()
+        _, changes = upgrade_md(starter, starter, __version__)
+        assert "preamble ← starter.md" not in changes
+
+    def test_missing_anchor_after_frontmatter_raises(self) -> None:
+        starter = _starter_text()
+        # Strip every @anchor line — nothing for the preamble to bound against.
+        broken = "\n".join(line for line in starter.splitlines() if "<!-- @anchor:" not in line)
+        with pytest.raises(UpgradeError, match=r"no `<!-- @anchor:"):
+            upgrade_md(broken, starter, __version__)
+
+
+class TestAgentReminderRefresh:
+    """The visible `> **Agent: ...` blockquote inside the title block is
+    template-owned and refreshed on upgrade."""
+
+    def test_swaps_stale_blockquote(self) -> None:
+        starter = _starter_text()
+        # Find the blockquote line in the starter and produce a stale version.
+        star_line = next(line for line in starter.splitlines() if line.startswith("> **Agent:"))
+        stale = starter.replace(star_line, "> **Agent: old reminder text.**", 1)
+        assert "old reminder text" in stale
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert "agent-reminder blockquote ← starter.md" in changes
+        assert "old reminder text" not in upgraded
+        assert star_line in upgraded
+
+    def test_idempotent_when_blockquote_in_sync(self) -> None:
+        starter = _starter_text()
+        _, changes = upgrade_md(starter, starter, __version__)
+        assert "agent-reminder blockquote ← starter.md" not in changes
+
+    def test_no_op_when_source_has_no_blockquote(self) -> None:
+        starter = _starter_text()
+        star_line = next(line for line in starter.splitlines() if line.startswith("> **Agent:"))
+        # Drop the blockquote line entirely. Older docs may predate it.
+        no_blockquote = starter.replace(star_line + "\n", "")
+        upgraded, changes = upgrade_md(no_blockquote, starter, __version__)
+        # No blockquote change applied; preamble/framework may still be in sync.
+        assert "agent-reminder blockquote ← starter.md" not in changes
+        assert star_line not in upgraded
+
+
 class TestCli:
     def test_md_upgrade_dry_run(self, tmp_path: Path) -> None:
         from research_buddy.main import cmd_upgrade
