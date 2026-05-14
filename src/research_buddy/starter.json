@@ -241,7 +241,7 @@
         "subtitle": "[FILL in session_zero: one-line description]",
         "title_page_section_title": "[FILL in session_zero]",
         "file_name": "[FILL in session_zero: base name for files, e.g. my-research]",
-        "research_buddy_version": "1.9.1",
+        "research_buddy_version": "1.10.0",
         "language": {
             "code": "en",
             "label": "English",
