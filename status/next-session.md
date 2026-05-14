@@ -1,5 +1,77 @@
 # Next session
 
+## Session 2026-05-14 (session 17)
+
+### What was done
+
+- **Operating-manual hardening — 1.9.1 → 1.10.0 (single PR).** Driven
+  by a postmortem from a downstream agent that called
+  `launch_extended_search_task` before emitting the second-opinion
+  brief. Root cause: the agent's first read window stopped around
+  line 47 and the load-bearing "read Framework Core first"
+  reminder was below that line; the surrounding chat-environment
+  tool mandate ("USE ONLY THE LAUNCH EXTENDED SEARCH TOOL") won
+  the tug-of-war against the in-file protocol. Five things shipped
+  together:
+  1. **Compacted operating manual** (HTML comment between
+     frontmatter and the first `@anchor`). Now ≤12 lines, all
+     critical content above line 41. Order: STOP banner + Continue
+     interpretation → DO NOT CALL ANY TOOL with 3 numbered
+     preconditions (read framework, detect state, emit brief) →
+     Tools at hand / install rule → precedence over chat-env tool
+     mandates. Dropped the redundant "Deliverable = .md file"
+     paragraph (it's stated in framework Core, which is mandatory
+     reading per the no-tool-call gate).
+  2. **Install rule promoted to the operating manual.** Previously
+     only at line 412 (inside Framework Reference → Self-validation).
+     Now also stated at the top: "if you have shell or
+     code-execution access and `research-buddy --version` fails,
+     `pip install research-buddy`". Cross-links to the full rule
+     at [Self-validation](#self-validation).
+  3. **Framework Core version-compatibility check rewritten.**
+     Same-MAJOR/MINOR-older now pauses at top of Turn 1 and asks
+     the user "(a) pause so you can run `research-buddy upgrade
+     <file>.md --apply` and re-upload, or (b) proceed with the
+     older framework this session?" *before* composing the brief
+     or calling any research tool. Previously: silent note in the
+     Turn 2 change summary. The new behavior can cost a turn, but
+     that's the trade-off — if (a), the next session resumes from
+     a refreshed file.
+  4. **Visible blockquote inside the title block** now names tool
+     calls explicitly ("before any other action — including any
+     tool call (web search, extended research, code execution,
+     etc.)"). Belt-and-suspenders for agents that skip HTML
+     comments.
+  5. **Upgrade pathway** — `research-buddy upgrade <file>.md
+     --apply` now refreshes three template-owned regions: the
+     preamble (the HTML comment), the framework block (existing),
+     and the visible blockquote. Implemented as two new functions
+     in `src/research_buddy/upgrade_md.py` (`_replace_preamble`,
+     `_refresh_agent_reminder`) wired into `upgrade_md()`
+     alongside the existing frontmatter migration and
+     framework-block swap. Six new tests in
+     `TestPreambleReplacement` and `TestAgentReminderRefresh`.
+     Existing v1.9.1 projects will pick up the operating-manual
+     changes on `upgrade --apply`.
+
+### Next steps
+
+- Watch downstream agents to confirm the no-tool-call gate
+  actually changes behavior. The structural fix is in place but
+  agent compliance is empirical — the next agent skip would tell
+  us whether the prominence + precedence statement was enough or
+  whether the operating manual needs to be promoted out of HTML
+  comments into visible Markdown.
+- If the preamble proves load-bearing, consider extending
+  `upgrade_md.py` to refresh the visible title-block prose too
+  (currently it's mostly project-owned with the blockquote being
+  the only template-owned line inside, but the format line and
+  filename-convention list could grow template-owned bits).
+
+### Blockers / open
+
+- None.
+
 ## Session 2026-05-12 (session 16)
 
 ### What was done

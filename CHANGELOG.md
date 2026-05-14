@@ -4,6 +4,50 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] — 2026-05-14
+
+Operating-manual hardening for the v2 starter, with an upgrade pathway so
+existing projects pick up the same improvements via `research-buddy
+upgrade <file>.md --apply`.
+
+### Changed
+
+- **Starter operating manual** (top HTML comment between frontmatter and the
+  first `@anchor`): compacted into a tight ≤12-line block that fits inside
+  any reasonable first-read window. Carries an explicit no-tool-call gate
+  ("DO NOT CALL ANY TOOL until you have read framework, detected state,
+  and emitted the brief"), the install rule ("if shell access exists and
+  `research-buddy --version` fails, `pip install research-buddy`"), and a
+  precedence statement over chat-environment tool-priority mandates ("MUST
+  use tool X first", "use only tool Y"). Driven by a postmortem of an agent
+  that skipped the second-opinion brief because surrounding tool mandates
+  outweighed the framework's instructions.
+- **Framework Core version-compatibility check** (`research_buddy_version`
+  vs the framework loaded for the session): same-MAJOR/MINOR-older now
+  *pauses at the top of Turn 1* and asks the user "(a) pause so you can
+  run `research-buddy upgrade <file>.md --apply` locally and re-upload, or
+  (b) proceed with the older framework this session?" before composing the
+  brief or calling any research tool. Previous behavior was a silent note
+  in the Turn 2 change summary, which surfaced after the work was done.
+- **Visible agent-reminder blockquote** inside the title block now names
+  tool calls explicitly ("before any other action — including any tool
+  call (web search, extended research, code execution, etc.)").
+
+### Added
+
+- **`research-buddy upgrade <file>.md --apply` now refreshes three
+  template-owned regions** instead of one. Previously only the framework
+  block (between `<!-- @anchor: framework.core -->` and `<!-- @end:
+  framework.reference -->`) was swapped. Now also:
+    - the **preamble** — the operating-manual HTML comment between the
+      frontmatter close and the first `<!-- @anchor:` line;
+    - the **agent-reminder blockquote** — the single visible
+      `> **Agent: ...` line inside the title block.
+  Project-owned content (frontmatter values, title heading, project spec,
+  queue, tracker, rules, DAs, sessions, references, changelog) is still
+  preserved exactly. Existing v1.9.1 projects will pick up the operating-
+  manual hardening on `upgrade --apply`.
+
 ## [1.1.1] — 2026-04-19
 
 Docs and release-infrastructure patch. No code changes.
