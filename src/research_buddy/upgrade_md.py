@@ -171,39 +171,59 @@ def _refresh_agent_reminder(source: str, starter: str) -> tuple[str, list[str]]:
     """Replace the visible 'Agent: read framework first' blockquote with the
     starter's version.
 
-    The blockquote is a single line starting with `> **Agent:`. If the source
-    has no such line, no change is made (older docs predate the reminder).
-    If the starter has no such line, that's a packaging error and we raise.
+    The blockquote starts with `> **Agent:` and may span multiple contiguous
+    lines (each continuation line starting with `>`). The entire contiguous
+    block is replaced wholesale so wrapped/multi-line variants don't leave
+    orphaned continuation lines. If the source has no such line, no change
+    is made (older docs predate the reminder). If the starter has no such
+    line, that's a packaging error and we raise.
+
+    Leading whitespace is tolerated on the prefix match (matching the
+    convention used in `_find_preamble_bounds`).
     """
     src_lines = source.splitlines()
     star_lines = starter.splitlines()
 
-    star_idx = -1
-    for i, line in enumerate(star_lines):
-        if line.startswith(_AGENT_REMINDER_PREFIX):
-            star_idx = i
-            break
+    star_idx = _find_agent_reminder_start(star_lines)
     if star_idx < 0:
         raise UpgradeError(
             "starter: agent-reminder blockquote not found (bundled starter.md is malformed)"
         )
+    star_end = _blockquote_end(star_lines, star_idx)
+    star_block = star_lines[star_idx : star_end + 1]
 
-    src_idx = -1
-    for i, line in enumerate(src_lines):
-        if line.startswith(_AGENT_REMINDER_PREFIX):
-            src_idx = i
-            break
+    src_idx = _find_agent_reminder_start(src_lines)
     if src_idx < 0:
         return source, []
+    src_end = _blockquote_end(src_lines, src_idx)
 
-    if src_lines[src_idx] == star_lines[star_idx]:
+    if src_lines[src_idx : src_end + 1] == star_block:
         return source, []
 
-    src_lines[src_idx] = star_lines[star_idx]
-    out = "\n".join(src_lines)
+    new_lines = src_lines[:src_idx] + star_block + src_lines[src_end + 1 :]
+    out = "\n".join(new_lines)
     if source.endswith("\n") and not out.endswith("\n"):
         out += "\n"
     return out, ["agent-reminder blockquote ← starter.md"]
+
+
+def _find_agent_reminder_start(lines: list[str]) -> int:
+    """Return the index of the first line whose lstripped content starts with
+    `_AGENT_REMINDER_PREFIX`, or -1 if none exists."""
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith(_AGENT_REMINDER_PREFIX):
+            return i
+    return -1
+
+
+def _blockquote_end(lines: list[str], start: int) -> int:
+    """Return the index of the last contiguous blockquote line starting at
+    `start`. A continuation line is any line whose lstripped content starts
+    with `>`."""
+    end = start
+    while end + 1 < len(lines) and lines[end + 1].lstrip().startswith(">"):
+        end += 1
+    return end
 
 
 # ---------------------------------------------------------------------------

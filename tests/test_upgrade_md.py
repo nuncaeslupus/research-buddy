@@ -312,6 +312,28 @@ class TestAgentReminderRefresh:
         assert "agent-reminder blockquote ← starter.md" not in changes
         assert star_line not in upgraded
 
+    def test_replaces_multi_line_blockquote_without_orphans(self) -> None:
+        """If a source doc has a wrapped/multi-line blockquote, the entire
+        contiguous block is replaced — no continuation lines orphaned."""
+        starter = _starter_text()
+        star_line = next(line for line in starter.splitlines() if line.startswith("> **Agent:"))
+        wrapped = (
+            "> **Agent: OLD reminder text line one.**\n"
+            "> wrapped continuation line two.\n"
+            "> wrapped continuation line three."
+        )
+        stale = starter.replace(star_line, wrapped, 1)
+        assert "wrapped continuation line three" in stale
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert "agent-reminder blockquote ← starter.md" in changes
+        # None of the wrapped continuation lines survive as orphans.
+        assert "wrapped continuation line two" not in upgraded
+        assert "wrapped continuation line three" not in upgraded
+        assert "OLD reminder text line one" not in upgraded
+        # Starter's single-line blockquote is present.
+        assert star_line in upgraded
+
 
 class TestCli:
     def test_md_upgrade_dry_run(self, tmp_path: Path) -> None:
