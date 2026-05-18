@@ -108,12 +108,7 @@ class TestSchemaErrorPathFormatting:
         #   - empty-or-(root) mutants don't fire here (path non-empty)
         issues = validate(
             {
-                "meta": {
-                    "version": "1.0",
-                    "date": "April 2026",
-                    "title": "T",
-                    "research_buddy_version": "1.10.0",
-                },
+                "meta": _BASE_META,
                 "tabs": [{"label": "L", "sections": {}}],
             }
         )
@@ -162,7 +157,7 @@ class TestRbVersionMissingExactMessage:
     def test_missing_rb_version_full_text(self) -> None:
         doc = {
             "meta": {"version": "1.0", "date": "April 2026", "title": "T"},
-            "tabs": [{"id": "overview", "label": "Overview", "sections": {}}],
+            "tabs": _BASE_TABS,
         }
         issues = validate(doc)
         # TOOL_VERSION is interpolated into the middle of the message, so
