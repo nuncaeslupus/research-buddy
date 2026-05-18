@@ -1,5 +1,90 @@
 # Next session
 
+## Session 2026-05-18 (session 20)
+
+### What was done
+
+- **Roadmap step #7a shipped — validator mutation survivors.** Ran
+  `.claude/skills/mutmut-report/analyze_mutmut.py --module validator`
+  against the baseline survivor set (46 mutants). Classified them:
+  - **6 EQUIVALENT** (accepted, no test changes):
+    - `_load_schema#9/10/11/15` — encoding variants (`utf-8`/None/
+      omitted/`UTF-8`). `schema.json` is pure ASCII, so all four
+      decodings produce identical bytes; testing the difference would
+      require corrupting the bundled schema with non-ASCII content.
+    - `_walk_references#27/45` — boundary swap `> 1` → `>= 1` on the
+      version/date count check. With exactly one item,
+      `sorted([x], reverse=True) == [x]`, so no warning fires either
+      way — observationally identical.
+  - **40 REAL_GAP**: covered by 19 new tests in a dedicated
+    `tests/test_validator_mutations.py` organised into 8 buckets:
+    - `TestParseDateInternals` — direct assertions on
+      `_parse_date("2026-04-01") == (2026, 4, 1)`,
+      `_parse_date("2026-04-01-rev5") == (2026, 4, 1)` (forces
+      `re.match` short-circuit, distinguishes the numeric-fallback
+      branch), and `_parse_date("April 2026") == (2026, 4, 0)`
+      (pins the trailing-0 day).
+    - `TestParseSemverInternals` — pin zero-fill on missing minor
+      (`"1" → (1,0,0)`) and missing patch (`"1.0" → (1,0,0)`).
+    - `TestVersionCompatibilityExactMessage` — assert the full
+      "Unrecognized version format" warning verbatim (kills the
+      XX-wrap + casing mutants on the hint sentence).
+    - `TestSchemaErrorPathFormatting` — assert the bracketed prefix
+      "[(root)]" for root-level errors and "[tabs.0]" for deep errors;
+      explicitly reject the mutant variants `[None]`, `[(ROOT)]`,
+      `[XX(root)XX]`, `[tabsXX.XX0]`, `[None.None]`.
+    - `TestSchemaErrorSortOrder` — feed a doc where `iter_errors`
+      natural order would be `[meta, changelog]` (schema declaration
+      order) but path-sort puts `[changelog]` first. The mutant that
+      replaces the sort key with the constant `str(None)` collapses
+      to a stable no-op and preserves natural order, so asserting
+      `changelog_idx < meta_idx` kills it.
+    - `TestRbVersionMissingExactMessage` — pin the leading and
+      trailing static substrings of the missing-rb-version warning
+      (TOOL_VERSION is interpolated in the middle).
+    - `TestLanguageExactMessages` — assert both `[meta.language]`
+      warnings verbatim, plus an absence-of-warning test for the
+      missing-language case (kills the `is not None` → `is None`
+      mutant).
+    - `TestEmptyKeyDefaults` — exercise `_validate_references` /
+      `_walk_references` with tabs missing `sections`, sections
+      missing `blocks`, and references blocks missing `items`. The
+      mutants that change the default `{}`/`[]` to `None` would
+      crash on `None.items()` / `for x in None`; the original
+      walks cleanly.
+    - `TestSubsectionsRecursion` — nest a subsection containing
+      a misordered references block. Original recurses into
+      `sec.get("subsections", {})` and emits the warning; mutants
+      that swap the key name (`None`, `"XXsubsectionsXX"`,
+      `"SUBSECTIONS"`) or pass `warnings=None` either skip the
+      recursion or crash inside it.
+
+- **mutmut re-verification.** After landing the new tests, re-ran
+  `mutmut run` against the 46 validator survivor IDs. Result: 40 now
+  killed, 6 still survive (the accepted equivalents). Per-module
+  validator survivor count: **46 → 6** (87% kill rate on the survivor
+  cohort).
+
+- **Operational note.** `mutmut run <mutant_id>` reset the entire
+  cache state to "not checked" on the first invocation when the
+  argument list was passed as a single newline-separated string
+  (shell quoting trap). Re-running the full validator mutant set
+  (247 mutants) takes ~7 minutes. Future runs: pass mutant IDs as
+  separate shell tokens, e.g. `mutmut run $(cat file.txt | xargs)`.
+
+### Next steps
+
+1. Ship session #20 as the step #7a PR — `tests/test_validator_mutations.py`
+   + `status/plan.md` (check off #7a) + `status/next-session.md`.
+2. **Step #7b — `table_layout` survivors** (49 mutants). Same
+   playbook: run the report, classify, write targeted tests, re-run.
+3. **Step #8 — coverage threshold in CI.** Still queued. Wire
+   `--cov-fail-under=85` and `pytest-cov` into CI test job.
+
+### Blockers
+
+- None.
+
 ## Session 2026-05-18 (session 19)
 
 ### What was done
