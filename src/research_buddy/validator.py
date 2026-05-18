@@ -10,7 +10,6 @@ from typing import Any
 import jsonschema
 
 from research_buddy import __version__ as TOOL_VERSION
-from research_buddy.build import slugify
 
 Doc = dict[str, Any]
 
@@ -19,83 +18,6 @@ def _load_schema() -> Doc:
     ref = resources.files("research_buddy") / "schema.json"
     with ref.open("r", encoding="utf-8") as f:
         return json.load(f)  # type: ignore[no-any-return]
-
-
-def _ensure_entry_id(entry: Doc) -> str:
-    eid = entry.get("id") or ""
-    if eid:
-        return eid
-    ver = entry.get("version", "")
-    m = re.search(r"(\d+)\.(\d+)", ver)
-    if m:
-        return f"cl-v{m.group(1)}{m.group(2)}"
-    return ""
-
-
-def build_changelog_nav(changelog: Doc) -> list[Doc]:
-    """Auto-generate changelog sidebar nav from entries."""
-
-    def _version_sort_key(entry: Doc) -> tuple[int, int]:
-        ver = entry.get("version", "") or entry.get("id", "")
-        m = re.search(r"(\d+)\.(\d+)", ver)
-        return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
-
-    entries = sorted(changelog.get("entries", []), key=_version_sort_key, reverse=True)
-    items: list[Doc] = []
-    for entry in entries:
-        eid = _ensure_entry_id(entry)
-        ver = entry.get("version", "")
-        label = ver.split("—")[0].split("\u2014")[0].strip()
-        if label and not label.startswith("v"):
-            label = f"v{label}"
-        if entry.get("current"):
-            label += " \u2014 Current"
-        items.append({"href": eid, "label": label})
-    return [{"label": "", "items": items}]
-
-
-def _collect_block_ids(blocks: list[dict[str, Any]]) -> list[str]:
-    """Helper to gather IDs from content blocks."""
-    ids: list[str] = []
-    for b in blocks:
-        bid = b.get("id")
-        if bid:
-            ids.append(bid)
-        elif b.get("type") in ("h3", "h4", "heading"):
-            text = b.get("md") or b.get("content") or ""
-            if text:
-                ids.append(slugify(text))
-    return ids
-
-
-def _walk_section_ids(secs: dict[str, Any], ids: list[str]) -> None:
-    """Recursively collect slugified titles + block IDs from a section tree."""
-    for title, sec in secs.items():
-        ids.append(slugify(title))
-        ids.extend(_collect_block_ids(sec.get("blocks", [])))
-        _walk_section_ids(sec.get("subsections", {}), ids)
-
-
-def _collect_all_ids(doc: Doc) -> list[str]:
-    """Gather every ID that will be generated in the HTML."""
-    ids: list[str] = []
-
-    # Meta title page (implied ID from its title)
-    title_sec = doc["meta"].get("title_page_section_title")
-    if title_sec:
-        ids.append(slugify(title_sec))
-
-    # Tab sections
-    for tab in doc.get("tabs", []):
-        _walk_section_ids(tab.get("sections", {}), ids)
-
-    # Changelog (legacy structure check if still present)
-    cl = doc.get("changelog")
-    if cl:
-        for entry in cl.get("entries", []):
-            ids.append(_ensure_entry_id(entry))
-
-    return ids
 
 
 def _parse_ver(v: str) -> tuple[int, ...]:

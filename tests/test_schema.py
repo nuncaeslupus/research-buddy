@@ -117,6 +117,33 @@ class TestVersionCompatibility:
         issues = validate(starter_doc)
         assert any("Unrecognized version format" in i for i in issues)
 
+    def test_parse_semver_rejects_non_string(self) -> None:
+        from research_buddy.validator import _parse_semver
+
+        assert _parse_semver(42) is None  # type: ignore[arg-type]
+
+    def test_malformed_tool_version_is_silent(self) -> None:
+        from research_buddy.validator import _check_version_compatibility
+
+        assert _check_version_compatibility("1.0.0", "not-a-version") == []
+
+
+class TestParseDate:
+    """`_parse_date` is exercised indirectly through reference ordering but its
+    pure-numeric fallback branch needs direct coverage to pin the contract."""
+
+    def test_numeric_fallback_when_no_format_matches(self) -> None:
+        from research_buddy.validator import _parse_date
+
+        # "Q3 2026" matches neither YYYY-MM-DD nor "Month YYYY"; the fallback
+        # extracts the raw digit groups in order.
+        assert _parse_date("Q3 2026") == (3, 2026)
+
+    def test_non_string_returns_zero_tuple(self) -> None:
+        from research_buddy.validator import _parse_date
+
+        assert _parse_date(2026) == (0, 0, 0)  # type: ignore[arg-type]
+
 
 class TestLanguageField:
     def test_language_as_object(self, starter_doc: dict) -> None:

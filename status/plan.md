@@ -29,10 +29,16 @@ both protect the refactors.
       that loads `schema.json` and validates it against the Draft
       2020-12 meta-schema. Catches typos in the schema itself.
       *Shipped in PR [#40].*
-- [ ] **6. Raise coverage.** `main.py` (64% → ≥85%) and `validator.py`
-      (63% → ≥85%). Target the untested branches: `--watch`, `--pdf`,
-      `--all`, batch mode, validator error paths, version-compat
-      tiers.
+- [x] **6. Raise coverage.** `main.py` (61% → 88%) and `validator.py`
+      (63% → 100%). Targeted the untested branches: `--watch`,
+      `--pdf`, `--all`, batch mode, validator error paths,
+      version-compat tiers, MD pipeline (validate / migrate / clean
+      / upgrade), and the argparse `main()` entry point.
+      *Shipped: validator.py dead-code (`build_changelog_nav`,
+      `_collect_all_ids` + helpers — never referenced anywhere)
+      removed; new `tests/test_main_coverage.py` with 41 tests
+      covering the previously-untested branches. Total project
+      coverage 82% → 89%.*
 - [ ] **7. Mutation-testing baseline.** Install `mutmut`, configure
       it against `src/research_buddy/`, and capture a baseline
       survivor count. Acts as a quality check on the coverage raised
@@ -56,6 +62,63 @@ both protect the refactors.
       scaffold at the bottom of `build_html()` is now
       `base.html.j2`.
       *Shipped via the Jinja migration.*
+
+## Agent-efficiency helpers (queued after #6)
+
+Surfaced 2026-05-16 from a real research-buddy session transcript
+(`claude-md-best-practices_v1.11 → v1.12`). The session-time
+breakdown showed the bulk of agent effort is genuinely non-mechanical
+(rule drafting, hypothesis-table writing, vetting), but a meaningful
+slice is pure plumbing: locating `<!-- @end: X -->` insertion points,
+moving queue→tracker, bumping frontmatter + date + changelog
+boilerplate, hand-writing the `@summary` block. These four steps
+target that slice. Ordering rationale: `bump` is the biggest single
+win (4–6 fewer str_replaces per session); the starter convention fix
+is a one-line change but unblocks every future agent grep; `locate`
+is a smaller-scope companion to `bump`; `diff-summary` is the
+lowest-leverage convenience and can land last.
+
+- [ ] **11. `research-buddy bump <source.md> <queue-id>`.** Single
+      command that performs all the mechanical Turn-2 edits: bump
+      `version` + `date` in YAML frontmatter; move the Q-NNN queue
+      row → Research Tracker (preserving the ID, appending version
+      attribution); insert empty session-notes skeleton with
+      hypothesis-resolution table + cross-section-impact line +
+      compliance-validation line; add empty top changelog entry with
+      version + date + queue-ID hook; add empty `### v1.X —
+      YYYY-MM-DD` subsection at top of References. Agent fills the
+      prose; everything mechanical is already correct. Dry-run by
+      default; `--apply` writes atomically and runs `validate-md`.
+      New module `src/research_buddy/bump.py` + CLI handler in
+      `main.py`. Tests in `tests/test_bump.py`.
+- [ ] **12. Starter marker hygiene.** `starter.md` currently has
+      prose like *"paste this immediately before its `<!-- @end:
+      rules -->` marker"* outside fenced code blocks. The validator
+      is fence-aware so this doesn't false-positive *validation*,
+      but it does false-positive the agent's `grep` for insertion
+      points (which is what the v1.12 session transcript showed —
+      the agent hit "found multiple times" on `@end: journey` and
+      had to retry str_replace with bigger context). Fix: wrap each
+      scaffolding example in `starter.md` inside a fenced block.
+      Ship an `upgrade` pass so existing v2 projects pick it up.
+      One-line starter change + small `upgrade_md.py` extension.
+- [ ] **13. `research-buddy locate <source.md> <anchor>`.** Returns
+      the line number + ~5 lines of surrounding context for the
+      *live* `@end: <anchor>` marker, skipping fenced and HTML-
+      comment-template instances (reusing `validator_md._line_in_fence`).
+      Lets the agent jump straight to insertion points without
+      grepping. Smaller than `bump` but useful for ad-hoc edits
+      between sessions. New CLI subcommand only — no new module
+      needed, calls into `validator_md` helpers.
+- [ ] **14. `research-buddy diff-summary <old.md> <new.md>`.** Emits
+      the `<!-- @summary-start --> ... <!-- @summary-end -->` block
+      by diffing the two versions: rules added/revised, DAs added,
+      queue rows moved, version bump, append-only-invariant check.
+      Pure-mechanical portions only — the narrative paragraphs at
+      the top of the summary stay agent-authored. Wraps existing
+      diff logic in `validator_md._check_append_only` and
+      `_collect_entry_ids`. New module
+      `src/research_buddy/diff_summary.py` + CLI handler.
 
 ## Future improvements (queued, not in the current batch)
 

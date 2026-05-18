@@ -1,5 +1,62 @@
 # Next session
 
+## Session 2026-05-18 (session 18)
+
+### What was done
+
+- **Roadmap step #6 shipped — raise coverage on `main.py` and
+  `validator.py` to ≥85%.** Total project coverage 82% → 89%.
+  Two pieces:
+  1. **`validator.py` 63% → 100%.** Removed a closed dead-code
+     subgraph (`build_changelog_nav`, `_ensure_entry_id`,
+     `_collect_all_ids`, `_collect_block_ids`, `_walk_section_ids`
+     — ~75 lines, plus the now-unneeded `slugify` import). Added
+     in 2d11252 ("enhance build engine") but never referenced by
+     `build.py`, `build_md.py`, or any caller — the sidebar nav
+     was reimplemented inline in both renderers. Testing
+     load-bearing-untested code would have locked it in with no
+     caller. Added three small targeted tests for `_parse_date`
+     numeric fallback, `_parse_semver` non-string rejection, and
+     the malformed-tool-version silent branch in
+     `_check_version_compatibility`.
+  2. **`main.py` 61% → 88%.** New `tests/test_main_coverage.py`
+     with 41 tests across seven classes covering the
+     previously-untested branches: `main()` argparse + dispatch
+     via `sys.argv` patching (catching `SystemExit`); the entire
+     `cmd_migrate`, `cmd_clean`, and `cmd_validate` MD path; the
+     `_upgrade_md_file` helper; `cmd_build` error branches
+     (`.json`/`.md` mixing, `--watch` + `.md`, `--pdf` + `.md`,
+     `--watch` + multiple paths, `--all` empty directory,
+     `--validate-only` with invalid doc); `perform_build_md`
+     theme cascade (explicit `--theme` flag, frontmatter
+     `theme_css` field, `--no-versioning`); `_set_frontmatter_scalar`
+     edge cases (no leading `---`, no closing `---`, missing key);
+     and `perform_build`'s `--pdf` success + weasyprint-missing
+     paths.
+- Pre-work review surfaced four queued agent-efficiency helpers
+  (steps #11–#14 in `plan.md`) derived from a real research-buddy
+  v1.11→v1.12 session transcript: `bump <id>` scaffold, starter
+  marker hygiene, `locate <anchor>`, `diff-summary`. Ordered after
+  #6 per the original roadmap.
+
+### Next steps
+
+1. Ship session #18 as a PR — single bundled commit covers the
+   dead-code removal + new test file.
+2. **Roadmap step #7 — mutation-testing baseline.** Install
+   `mutmut`, configure against `src/research_buddy/`, capture
+   baseline survivor count using the `.claude/skills/mutmut-report/`
+   skill to group survivors into real-gap / equivalent / untestable.
+3. **Roadmap step #8 — coverage threshold in CI.** Add
+   `--cov-fail-under=85` to pytest and wire `pytest-cov` into the
+   CI test job.
+4. After steps #6–#10 close, start the agent-efficiency helpers
+   (#11 `bump` is the biggest single win).
+
+### Blockers
+
+- None.
+
 ## Session 2026-05-14 (session 17)
 
 ### What was done
