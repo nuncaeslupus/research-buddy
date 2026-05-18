@@ -67,7 +67,7 @@ both protect the refactors.
       - [x] **7b.** `table_layout` (49 survivors → 10 accepted
             equivalents). Survivors classified into 39 REAL_GAP +
             10 EQUIVALENT. New `tests/test_table_layout_mutations.py`
-            (20 tests across 8 classes) kills all 39 real gaps; the
+            (20 tests across 9 classes) kills all 39 real gaps; the
             10 equivalents (`_layout_from_profiles#52/75/79` plus all
             seven `compute_layouts` mutations on the `is not None`
             fallback) are documented in `next-session.md`.

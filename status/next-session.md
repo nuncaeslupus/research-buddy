@@ -28,7 +28,7 @@
       variants (`None` substitutions, dropped positional args,
       `False → True`) are unreachable under normal flow.
   - **39 REAL_GAP**: killed by 20 new tests in
-    `tests/test_table_layout_mutations.py` organised into 8 classes:
+    `tests/test_table_layout_mutations.py` organised into 9 classes:
     - `TestProfileColumnPercentiles` — exact `p50` / `p90`
       indexing, kills `profile_column#22/31/33`.
     - `TestProfileColumnSpacesCount` — three cases at the

@@ -14,7 +14,7 @@ Buckets:
       negative diff branches).
     - `compute_layouts`: signature-group iteration progression.
 
-The 6 accepted equivalents not covered here are documented in
+The 10 accepted equivalents not covered here are documented in
 `status/next-session.md` for step #7b.
 """
 
