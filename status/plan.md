@@ -64,7 +64,13 @@ both protect the refactors.
             equivalents (4× `_load_schema` encoding variants on an
             ASCII file, 2× `>1` vs `>=1` boundary that produces
             identical output on a single-element list).*
-      - [ ] **7b.** `table_layout` (49).
+      - [x] **7b.** `table_layout` (49 survivors → 10 accepted
+            equivalents). Survivors classified into 39 REAL_GAP +
+            10 EQUIVALENT. New `tests/test_table_layout_mutations.py`
+            (20 tests across 9 classes) kills all 39 real gaps; the
+            10 equivalents (`_layout_from_profiles#52/75/79` plus all
+            seven `compute_layouts` mutations on the `is not None`
+            fallback) are documented in `next-session.md`.
       - [ ] **7c.** `clean_md` (52).
       - [ ] **7d.** `upgrade` (88).
       - [ ] **7e.** `upgrade_md` (188).
