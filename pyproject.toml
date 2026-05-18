@@ -49,6 +49,7 @@ dev = [
     "build>=1.0.0",
     "weasyprint>=60.0",
     "pre-commit>=3.5.0",
+    "mutmut>=3.0.0",
 ]
 
 [project.scripts]
@@ -66,7 +67,7 @@ research_buddy = ["css/*", "js/*", "lib/*", "images/*", "templates/*", "*.json",
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [".claude/", ".venv/", "tmp/"]
+exclude = [".claude/", ".venv/", "tmp/", "mutants/"]
 
 [tool.ruff.lint]
 select = [
@@ -92,6 +93,13 @@ markers = [
     "integration: marks tests as integration tests",
 ]
 
+[tool.mutmut]
+paths_to_mutate = ["src/research_buddy/"]
+tests_dir = ["tests/"]
+do_not_mutate = [
+    "src/research_buddy/__init__.py",
+]
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
@@ -103,5 +111,5 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 show_error_codes = true
-exclude = ["tests/", ".claude/", "tmp/"]
+exclude = ["tests/", ".claude/", "tmp/", "mutants/"]
 mypy_path = ["src"]

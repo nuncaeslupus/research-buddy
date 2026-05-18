@@ -16,7 +16,14 @@ import re
 import tomllib
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+pytestmark = pytest.mark.skipif(
+    not (REPO_ROOT / "README.md").exists(),
+    reason="version-sync checks need the full repo checkout (README.md absent — mutmut sandbox)",
+)
 
 
 def _pyproject_version() -> str:

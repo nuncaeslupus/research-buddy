@@ -39,14 +39,37 @@ both protect the refactors.
       removed; new `tests/test_main_coverage.py` with 41 tests
       covering the previously-untested branches. Total project
       coverage 82% → 89%.*
-- [ ] **7. Mutation-testing baseline.** Install `mutmut`, configure
+- [x] **7. Mutation-testing baseline.** Install `mutmut`, configure
       it against `src/research_buddy/`, and capture a baseline
-      survivor count. Acts as a quality check on the coverage raised
-      in #6: high line-coverage with weak assertions still lets
-      mutants survive. The `mutmut-report` skill at
-      `.claude/skills/mutmut-report/` analyzes the run and groups
-      survivors into real-gap / equivalent / untestable. Fix the real
-      gaps, accept the rest.
+      survivor count.
+      *Shipped: `mutmut>=3.0.0` in `[project.optional-dependencies].dev`,
+      `[tool.mutmut]` config in `pyproject.toml`, `mutants/`
+      gitignored, `tests/test_version_sync.py` skips when README is
+      absent (mutmut runs tests from a `mutants/` sandbox that
+      omits README). Baseline: 8964 total mutants — 4643 killed
+      (51.8%), 3792 survived (42.3%), 511 no-tests, 18 timeout.
+      Per-module survivor distribution captured in next-session.md.*
+- [ ] **7a–7j. Mutation-survivor cleanup, one module per step.**
+      Ordered ascending by survivor count so the smallest, most
+      tractable modules ship first. For each: run `mutmut-report`
+      with `--module <name>`, classify survivors into real-gap /
+      equivalent / untestable, add tests for the real gaps, accept
+      the rest. Goal per module: zero remaining REAL_GAP survivors.
+      - [ ] **7a.** `validator` (46 survivors). Smallest module;
+            also the one we just brought to 100% line coverage in
+            #6 — a load-bearing demonstration that line coverage ≠
+            mutation kill rate.
+      - [ ] **7b.** `table_layout` (49).
+      - [ ] **7c.** `clean_md` (52).
+      - [ ] **7d.** `upgrade` (88).
+      - [ ] **7e.** `upgrade_md` (188).
+      - [ ] **7f.** `validator_md` (308).
+      - [ ] **7g.** `build_md` (384).
+      - [ ] **7h.** `build` (630).
+      - [ ] **7i.** `main` (849).
+      - [ ] **7j.** `migrate_v1_to_v2` (1198). Largest; tackle
+            last so the muscle is built up on the smaller modules
+            first.
 - [ ] **8. Coverage threshold in CI.** Add `--cov-fail-under=85` to
       pytest and wire `pytest-cov` into the CI test job. Optional:
       codecov upload + badge in README.

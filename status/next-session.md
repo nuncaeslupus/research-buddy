@@ -1,5 +1,93 @@
 # Next session
 
+## Session 2026-05-18 (session 19)
+
+### What was done
+
+- **Roadmap step #7 shipped — mutation-testing baseline.** Set up
+  `mutmut` against `src/research_buddy/` and captured the baseline
+  numbers. Four pieces:
+  1. **Install.** Added `mutmut>=3.0.0` to
+     `[project.optional-dependencies].dev` in `pyproject.toml`.
+     mutmut 3.5.0 resolves via `uv sync --extra dev`.
+  2. **Config.** New `[tool.mutmut]` section pointing
+     `paths_to_mutate = ["src/research_buddy/"]`,
+     `tests_dir = ["tests/"]`, `do_not_mutate =
+     ["src/research_buddy/__init__.py"]` (the file holds only
+     `__version__`, already guarded by `test_version_sync.py`).
+  3. **Sandbox compatibility.** mutmut runs the test suite from a
+     `mutants/` copy of the repo that contains `pyproject.toml`,
+     `src/`, `tests/` but **not** `README.md`. That broke
+     `test_readme_matches_pyproject` which reads
+     `REPO_ROOT/README.md` to assert version sync. Fix: module-level
+     `pytestmark = pytest.mark.skipif(not (REPO_ROOT /
+     "README.md").exists(), ...)` on the whole `test_version_sync.py`
+     file — the entire file is a repo-state guardrail (none of the
+     tests exercise mutated product code), so skipping it in the
+     mutmut sandbox is correct. Real-CI / local `make test` still
+     run all 5 assertions because README.md is present there.
+  4. **Gitignore.** `mutants/` added to `.gitignore` so the ~676 KB
+     mutant workspace doesn't surface in `git status`.
+
+- **Baseline numbers (8964 total mutants):**
+  - Killed: **4643** (51.8%)
+  - Survived: **3792** (42.3%)
+  - No-tests: **511** (5.7%)
+  - Timeout: **18** (0.2%)
+  - Stats live in `mutants/mutmut-cicd-stats.json` (also gitignored;
+    regenerate with `uv run mutmut export-cicd-stats`).
+
+- **Per-module survivor distribution** (sorted ascending, drives
+  the #7a–#7j cleanup order in `plan.md`):
+  ```
+  validator           46
+  table_layout        49
+  clean_md            52
+  upgrade             88
+  upgrade_md         188
+  validator_md       308
+  build_md           384
+  build              630
+  main               849
+  migrate_v1_to_v2  1198
+  ```
+
+- **`plan.md` reshape.** Step #7 marked shipped. Inserted #7a–#7j
+  (one per module) ordered by survivor count ascending — smallest
+  first so the muscle is built up on simpler modules before
+  tackling `migrate_v1_to_v2`. Decided in-conversation that bundling
+  the survivor fixes into the baseline PR would balloon scope (per-
+  module fixes look like ≥100 LOC of new test cases each); shipping
+  the baseline alone keeps the PR reviewable.
+
+### Next steps
+
+1. Ship session #19 as the step #7 PR — pyproject + .gitignore +
+   tests/test_version_sync.py + plan.md + next-session.md. Single
+   commit on `chore/mutmut-step-7`.
+2. **Step #7a — validator survivors.** Run
+   `.claude/skills/mutmut-report/analyze_mutmut.py --module validator
+   --max 60`, classify the 46 survivors, fix real gaps. Most look
+   like: `encoding="utf-8"` → `None`/omitted (likely equivalent,
+   reading our own JSON); `_parse_date` regex mutations (real gap —
+   tests don't assert parsed year/month/day values); `.get(key, {})`
+   → `.get(key, None)` (real gap — missing-key path not exercised);
+   `len(x) > 1` → `>= 1` (real gap — boundary case).
+3. **Step #8 — coverage threshold in CI.** Still queued. Wire
+   `--cov-fail-under=85` and `pytest-cov` into CI test job.
+4. **Note: mutmut-report skill has a parser bug for mutmut 3.x.**
+   It uses `re.match(r"x_(.+?)__mutmut_(\d+)", ...)` but mutmut 3.x
+   names class-method mutants `xǁClassǁmethod__mutmut_N` (Unicode
+   `ǁ`). The skill mis-groups these as separate single-survivor
+   "modules" and lists them above the real modules in the
+   "smallest first" sort. Workaround: it still classifies free-
+   function mutants correctly, which covers most survivors. Fix
+   later or skip if the work is otherwise tractable.
+
+### Blockers
+
+- None.
+
 ## Session 2026-05-18 (session 18)
 
 ### What was done
