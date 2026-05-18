@@ -55,10 +55,15 @@ both protect the refactors.
       with `--module <name>`, classify survivors into real-gap /
       equivalent / untestable, add tests for the real gaps, accept
       the rest. Goal per module: zero remaining REAL_GAP survivors.
-      - [ ] **7a.** `validator` (46 survivors). Smallest module;
-            also the one we just brought to 100% line coverage in
-            #6 — a load-bearing demonstration that line coverage ≠
-            mutation kill rate.
+      - [x] **7a.** `validator` (46 survivors → 6 accepted
+            equivalents). Smallest module; also the one we just
+            brought to 100% line coverage in #6 — a load-bearing
+            demonstration that line coverage ≠ mutation kill rate.
+            *Shipped: 19 new tests in `tests/test_validator_mutations.py`
+            kill all 40 REAL_GAP survivors; 6 remain as accepted
+            equivalents (4× `_load_schema` encoding variants on an
+            ASCII file, 2× `>1` vs `>=1` boundary that produces
+            identical output on a single-element list).*
       - [ ] **7b.** `table_layout` (49).
       - [ ] **7c.** `clean_md` (52).
       - [ ] **7d.** `upgrade` (88).
