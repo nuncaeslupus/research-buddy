@@ -1,5 +1,97 @@
 # Next session
 
+## Session 2026-05-18 (session 21)
+
+### What was done
+
+- **Roadmap step #7b shipped — `table_layout` mutation survivors.**
+  Re-ran `mutmut run "research_buddy.table_layout.*"` against the
+  baseline (the cache was reset after the validator-specific re-run in
+  session #20). 219 mutants total, 49 survivors confirmed. Classified
+  them:
+  - **10 EQUIVALENT** (accepted, no test changes):
+    - `_layout_from_profiles#52` (`sum(clamped) or 1.0` → `or 2.0`).
+      `clamped` always has ≥1 element (line-138 guard) and each value
+      is `≥ MIN_PCT = 12`, so `sum(clamped) ≥ 12 > 0` is truthy and
+      the `or` fallback is unreachable.
+    - `_layout_from_profiles#75` (`reverse=diff > 0` → `reverse=diff
+      >= 0`) and `#79` (`step = 1 if diff > 0` → `if diff >= 0`).
+      Both sit inside `if diff != 0:` so `diff` is non-zero when the
+      mutated expressions evaluate, making `> 0` and `>= 0`
+      observationally identical.
+    - `compute_layouts#26/27/28/29/30/31/32` — all seven mutate the
+      `is not None` fallback `TableLayout({}, (), False)` in the
+      return comprehension. Every index in `layouts` is assigned by
+      either the singleton or group branch (each `i ∈ range(len(
+      tables))` lands in exactly one signature group via
+      `setdefault`), so the fallback is dead code; the syntactic
+      variants (`None` substitutions, dropped positional args,
+      `False → True`) are unreachable under normal flow.
+  - **39 REAL_GAP**: killed by 20 new tests in
+    `tests/test_table_layout_mutations.py` organised into 8 classes:
+    - `TestProfileColumnPercentiles` — exact `p50` / `p90`
+      indexing, kills `profile_column#22/31/33`.
+    - `TestProfileColumnSpacesCount` — three cases at the
+      `n_with_spaces * 2 >= n` boundary (1/4, 1/3, 2/4), kills
+      `#39/44/45`.
+    - `TestProfileColumnTokenBoundary` — `<=` inclusivity on both
+      `p90` and `max_len`, kills `#50/51`.
+    - `TestProfileTableRagged` — ragged-row padding (kills both
+      `profile_table#7` via `IndexError` and `#8` via wrong `p90`).
+    - `TestAggregateGroup` — one assertion per `_aggregate` field,
+      kills `#6/8/9/10`.
+    - `TestLayoutFromProfilesEarlyReturns` — single-profile and
+      all-token return paths, kills `#3/22/24`.
+    - `TestLayoutFromProfilesWeights` — `max(1, p90)` floor and the
+      raw/scaled multiplicative constants, kills `#33/37/38/39/55`
+      via a 2-col case (`p90=[2, 3]`) that clamps one column to
+      `MAX_PCT=50`.
+    - `TestLayoutFromProfilesRedistribution` — positive-diff case
+      (`p90=[3, 6, 10]`, `diff=+1`) kills `#56/63/64/67/70/71/74/76
+      /78/80/85/86`; negative-diff case (`p90=[3, 5, 12]`,
+      `diff=-1`) kills `#81/82`.
+    - `TestComputeLayoutsGrouping` — two-table cases that pin
+      specific col_widths, kills `compute_layouts#19/22/24` (the
+      existing `test_grouped_tables_share_one_layout` only asserted
+      `layouts[0] == layouts[1]`, which the `None`-fallback mutants
+      preserve).
+
+- **mutmut re-verification.** After landing the tests, re-ran
+  `mutmut run "research_buddy.table_layout.*"`. Result: 39 killed,
+  10 still survive (the accepted equivalents). Per-module table_layout
+  survivor count: **49 → 10** (80% kill rate on the survivor cohort;
+  100% on real gaps).
+
+- **Operational note.** mutmut 3.x accepts a wildcard filter
+  `module.*` for the run command — confirmed working with
+  `mutmut run "research_buddy.table_layout.*"`. Passing the bare
+  module name (`research_buddy.table_layout`) fails with
+  `AssertionError: Filtered for specific mutants, but nothing
+  matches`. Future module-cleanup steps should use the wildcard form.
+
+- **Gemini review on PR #89.** `gemini-code-assist` flagged two
+  duplicated literals in `tests/test_validator_mutations.py` — the
+  inline meta dict at the deep-path test was identical to
+  `_BASE_META`, and the inline tabs list at the missing-rb-version
+  test was identical to `_BASE_TABS`. Both replaced with the shared
+  constants; pure dedup (semantics unchanged). Landed as
+  `bd09029` on the `chore/mutmut-step-7a-validator` branch before
+  merge; PR #89 merged as `a947742`.
+
+### Next steps
+
+1. Ship session #21 as the step #7b PR — `tests/test_table_layout_mutations.py`
+   + `status/plan.md` (check off #7b) + `status/next-session.md`.
+2. **Step #7c — `clean_md` survivors** (52 mutants). Same playbook:
+   `uv run mutmut run "research_buddy.clean_md.*"`, run the report,
+   classify, write targeted tests, re-run.
+3. **Step #8 — coverage threshold in CI.** Still queued. Wire
+   `--cov-fail-under=85` and `pytest-cov` into CI test job.
+
+### Blockers
+
+- None.
+
 ## Session 2026-05-18 (session 20)
 
 ### What was done
