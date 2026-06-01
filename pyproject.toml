@@ -93,6 +93,14 @@ markers = [
     "integration: marks tests as integration tests",
 ]
 
+# Coverage is gated in CI via `make test-cov` (`--cov-fail-under`). The source
+# is configured here so a bare `--cov` (no path) measures the package only.
+[tool.coverage.run]
+source = ["research_buddy"]
+
+[tool.coverage.report]
+show_missing = true
+
 [tool.mutmut]
 paths_to_mutate = ["src/research_buddy/"]
 tests_dir = ["tests/"]

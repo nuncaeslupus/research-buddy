@@ -49,45 +49,42 @@ both protect the refactors.
       omits README). Baseline: 8964 total mutants — 4643 killed
       (51.8%), 3792 survived (42.3%), 511 no-tests, 18 timeout.
       Per-module survivor distribution captured in next-session.md.*
-- [ ] **7a–7j. Mutation-survivor cleanup, one module per step.**
-      Ordered ascending by survivor count so the smallest, most
-      tractable modules ship first. For each: run `mutmut-report`
-      with `--module <name>`, classify survivors into real-gap /
-      equivalent / untestable, add tests for the real gaps, accept
-      the rest. Goal per module: zero remaining REAL_GAP survivors.
-      - [x] **7a.** `validator` (46 survivors → 6 accepted
-            equivalents). Smallest module; also the one we just
-            brought to 100% line coverage in #6 — a load-bearing
-            demonstration that line coverage ≠ mutation kill rate.
-            *Shipped: 19 new tests in `tests/test_validator_mutations.py`
-            kill all 40 REAL_GAP survivors; 6 remain as accepted
-            equivalents (4× `_load_schema` encoding variants on an
-            ASCII file, 2× `>1` vs `>=1` boundary that produces
-            identical output on a single-element list).*
-      - [x] **7b.** `table_layout` (49 survivors → 10 accepted
-            equivalents). Survivors classified into 39 REAL_GAP +
-            10 EQUIVALENT. New `tests/test_table_layout_mutations.py`
-            (20 tests across 9 classes) kills all 39 real gaps; the
-            10 equivalents (`_layout_from_profiles#52/75/79` plus all
-            seven `compute_layouts` mutations on the `is not None`
-            fallback) are documented in `next-session.md`.
-      - [ ] **7c.** `clean_md` (52).
-      - [ ] **7d.** `upgrade` (88).
-      - [ ] **7e.** `upgrade_md` (188).
-      - [ ] **7f.** `validator_md` (308).
-      - [ ] **7g.** `build_md` (384).
-      - [ ] **7h.** `build` (630).
-      - [ ] **7i.** `main` (849).
-      - [ ] **7j.** `migrate_v1_to_v2` (1198). Largest; tackle
-            last so the muscle is built up on the smaller modules
-            first.
-- [ ] **8. Coverage threshold in CI.** Add `--cov-fail-under=85` to
-      pytest and wire `pytest-cov` into the CI test job. Optional:
-      codecov upload + badge in README.
-- [ ] **9. Split `main.py` (421 lines).** Extract `cli.py`
-      (argparse wiring) + `commands/{build,init,validate}.py`. Keep
-      `main.py` as a thin shim re-exporting `main` for the console
-      script.
+- [~] **7a–7j. Mutation-survivor cleanup, one module per step.**
+      **Discontinued 2026-06-01.** The baseline (#7) earned its keep
+      as a diagnostic — it proved line coverage ≠ behaviour coverage
+      — and `validator` (#7a) + `table_layout` (#7b) shipped as
+      PRs #89/#90. But the remaining ~3,700 survivors across eight
+      modules (tail: `build` 630, `main` 849, `migrate_v1_to_v2`
+      1198) is a low-ROI treadmill: the tests it yields pin exact
+      warning strings and off-by-one boundaries, which are brittle
+      and rarely catch real future bugs. Decision: stop grinding to
+      zero. If a specific module gets a real bug later, fix the gap
+      then. mutmut config stays in `pyproject.toml` for ad-hoc use.
+      - [x] **7a.** `validator` — shipped (PR #89). 19 tests, 40
+            REAL_GAP killed, 6 accepted equivalents.
+      - [x] **7b.** `table_layout` — shipped (PR #90). 20 tests, 39
+            REAL_GAP killed, 10 accepted equivalents.
+      - [~] **7c–7j.** Discontinued (see note above).
+- [x] **8. Coverage threshold in CI.** `make test-cov` runs pytest
+      with `--cov --cov-report=term-missing --cov-fail-under=85`;
+      CI's test job now calls it instead of bare `pytest`. Coverage
+      source configured in `[tool.coverage.run]`. Current total 89%,
+      so the 85% floor has headroom. *Shipped this session.*
+      Optional follow-up: codecov upload + badge in README.
+- [x] **8a. `starter-example/` sync guard.** New
+      `scripts/check_examples_sync.py` + `make check-examples-sync`,
+      wired into the CI lint job. Regenerates both examples to a temp
+      dir and byte-compares against the committed copies — catches
+      both content drift and version-footer drift (the examples had
+      in fact gone stale at 1.8.0; regenerated to 1.10.0 in this
+      change). *Shipped this session.*
+- [ ] **9. Split `main.py` (1007 lines — was 421 when this step was
+      written; it has more than doubled).** Extract `cli.py`
+      (argparse wiring) + `commands/{build,init,validate,...}.py`.
+      Keep `main.py` as a thin shim re-exporting `main` for the
+      console script. **Do this BEFORE #11–#14** — those three queue
+      new subcommands *into* `main.py`, so splitting first stops the
+      file growing further.
 - [x] **10. Split `build.py` (796 lines).** Folded into the Jinja2
       migration listed in "Future improvements" — the renderer
       split would have been torn out a step later. Each `r_*`
@@ -155,6 +152,42 @@ lowest-leverage convenience and can land last.
       `src/research_buddy/diff_summary.py` + CLI handler.
 
 ## Future improvements (queued, not in the current batch)
+
+Surfaced 2026-06-01 in a project-review pass. These are higher-leverage
+than further test-suite polish but are design-heavy / outward-facing, so
+they need a decision before execution rather than being picked up blind.
+
+- **Framework token overhead (highest leverage).** The framework block
+  rides in *every* source file an agent uploads, *every* session
+  (`starter.md` is ~674 lines). This is a per-session tax on the core
+  2-turn workflow — the product's whole reason to exist. Flagged in
+  session 16 as the unaddressed survivor, then dropped. The idea worth a
+  real design pass: a short agent-edited source file + a separate
+  `framework-cheatsheet.md` the agent reads once, so the per-session
+  payload shrinks. Needs care: the framework is load-bearing for agent
+  compliance (see sessions 16/17), so any split must not regress the
+  no-tool-call gate or the session-state detection.
+
+- **v2 escaping / trust model.** `build.py` runs Jinja with
+  `autoescape=False`; the PR #53 review pushback ("agents are instructed
+  not to embed JS") was reasonable for v1, where a human curates the
+  JSON. But v2's whole premise is *LLM-authored Markdown* rendered to
+  single-file HTML a human opens in a browser — a prompt-injected or
+  sloppy agent emitting `<script>`/`onerror=` is now in the threat model.
+  At minimum: document the trust boundary in the v2 docs. Ideally:
+  sanitize the raw-HTML / `r_svg` passthrough on the v2 path.
+
+- **v1 sunset with a dated target.** v1 is "deprecated" in prose but every
+  feature still ships a dual path (`build`/`build_md`,
+  `validator`/`validator_md`, `upgrade`/`upgrade_md`, plus `migrate`),
+  roughly doubling surface area. A dated removal plan (e.g. v1 read-only
+  in 2.0, removed in 2.1) would let us stop investing in the legacy half
+  and shrink the codebase. Behavioural change for v1 users → needs a
+  decision.
+
+- **User-facing CHANGELOG.** `status/next-session.md` is an excellent
+  internal log but there's no `CHANGELOG.md` for `pip` upgraders — a
+  published PyPI package should have a "what changed" surface.
 
 - **Mobile-friendly tab bar.** Symptom: when a document has many
   tabs, the top menu overflows off-screen on mobile with no way to

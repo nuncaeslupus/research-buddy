@@ -1,4 +1,4 @@
-.PHONY: lint format test test-all clean sync regen-example regen-md-example regen-examples build publish publish-force version-sync check-version-sync update-skills
+.PHONY: lint format test test-cov test-all clean sync regen-example regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
 
 sync:
 	uv sync --extra dev
@@ -46,6 +46,11 @@ regen-md-example:
 
 regen-examples: regen-example regen-md-example
 
+# CI gate: fails if the committed starter-example/*.html files have drifted
+# from what `research-buddy build` produces. Run `make regen-examples` to fix.
+check-examples-sync:
+	uv run scripts/check_examples_sync.py
+
 lint: check-version-sync
 	uv run ruff check . && uv run ruff format --check . && uv run mypy . --explicit-package-bases
 
@@ -54,6 +59,11 @@ format:
 
 test:
 	uv run pytest tests/ -v
+
+# Gated run used by CI: enforces the coverage floor. Keep `make test` fast and
+# ungated for local iteration.
+test-cov:
+	uv run pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=85
 
 test-all:
 	uv run pytest tests/ -v --run-slow

@@ -1,5 +1,70 @@
 # Next session
 
+## Session 2026-06-01 (session 22)
+
+### What was done
+
+- **Project-review pass + roadmap reshape.** User asked for an
+  improvement review, then decided to **exclude all further mutmut
+  work** and execute the rest. Shipped the safe, high-value guard
+  rails this session; deferred the design-heavy items to a decision.
+
+- **Mutmut cleanup discontinued (#7c–#7j).** Marked discontinued in
+  `plan.md`. Rationale recorded there: the baseline (#7) + `validator`
+  (#7a, PR #89) + `table_layout` (#7b, PR #90) earned their keep, but
+  the remaining ~3,700 survivors across eight modules (tail: `build`
+  630, `main` 849, `migrate_v1_to_v2` 1198) is a low-ROI treadmill
+  yielding brittle exact-string/boundary tests. mutmut config stays in
+  `pyproject.toml` for ad-hoc use; we just stop grinding to zero.
+
+- **#8 — coverage gate in CI (shipped).** New `make test-cov` runs
+  pytest with `--cov --cov-report=term-missing --cov-fail-under=85`;
+  CI's test job calls it instead of bare `pytest`. `[tool.coverage.run]
+  source = ["research_buddy"]` added so a bare `--cov` measures the
+  package only. Kept the gate OUT of global `addopts` so `make test`
+  stays fast/ungated locally and mutmut's pytest runs are unaffected.
+  Current total coverage **89.1%**, so the 85% floor has headroom.
+
+- **#8a — `starter-example/` sync guard (shipped).** New
+  `scripts/check_examples_sync.py` (mirrors `check_version_sync.py`
+  style) + `make check-examples-sync`, wired into the CI **lint** job
+  (3.12 only, to avoid cross-version byte-diff flakiness). It
+  regenerates both examples to a temp dir and byte-compares against the
+  committed copies. **It immediately caught real drift**: the committed
+  examples were last regenerated at 1.8.0 (session 15) and never
+  rebuilt through the 1.9/1.10 bumps. Only meaningful diff was the
+  footer `v1.8.0 → v1.10.0` (the 72KB raw diff is just the inlined
+  base64 logo sharing that physical line). Regenerated both via
+  `make regen-examples` and committed.
+
+- **`main.py` split (#9) — line count corrected.** Plan said "421
+  lines"; it is now **1007**. Updated #9 and noted it must land BEFORE
+  the #11–#14 agent-efficiency subcommands (which all add code *into*
+  `main.py`). Not executed this session — it's the next real refactor.
+
+- **Design-heavy items captured in `plan.md` "Future improvements"**
+  (need a decision, not blind execution): framework token overhead
+  (highest leverage; ~674-line framework rides every session), v2
+  escaping/trust model (`autoescape=False` + LLM-authored source), v1
+  sunset with a dated target (dual-path surface area), user-facing
+  CHANGELOG.
+
+- **Docs.** CLAUDE.md commands table + layout updated for `test-cov`,
+  `check-examples-sync`, and `check_examples_sync.py`.
+
+### Next steps
+
+1. Open the PR for this branch (`claude/friendly-sagan-TNkRY`).
+2. **#9 — split `main.py` (1007 lines).** Extract `cli.py` +
+   `commands/`; keep `main.py` a thin shim. Biggest reviewable refactor
+   in the queue; do it before #11–#14.
+3. **Decide on the deferred design items** (framework overhead first —
+   it's the highest-leverage and affects every session).
+
+### Blockers
+
+- None.
+
 ## Session 2026-05-18 (session 21)
 
 ### What was done
