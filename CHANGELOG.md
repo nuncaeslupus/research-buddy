@@ -4,6 +4,61 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] — 2026-06-01
+
+Agent-efficiency release: three new read-only/mechanical helper commands that
+take the deterministic parts of the 2-turn workflow off the agent's plate, plus
+robustness and starter-hygiene fixes. All additions are backwards-compatible —
+existing v2 documents build and validate unchanged.
+
+### Added
+
+- **`research-buddy bump <source.md> <Q-NNN>`** — performs the mechanical
+  Turn-2 edits for one researched queue item in a single command: MINOR
+  `version` + `date` bump, moves the `Q-NNN` row from the Open Research Queue
+  into the Research Tracker (preserving the ID, attributing the new version),
+  inserts an empty Session Notes skeleton (pre-registration, a
+  hypothesis-resolution table, sources table, cross-section-impact and
+  compliance-validation lines), and prepends empty Changelog + References
+  stubs. `{{placeholders}}` are left for the agent to fill. Dry-run by
+  default; `--apply` writes a new
+  `{file_name}_v{version}-source.md` atomically and validates it with the input
+  as `--prior`.
+- **`research-buddy locate <source.md> <anchor>`** — prints the line of the
+  *live* `<!-- @end: <anchor> -->` insertion point plus surrounding context.
+  Matches full-line markers outside fenced code blocks, so inline prose
+  mentions and fenced template examples never collide with the real marker (the
+  fence-and-full-line-aware lookup a plain `grep` can't do). Accepts `rules`,
+  `@end: rules`, or the full comment form.
+- **`research-buddy diff-summary <old.md> <new.md>`** — emits the mechanical
+  part of the Turn-2 `<!-- @summary-start --> … <!-- @summary-end -->` block by
+  diffing two versions: version bump, queue→tracker moves, Adopted Rules
+  added/revised, Discarded Alternatives and Session Notes added, and the
+  append-only-invariant check (PASS / the violations found). The narrative
+  sentences stay agent-authored as a `{{placeholder}}`; exit code 1 signals an
+  append-only violation.
+
+### Changed
+
+- **Starter marker hygiene.** Reworded the prose mentions in `starter.md` that
+  embedded a literal `<!-- @end: X -->` (e.g. *"paste this immediately before
+  its `<!-- @end: rules -->` marker"*) to *"this section's closing `@end`
+  marker"*, so every live `@end: X` marker is now the unique occurrence of its
+  ID. An agent grepping for an insertion point gets one hit instead of "found
+  multiple times". The framework-block changes propagate to existing projects
+  via `research-buddy upgrade <file>.md --apply`.
+- **Internal layout.** Split the monolithic `main.py` into `cli.py` (argparse
+  construction + dispatch) and a `commands/` package (one module per
+  subcommand). `main.py` remains a re-export façade, so
+  `from research_buddy.main import …` imports keep working.
+
+### Fixed
+
+- **Malformed-input handling on the JSON paths** (`build` / `validate` /
+  `upgrade` / `migrate`): invalid UTF-8 bytes and unparseable JSON now report a
+  clean error and exit code instead of an uncaught traceback. Version discovery
+  was also hardened for multi-component version strings.
+
 ## [1.10.0] — 2026-05-14
 
 Operating-manual hardening for the v2 starter, with an upgrade pathway so
