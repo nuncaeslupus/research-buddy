@@ -32,8 +32,11 @@ def perform_build(
     try:
         with json_path.open(encoding="utf-8") as f:
             doc = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"Error: {json_path.name} is not valid JSON: {e}", file=sys.stderr)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(
+            f"Error: {json_path.name} is not valid JSON or has invalid encoding: {e}",
+            file=sys.stderr,
+        )
         return 1
 
     issues = validate(doc)
@@ -324,8 +327,11 @@ def cmd_build(args: argparse.Namespace) -> int:
             try:
                 with json_path.open(encoding="utf-8") as f:
                     doc = json.load(f)
-            except json.JSONDecodeError as e:
-                print(f"Error: {json_path.name} is not valid JSON: {e}", file=sys.stderr)
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                print(
+                    f"Error: {json_path.name} is not valid JSON or has invalid encoding: {e}",
+                    file=sys.stderr,
+                )
                 exit_code = 1
                 continue
             issues = validate(doc)

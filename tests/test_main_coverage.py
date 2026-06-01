@@ -651,6 +651,56 @@ class TestMalformedJsonHandling:
         assert "is not valid JSON" in capsys.readouterr().err
 
 
+class TestInvalidEncodingHandling:
+    """A .json with invalid UTF-8 bytes raises UnicodeDecodeError (a sibling of
+    JSONDecodeError under ValueError, not a subclass), so it must be caught
+    explicitly. Each command should report it cleanly, not crash with a traceback.
+    """
+
+    def _bad_encoding(self, tmp_path: Path) -> Path:
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (tmp_path / "versions").mkdir()
+        bad = source_dir / "broken_v1.0.json"
+        # 0xFF is never valid in UTF-8 → UnicodeDecodeError on read.
+        bad.write_bytes(b"\xff\xfe{}")
+        return bad
+
+    def test_perform_build_rejects_bad_encoding(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from research_buddy.main import perform_build
+
+        bad = self._bad_encoding(tmp_path)
+        rc = perform_build(bad, tmp_path)
+        assert rc == 1
+        assert "invalid encoding" in capsys.readouterr().err
+
+    def test_cmd_validate_rejects_bad_encoding(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_validate
+
+        bad = self._bad_encoding(tmp_path)
+        rc = cmd_validate(Namespace(paths=[str(bad)], prior=None))
+        assert rc == 1
+        assert "invalid encoding" in capsys.readouterr().err
+
+    def test_cmd_upgrade_rejects_bad_encoding(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_upgrade
+
+        bad = self._bad_encoding(tmp_path)
+        rc = cmd_upgrade(Namespace(paths=[str(bad)], apply=False, no_validate=False))
+        assert rc == 2
+        assert "invalid encoding" in capsys.readouterr().err
+
+
 # ---------------------------------------------------------------------------
 # build --all discovers and sorts multi-component versions (_v1.0.3.json)
 # ---------------------------------------------------------------------------
