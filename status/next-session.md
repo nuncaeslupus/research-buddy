@@ -1,5 +1,53 @@
 # Next session
 
+## Session 2026-06-01 (session 24)
+
+### What was done
+
+- **Roadmap step #11 shipped — `research-buddy bump <source.md> <Q-NNN>`.**
+  The biggest agent-efficiency win: one command does all the mechanical
+  Turn-2 edits so the agent only writes prose. Two new modules:
+  - `bump.py` — pure text transforms (no I/O): `next_minor_version`
+    (1.0→1.1, drops a trailing PATCH), `pop_queue_row` (comment-aware so
+    the queue's example rows inside `<!-- -->` are never matched),
+    `append_tracker_row`, the session/changelog/references block builders,
+    and `bump_md_text` which orchestrates all five edits + frontmatter
+    version/date (reuses `init._set_frontmatter_scalar`).
+  - `commands/bump.py` — `cmd_bump`: extension/starter/required-field
+    guards, dry-run by default, `--apply` writes a NEW
+    `{file_name}_v{next}-source.md` atomically, `--force` to overwrite,
+    `--no-validate` to skip. Wired into `cli.py` (parser + dispatch) and
+    re-exported from `main.py`.
+- **Design choice — bump emits a new versioned file, not in-place.**
+  Matches the agent workflow (each version is its own file) and lets the
+  apply path validate the output with the **input as `--prior`**, so
+  anchor-preservation + append-only invariants are checked mechanically.
+  The headline test asserts the bumped file is `validate_md`-clean against
+  its prior.
+- **Plan text was stale post-#9.** #11 said "CLI handler in `main.py`";
+  after the split, handlers live in `commands/*`. Noted in plan.md.
+- **Verified.** `tests/test_bump.py` (15 tests: version math, table
+  helpers, dry-run/apply/guards/dispatch). `make test-cov` 419 → **434
+  passed, 89.6%**; `make lint` clean; end-to-end CLI smoke (lowercase
+  `q-001` normalized, 1.3→1.4) green. Docs: CLAUDE.md layout + a bump
+  non-obvious note; plan.md #11 checked off.
+
+### Next steps
+
+1. **#12 Starter marker hygiene** — fence the scaffolding examples in
+   `starter.md` so agent greps stop false-matching; ship an `upgrade_md`
+   pass. Cheap, unblocks every future agent grep.
+2. **#13 `locate`** / **#14 `diff-summary`** — remaining agent-efficiency
+   helpers; smaller leverage, can follow #12.
+3. **Encoding-handling backlog** (Future improvements) — extend
+   `UnicodeDecodeError` guards to the `read_text` sites.
+4. **Deferred design items** still await a decision (framework token
+   overhead first).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-01 (session 23)
 
 ### What was done

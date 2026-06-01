@@ -26,6 +26,7 @@ from research_buddy.commands._shared import (
     _resolve_source,
 )
 from research_buddy.commands.build import cmd_build, perform_build, perform_build_md
+from research_buddy.commands.bump import cmd_bump
 from research_buddy.commands.clean import cmd_clean
 from research_buddy.commands.init import (
     _init_v1,
@@ -51,6 +52,7 @@ __all__ = [
     "_upgrade_md_file",
     "build_parser",
     "cmd_build",
+    "cmd_bump",
     "cmd_clean",
     "cmd_init",
     "cmd_migrate",
