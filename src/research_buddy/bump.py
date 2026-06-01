@@ -118,7 +118,8 @@ def _comment_mask(lines: list[str]) -> list[bool]:
 
 
 def _row_cells(line: str) -> list[str]:
-    return [c.strip() for c in line.strip().strip("|").split("|")]
+    # Negative lookbehind so escaped pipes (\|) inside a cell aren't split on.
+    return [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
 
 
 def _is_separator_row(line: str) -> bool:
@@ -128,13 +129,15 @@ def _is_separator_row(line: str) -> bool:
 def pop_queue_row(queue_body: str, queue_id: str) -> tuple[str, str]:
     """Remove the queue row whose first cell is `queue_id`; return
     (new_body, topic). Raises BumpError if the ID is not a live queue row."""
-    lines = queue_body.splitlines()
+    # split("\n") (not splitlines) so the trailing blank line before the
+    # @end marker survives the join below.
+    lines = queue_body.split("\n")
     mask = _comment_mask(lines)
     for i, line in enumerate(lines):
         if mask[i] or not line.strip().startswith("|") or _is_separator_row(line):
             continue
         cells = _row_cells(line)
-        if cells and cells[0] == queue_id:
+        if cells and cells[0].upper() == queue_id:
             topic = cells[1] if len(cells) > 1 else ""
             del lines[i]
             return "\n".join(lines), topic
@@ -146,7 +149,7 @@ def pop_queue_row(queue_body: str, queue_id: str) -> tuple[str, str]:
 
 def append_tracker_row(tracker_body: str, row: str) -> str:
     """Insert `row` immediately after the last live table row in the tracker."""
-    lines = tracker_body.splitlines()
+    lines = tracker_body.split("\n")  # preserve trailing blank line (see pop_queue_row)
     mask = _comment_mask(lines)
     last = -1
     for i, line in enumerate(lines):

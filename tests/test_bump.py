@@ -95,6 +95,23 @@ class TestTableHelpers:
         with pytest.raises(BumpError):
             pop_queue_row(body, "Q-099")
 
+    def test_row_cells_keeps_escaped_pipe(self) -> None:
+        from research_buddy.bump import _row_cells
+
+        assert _row_cells(r"| Q-001 | a \| b | obj |") == ["Q-001", r"a \| b", "obj"]
+
+    def test_pop_queue_row_case_insensitive_cell(self) -> None:
+        body = "\n| ID | Topic |\n|----|----|\n| q-001 | Real |\n"
+        new_body, topic = pop_queue_row(body, "Q-001")
+        assert topic == "Real"
+        assert "q-001" not in new_body
+
+    def test_pop_queue_row_preserves_trailing_blank_line(self) -> None:
+        # Mirrors the section body shape: blank line before the @end marker.
+        body = "\n| ID | Topic |\n|----|----|\n| Q-001 | Real |\n| Q-002 | Other |\n\n"
+        new_body, _ = pop_queue_row(body, "Q-001")
+        assert new_body.endswith("\n\n")
+
     def test_append_tracker_row_after_last_row(self) -> None:
         body = "\n| ID | T | F | V |\n|--|--|--|--|\n| T-000 | init | done | v1.0 |\n\n"
         out = append_tracker_row(body, "| Q-001 | x | y | v1.1 |")
