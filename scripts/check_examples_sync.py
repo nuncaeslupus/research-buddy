@@ -45,7 +45,11 @@ def main() -> None:
             committed_path = Path(committed)
             if not committed_path.exists():
                 drift.append(f"  - {committed} is missing")
-            elif out.read_bytes() != committed_path.read_bytes():
+            # Compare as UTF-8 text, not bytes: read_text() applies universal-
+            # newline translation, so a Windows checkout that rewrote LF -> CRLF
+            # doesn't false-positive. Real content drift (and trailing-newline
+            # changes) is still caught.
+            elif out.read_text(encoding="utf-8") != committed_path.read_text(encoding="utf-8"):
                 drift.append(f"  - {committed} is stale")
 
     if drift:
