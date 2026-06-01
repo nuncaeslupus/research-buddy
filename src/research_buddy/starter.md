@@ -168,7 +168,7 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 
 **Cross-section contradiction check.** Before writing, list every section the change touches and confirm: (a) no existing rule contradicts a new decision; (b) no existing DA bans the chosen approach; (c) no prior session note already settled the question with different evidence. If any conflict is found, resolve in the same write or surface for user input via the blocked Turn 2 marker.
 
-**Derived files (clean view + HTML).** A future utility can produce a "research-only" view by stripping everything between `<!-- @anchor: framework.core -->` and `<!-- @end: framework.reference -->`. The remaining file is a self-contained research artifact. Filename convention:
+**Derived files (clean view + HTML).** A future utility can produce a "research-only" view by stripping everything between the `framework.core` anchor and the `framework.reference` end marker (inclusive). The remaining file is a self-contained research artifact. Filename convention:
 
 - `{{file_name}}_v{{version}}-source.md` — agent-edited. **Always returned by default at end of Turn 2, conditional on compliance validation passing.**
 - `{{file_name}}_v{{version}}.md` — clean view. Returned on user request.
@@ -465,7 +465,7 @@ Each entry is tagged `[mechanical]` (a script can detect it), `[semantic]` (the 
 
 Copy-paste blocks for the three entry-based sections — [Adopted Rules](#adopted-rules), [Discarded Alternatives](#discarded-alternatives), [Session Notes](#session-notes). The templates live here, outside the user sections, so the rule "append immediately before `@end`" is unambiguous: every str_replace target inside `## Adopted Rules` / `## Discarded Alternatives` / `## Session Notes` is real content, never a template fence to confuse with content.
 
-**When adding a new rule** — paste this into [Adopted Rules](#adopted-rules) immediately before its `<!-- @end: rules -->` marker. Replace `R-EXAMPLE-1` with the real rule ID (e.g. `R-CHUNK-4`) and lowercase it for the `<a id>` value:
+**When adding a new rule** — paste this into [Adopted Rules](#adopted-rules) immediately before that section's closing `@end` marker. Replace `R-EXAMPLE-1` with the real rule ID (e.g. `R-CHUNK-4`) and lowercase it for the `<a id>` value:
 
 ````
 <!-- @rule: R-EXAMPLE-1 -->
@@ -488,7 +488,7 @@ evidence:
 **R-EXAMPLE-1 [tag1] [tag2] VALIDATED MUST.** Imperative-form rule body in one or two short paragraphs. Cite Tier-1 sources inline. Avoid `MUST` / `ALWAYS` / `NEVER` shouting unless the rule truly admits no exception; explain reasoning instead.
 ````
 
-**When adding a new discarded alternative** — paste this into [Discarded Alternatives](#discarded-alternatives) immediately before its `<!-- @end: discarded -->` marker. Replace `DA-EXAMPLE-1` with the real ID (e.g. `DA-Q016-3`) and lowercase it for the `<a id>` value:
+**When adding a new discarded alternative** — paste this into [Discarded Alternatives](#discarded-alternatives) immediately before that section's closing `@end` marker. Replace `DA-EXAMPLE-1` with the real ID (e.g. `DA-Q016-3`) and lowercase it for the `<a id>` value:
 
 ```
 <!-- @da: DA-EXAMPLE-1 -->
@@ -497,7 +497,7 @@ evidence:
 **DA-EXAMPLE-1.** {{Short title of the rejected approach.}} Rationale: {{why it was rejected, with Tier-1 anchor where applicable}}. Rejected in: v1.X. Superseded by: {{R-XXX-N if applicable, else "—"}}.
 ```
 
-**When adding a new session note** — paste this into [Session Notes](#session-notes) immediately before its `<!-- @end: sessions -->` marker. Replace `Q-001` with the queue/tracker ID that just completed and lowercase it for the `<a id>` value:
+**When adding a new session note** — paste this into [Session Notes](#session-notes) immediately before that section's closing `@end` marker. Replace `Q-001` with the queue/tracker ID that just completed and lowercase it for the `<a id>` value:
 
 ````
 <!-- @session: Q-001 -->
@@ -610,7 +610,7 @@ Rules adopted during research. Each rule has a stable ID of the form `R-{{TOPIC}
 
 **Force keywords (RFC 2119 / 8174):** `MUST` / `MUST NOT` / `SHOULD` / `SHOULD NOT` / `MAY`. Force is orthogonal to status — a `SHOULD` rule may be `VALIDATED`; a `MUST` rule may be `PROPOSED`.
 
-**Block format:** see [Templates → new rule](#templates) for the copy-paste block. Append new rule blocks immediately above the `<!-- @end: rules -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
+**Block format:** see [Templates → new rule](#templates) for the copy-paste block. Append new rule blocks immediately above this section's closing `@end` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: rules -->
 
@@ -621,7 +621,7 @@ Rules adopted during research. Each rule has a stable ID of the form `R-{{TOPIC}
 
 Permanent record of rejected approaches. Never re-propose items listed here. Each entry has a stable `DA-{{TOPIC}}-{{N}}` label and an inline `<a id>` link target. Always check this section before proposing any approach.
 
-**Block format:** see [Templates → new discarded alternative](#templates) for the copy-paste block. Append new DA blocks immediately above the `<!-- @end: discarded -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
+**Block format:** see [Templates → new discarded alternative](#templates) for the copy-paste block. Append new DA blocks immediately above this section's closing `@end` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: discarded -->
 
@@ -632,7 +632,7 @@ Permanent record of rejected approaches. Never re-propose items listed here. Eac
 
 One subsection per researched topic. Each contains pre-registration, sources consulted, decisions adopted, rejected claims, and second-opinion evaluation. Each block has an inline `<a id>` link target for cross-linking from elsewhere in the document.
 
-**Block format:** see [Templates → new session note](#templates) for the copy-paste block. Append new session blocks immediately above the `<!-- @end: sessions -->` marker below — the section between this paragraph and that marker is content-only, no template fence.
+**Block format:** see [Templates → new session note](#templates) for the copy-paste block. Append new session blocks immediately above this section's closing `@end` marker below — the section between this paragraph and that marker is content-only, no template fence.
 
 <!-- @end: sessions -->
 

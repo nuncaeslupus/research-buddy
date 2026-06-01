@@ -48,6 +48,8 @@ src/research_buddy/
     validate.py        #   validate
     clean.py           #   clean
     bump.py            #   bump   (v2 Turn-2 mechanical edits; cmd_bump)
+    locate.py          #   locate (live @end insertion point; cmd_locate)
+    diff_summary.py    #   diff-summary (mechanical Turn-2 summary; cmd_diff_summary)
     migrate.py         #   migrate-v1-to-v2
     init.py            #   init (+ _set_frontmatter_scalar, _init_v1/_v2)
     upgrade.py         #   upgrade (+ _upgrade_md_file)
@@ -59,6 +61,7 @@ src/research_buddy/
   validator_md.py      # v2 mechanical validator (frontmatter, anchors, links, IDs, prior diff)
   clean_md.py          # v2 source MD → clean MD (strip framework, regen title)
   bump.py              # v2 Turn-2 mechanical edits (queue→tracker, stubs, version/date)
+  diff_summary.py      # v2 old→new diff → mechanical @summary block
   migrate_v1_to_v2.py  # v1 JSON  → v2 MD source
   schema.json          # v1 Draft 2020-12 schema, bundled in the wheel
   starter.json         # v1 session-zero template, bundled in the wheel
@@ -194,6 +197,21 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   leaves `{{placeholders}}` for the agent to fill. Pure text transforms live
   in `bump.py`; the file I/O + guards live in `commands/bump.py`. Refuses
   starter files and unknown queue IDs.
+- **`locate` / `diff-summary` are read-only agent helpers.** `locate
+  <file>.md <anchor>` prints the line of the *live* `<!-- @end: <anchor> -->`
+  marker plus context — it matches **full-line** markers outside fenced blocks
+  (reusing `validator_md._line_in_fence`), so inline prose mentions and fenced
+  template examples never collide. `diff-summary <old>.md <new>.md` emits the
+  mechanical part of the Turn-2 `@summary` block (version bump, queue→tracker
+  moves, rules added/revised, DAs/sessions added, append-only PASS/FAIL),
+  leaving the narrative as a `{{placeholder}}`; exit 1 signals an append-only
+  violation. Logic in `diff_summary.py`; both handlers in `commands/`.
+- **Starter marker hygiene is invariant-tested.** Every live `<!-- @end: X
+  -->` marker is the unique occurrence of `@end: X` in `starter.md` (so an
+  agent grep for an insertion point gets one hit). Prose that used to embed
+  the literal marker now says "this section's closing `@end` marker".
+  `tests/test_starter_hygiene.py` enforces this; reintroducing a literal
+  marker mention in starter prose will fail it.
 - **v2 anchors are load-bearing.** `<!-- @anchor: X -->` ↔
   `<!-- @end: X -->` and `<!-- @rule: R-XXX-N -->` ↔
   `<a id="r-xxx-n"></a>` are the anchor system the validator

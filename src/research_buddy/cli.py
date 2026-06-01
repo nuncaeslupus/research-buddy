@@ -19,7 +19,9 @@ import argcomplete
 from research_buddy.commands.build import cmd_build
 from research_buddy.commands.bump import cmd_bump
 from research_buddy.commands.clean import cmd_clean
+from research_buddy.commands.diff_summary import cmd_diff_summary
 from research_buddy.commands.init import cmd_init
+from research_buddy.commands.locate import cmd_locate
 from research_buddy.commands.migrate import cmd_migrate
 from research_buddy.commands.upgrade import cmd_upgrade
 from research_buddy.commands.validate import cmd_validate
@@ -141,6 +143,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip `research-buddy validate` after applying",
     )
 
+    # locate
+    p_loc = sub.add_parser(
+        "locate",
+        help="Find the live `@end: <anchor>` insertion point in a v2 source file",
+    )
+    p_loc.add_argument("path", help="Path to the *_v*-source.md file")
+    p_loc.add_argument(
+        "anchor",
+        help="Section anchor to locate, e.g. rules (or `@end: rules`)",
+    )
+    p_loc.add_argument(
+        "--context",
+        type=int,
+        default=2,
+        help="Lines of context to show on each side of the marker (default: 2)",
+    )
+
+    # diff-summary
+    p_diff = sub.add_parser(
+        "diff-summary",
+        help="Emit the mechanical Turn-2 change-summary block by diffing two versions",
+    )
+    p_diff.add_argument("old", help="Path to the prior *_v*-source.md file")
+    p_diff.add_argument("new", help="Path to the new *_v*-source.md file")
+
     # init
     p_init = sub.add_parser(
         "init",
@@ -200,6 +227,8 @@ def main() -> None:
         "validate": cmd_validate,
         "clean": cmd_clean,
         "bump": cmd_bump,
+        "locate": cmd_locate,
+        "diff-summary": cmd_diff_summary,
         "migrate-v1-to-v2": cmd_migrate,
         "init": cmd_init,
         "upgrade": cmd_upgrade,
