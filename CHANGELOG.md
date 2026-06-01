@@ -17,10 +17,11 @@ existing v2 documents build and validate unchanged.
   Turn-2 edits for one researched queue item in a single command: MINOR
   `version` + `date` bump, moves the `Q-NNN` row from the Open Research Queue
   into the Research Tracker (preserving the ID, attributing the new version),
-  inserts an empty Session Notes skeleton (pre-registration, hypothesis-
-  resolution table, sources table, cross-section-impact + compliance-validation
-  lines), and prepends empty Changelog + References stubs. `{{placeholders}}`
-  are left for the agent to fill. Dry-run by default; `--apply` writes a new
+  inserts an empty Session Notes skeleton (pre-registration, a
+  hypothesis-resolution table, sources table, cross-section-impact and
+  compliance-validation lines), and prepends empty Changelog + References
+  stubs. `{{placeholders}}` are left for the agent to fill. Dry-run by
+  default; `--apply` writes a new
   `{file_name}_v{version}-source.md` atomically and validates it with the input
   as `--prior`.
 - **`research-buddy locate <source.md> <anchor>`** — prints the line of the
