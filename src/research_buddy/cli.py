@@ -17,6 +17,7 @@ import sys
 import argcomplete
 
 from research_buddy.commands.build import cmd_build
+from research_buddy.commands.bump import cmd_bump
 from research_buddy.commands.clean import cmd_clean
 from research_buddy.commands.init import cmd_init
 from research_buddy.commands.migrate import cmd_migrate
@@ -114,6 +115,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overwrite the output file if it already exists",
     )
 
+    # bump
+    p_bump = sub.add_parser(
+        "bump",
+        help=(
+            "Perform the mechanical Turn-2 edits for one researched queue item "
+            "(version/date, queue→tracker, session/changelog/references stubs)"
+        ),
+    )
+    p_bump.add_argument("path", help="Path to the *_v*-source.md file to bump")
+    p_bump.add_argument("queue_id", help="Queue item ID to close, e.g. Q-003")
+    p_bump.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write the new {file_name}_v{version}-source.md (default is dry-run)",
+    )
+    p_bump.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite the output file if it already exists",
+    )
+    p_bump.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip `research-buddy validate` after applying",
+    )
+
     # init
     p_init = sub.add_parser(
         "init",
@@ -172,6 +199,7 @@ def main() -> None:
         "build": cmd_build,
         "validate": cmd_validate,
         "clean": cmd_clean,
+        "bump": cmd_bump,
         "migrate-v1-to-v2": cmd_migrate,
         "init": cmd_init,
         "upgrade": cmd_upgrade,

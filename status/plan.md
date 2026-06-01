@@ -113,7 +113,7 @@ is a one-line change but unblocks every future agent grep; `locate`
 is a smaller-scope companion to `bump`; `diff-summary` is the
 lowest-leverage convenience and can land last.
 
-- [ ] **11. `research-buddy bump <source.md> <queue-id>`.** Single
+- [x] **11. `research-buddy bump <source.md> <queue-id>`.** Single
       command that performs all the mechanical Turn-2 edits: bump
       `version` + `date` in YAML frontmatter; move the Q-NNN queue
       row → Research Tracker (preserving the ID, appending version
@@ -124,8 +124,11 @@ lowest-leverage convenience and can land last.
       YYYY-MM-DD` subsection at top of References. Agent fills the
       prose; everything mechanical is already correct. Dry-run by
       default; `--apply` writes atomically and runs `validate-md`.
-      New module `src/research_buddy/bump.py` + CLI handler in
-      `main.py`. Tests in `tests/test_bump.py`.
+      New module `src/research_buddy/bump.py` + handler
+      `commands/bump.py` (the plan predated the #9 split, which moved
+      handlers out of `main.py`). Tests in `tests/test_bump.py`.
+      Shipped: writes a NEW `_v{next}-source.md` and validates it with
+      the input as `--prior`.
 - [ ] **12. Starter marker hygiene.** `starter.md` currently has
       prose like *"paste this immediately before its `<!-- @end:
       rules -->` marker"* outside fenced code blocks. The validator

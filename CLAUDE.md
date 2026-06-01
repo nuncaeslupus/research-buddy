@@ -47,6 +47,7 @@ src/research_buddy/
     build.py           #   build  (perform_build, perform_build_md, cmd_build)
     validate.py        #   validate
     clean.py           #   clean
+    bump.py            #   bump   (v2 Turn-2 mechanical edits; cmd_bump)
     migrate.py         #   migrate-v1-to-v2
     init.py            #   init (+ _set_frontmatter_scalar, _init_v1/_v2)
     upgrade.py         #   upgrade (+ _upgrade_md_file)
@@ -57,6 +58,7 @@ src/research_buddy/
   validator.py         # v1 jsonschema + reference ordering + doc/tool version compat
   validator_md.py      # v2 mechanical validator (frontmatter, anchors, links, IDs, prior diff)
   clean_md.py          # v2 source MD → clean MD (strip framework, regen title)
+  bump.py              # v2 Turn-2 mechanical edits (queue→tracker, stubs, version/date)
   migrate_v1_to_v2.py  # v1 JSON  → v2 MD source
   schema.json          # v1 Draft 2020-12 schema, bundled in the wheel
   starter.json         # v1 session-zero template, bundled in the wheel
@@ -183,6 +185,15 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   only. `build_md_html` strips the framework block by default
   (matches the JSON pipeline's reader-facing semantics); pass
   `keep_framework=True` programmatically to keep it.
+- **`bump` writes a NEW versioned file, never in place.** `research-buddy
+  bump <file>_vX.Y-source.md Q-NNN --apply` emits
+  `<file>_vX.(Y+1)-source.md` (MINOR bump) and validates it with the input
+  as `--prior`, so anchor-preservation + append-only invariants are checked
+  on the way out. It does the mechanical Turn-2 edits only (queue→tracker
+  move, session/changelog/references stubs, frontmatter version+date) and
+  leaves `{{placeholders}}` for the agent to fill. Pure text transforms live
+  in `bump.py`; the file I/O + guards live in `commands/bump.py`. Refuses
+  starter files and unknown queue IDs.
 - **v2 anchors are load-bearing.** `<!-- @anchor: X -->` ↔
   `<!-- @end: X -->` and `<!-- @rule: R-XXX-N -->` ↔
   `<a id="r-xxx-n"></a>` are the anchor system the validator
