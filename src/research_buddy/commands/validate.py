@@ -69,8 +69,13 @@ def cmd_validate(args: argparse.Namespace) -> int:
         json_path, _root = res
 
         print(f"Validating {json_path.name}…")
-        with json_path.open(encoding="utf-8") as f:
-            doc = json.load(f)
+        try:
+            with json_path.open(encoding="utf-8") as f:
+                doc = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"Error: {json_path.name} is not valid JSON: {e}", file=sys.stderr)
+            exit_code = 1
+            continue
 
         issues = validate(doc)
         if issues:

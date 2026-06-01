@@ -110,8 +110,13 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         json_path, _root = res
 
         print(f"── {json_path.name} ──")
-        with json_path.open(encoding="utf-8") as f:
-            doc = json.load(f)
+        try:
+            with json_path.open(encoding="utf-8") as f:
+                doc = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"  Error: {json_path.name} is not valid JSON: {e}", file=sys.stderr)
+            exit_code = 2
+            continue
 
         upgraded, changes, key_diffs = upgrade_doc(doc, starter, __version__)
 

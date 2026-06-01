@@ -576,3 +576,118 @@ class TestPerformBuildPdf:
         with patch.dict(sys.modules, {"weasyprint": None}):
             rc = perform_build(json_path, tmp_project, pdf=True)
         assert rc == 1
+
+
+# ---------------------------------------------------------------------------
+# Malformed-JSON handling — build / validate / upgrade exit cleanly (no traceback)
+# ---------------------------------------------------------------------------
+
+
+class TestMalformedJsonHandling:
+    """A malformed .json must produce a clean error + exit code, not a traceback.
+
+    Mirrors the guard cmd_migrate already had; build/validate/upgrade gained it
+    when main.py was split into commands/*.
+    """
+
+    def _bad_json(self, tmp_path: Path) -> Path:
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (tmp_path / "versions").mkdir()
+        bad = source_dir / "broken_v1.0.json"
+        bad.write_text("{ not valid json", encoding="utf-8")
+        return bad
+
+    def test_perform_build_rejects_malformed(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from research_buddy.main import perform_build
+
+        bad = self._bad_json(tmp_path)
+        rc = perform_build(bad, tmp_path)
+        assert rc == 1
+        assert "is not valid JSON" in capsys.readouterr().err
+
+    def test_cmd_build_validate_only_rejects_malformed(self, tmp_path: Path) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_build
+
+        self._bad_json(tmp_path)
+        args = Namespace(
+            paths=[str(tmp_path)],
+            watch=False,
+            pdf=False,
+            all=False,
+            validate_only=True,
+            no_versioning=False,
+            theme=None,
+            output=None,
+        )
+        assert cmd_build(args) == 1
+
+    def test_cmd_validate_rejects_malformed(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_validate
+
+        bad = self._bad_json(tmp_path)
+        rc = cmd_validate(Namespace(paths=[str(bad)], prior=None))
+        assert rc == 1
+        assert "is not valid JSON" in capsys.readouterr().err
+
+    def test_cmd_upgrade_rejects_malformed(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_upgrade
+
+        bad = self._bad_json(tmp_path)
+        rc = cmd_upgrade(Namespace(paths=[str(bad)], apply=False, no_validate=False))
+        assert rc == 2
+        assert "is not valid JSON" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# build --all discovers and sorts multi-component versions (_v1.0.3.json)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAllVersionDiscovery:
+    """`build --all` must discover three-component versions, not just MAJOR.MINOR."""
+
+    def test_three_component_version_is_built(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import _load_starter_template, cmd_build
+
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (tmp_path / "versions").mkdir()
+        doc = _load_starter_template()
+        # Two- and three-component versions side by side.
+        for name in ("proj_v1.0.json", "proj_v1.0.3.json"):
+            with (source_dir / name).open("w", encoding="utf-8") as f:
+                json.dump(doc, f)
+
+        args = Namespace(
+            paths=[str(tmp_path)],
+            watch=False,
+            pdf=False,
+            all=True,
+            validate_only=True,
+            no_versioning=False,
+            theme=None,
+            output=None,
+        )
+        cmd_build(args)
+        out = capsys.readouterr().out
+        # The three-component file must be discovered (was silently skipped before).
+        assert "proj_v1.0.3.json" in out
+        # And ordered after the two-component one (1.0 < 1.0.3).
+        assert out.index("proj_v1.0.json") < out.index("proj_v1.0.3.json")

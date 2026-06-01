@@ -32,6 +32,21 @@
   a real `build`, and `python -m research_buddy.main`.
 - **Docs.** CLAUDE.md layout + a new façade/monkeypatch note;
   plan.md #9 checked off.
+- **Folded in Gemini review on #92 (user's call — "fold into #92").**
+  Four pre-existing-code suggestions, applied with tests so the PR is
+  no longer strictly verbatim:
+  - `build --all` discovery/sort regex widened from `_vMAJOR.MINOR`
+    to `_vMAJOR.MINOR(.PATCH…)` — three-component versions
+    (`_v1.0.3.json`) were silently skipped despite `perform_build`'s
+    fallback supporting them. `_version_key` now returns
+    `tuple[int, ...]` (shorter-prefix sorts first, so 1.0 < 1.0.3).
+  - `json.JSONDecodeError` now caught in `perform_build`,
+    `cmd_build --validate-only`, `cmd_validate`, and `cmd_upgrade`
+    (previously only `cmd_migrate` guarded it) — malformed input
+    prints a clean error + exit code instead of a traceback.
+  - New `tests/test_main_coverage.py` classes
+    `TestMalformedJsonHandling` (4 tests) + `TestBuildAllVersionDiscovery`
+    (1 test); suite 411 → 416, coverage 89.4%.
 
 ### Next steps
 
