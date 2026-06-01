@@ -32,9 +32,12 @@
   a real `build`, and `python -m research_buddy.main`.
 - **Docs.** CLAUDE.md layout + a new façade/monkeypatch note;
   plan.md #9 checked off.
-- **Folded in Gemini review on #92 (user's call — "fold into #92").**
-  Four pre-existing-code suggestions, applied with tests so the PR is
-  no longer strictly verbatim:
+- **Gemini review fixes → split into separate PR #93 (final call).**
+  Initially folded into #92, but the user then chose to keep #92 a
+  pure, behaviour-preserving refactor; the fixes were peeled back out
+  (force-pushed #92 to the pure split) and moved to a stacked follow-up
+  **#93** (`fix/cli-json-robustness`). Both PRs are now **merged**.
+  The fixes (all pre-existing-code, with tests):
   - `build --all` discovery/sort regex widened from `_vMAJOR.MINOR`
     to `_vMAJOR.MINOR(.PATCH…)` — three-component versions
     (`_v1.0.3.json`) were silently skipped despite `perform_build`'s
@@ -44,18 +47,30 @@
     `cmd_build --validate-only`, `cmd_validate`, and `cmd_upgrade`
     (previously only `cmd_migrate` guarded it) — malformed input
     prints a clean error + exit code instead of a traceback.
+  - A second Gemini round on #93 flagged that `json.load` over a file
+    raises `UnicodeDecodeError` (a sibling of `JSONDecodeError` under
+    `ValueError`, **not** a subclass) on invalid UTF-8 bytes, so the
+    new guards still let it traceback. Caught both across
+    `build`/`validate`/`upgrade`/**`migrate`** (migrate had the same
+    latent crash) — now reports "is not valid JSON or has invalid
+    encoding". Scoped to JSON reads only; the `read_text` sites
+    (v2 MD build, theme/starter loads) are a backlog item (see plan.md).
   - New `tests/test_main_coverage.py` classes
-    `TestMalformedJsonHandling` (4 tests) + `TestBuildAllVersionDiscovery`
-    (1 test); suite 411 → 416, coverage 89.4%.
+    `TestMalformedJsonHandling` (4) + `TestBuildAllVersionDiscovery`
+    (1) + `TestInvalidEncodingHandling` (3); suite 411 → 419,
+    coverage 89.4%.
+  - **Rebase note:** #92 squash-merged, so #93 (based on the old
+    refactor commit) showed conflicts; `git rebase --onto origin/main
+    0b5ba3b` dropped the redundant refactor commit and replayed only
+    the two fix commits cleanly.
 
 ### Next steps
 
-1. Open the PR for `refactor/split-main-py`.
-2. **#11–#14 agent-efficiency helpers** are now unblocked and should
+1. **#11–#14 agent-efficiency helpers** are now unblocked and should
    land as new `commands/*` modules (e.g. `commands/bump.py`) wired
    into `cli.py`, not as growth in `main.py`. #11 (`bump`) is the
    biggest single win.
-3. **Deferred design items** still await a decision (framework token
+2. **Deferred design items** still await a decision (framework token
    overhead first — highest leverage).
 
 ### Blockers
