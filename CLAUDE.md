@@ -40,7 +40,16 @@ path. Existing JSON projects can migrate via
 
 ```
 src/research_buddy/
-  main.py              # argparse CLI: build | validate | clean | migrate-v1-to-v2 | init | upgrade
+  main.py              # thin façade: re-exports `main` + command handlers for back-compat
+  cli.py               # argparse parser (build_parser) + dispatch (main)
+  commands/            # one module per subcommand
+    _shared.py         #   _resolve_source + starter-template loaders
+    build.py           #   build  (perform_build, perform_build_md, cmd_build)
+    validate.py        #   validate
+    clean.py           #   clean
+    migrate.py         #   migrate-v1-to-v2
+    init.py            #   init (+ _set_frontmatter_scalar, _init_v1/_v2)
+    upgrade.py         #   upgrade (+ _upgrade_md_file)
   build.py             # v1 JSON → HTML (block renderers, table widths, lang resolution)
   build_md.py          # v2 MD  → HTML (reuses v1 chrome via base.html.j2)
   upgrade.py           # v1 template refresh: re-sync agent_guidelines from starter.json
@@ -160,6 +169,14 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
 
 ## Non-obvious things
 
+- **`main.py` is a re-export façade.** Command logic lives in
+  `cli.py` + `commands/*`; `main.py` just re-exports `main` (the
+  console-script entry point) and the handlers/helpers so
+  `from research_buddy.main import cmd_build` etc. still resolve.
+  Consequence for tests: monkeypatch a command's dependency on
+  **its own module**, e.g. `research_buddy.commands.upgrade.validate`,
+  not `research_buddy.main.validate` — the patched name must match
+  where the function does its global lookup.
 - **`build` dispatches on file extension.** `.json` → v1 pipeline
   (`build.py`); `.md` → v2 pipeline (`build_md.py`). Mixing the two
   in a single invocation is rejected. `--watch` and `--pdf` are v1

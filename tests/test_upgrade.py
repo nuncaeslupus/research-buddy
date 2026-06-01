@@ -359,7 +359,7 @@ class TestUpgradeCli:
         def fake_validate(d: dict) -> list[str]:
             return ["synthetic validation error for testing"]
 
-        monkeypatch.setattr("research_buddy.main.validate", fake_validate)
+        monkeypatch.setattr("research_buddy.commands.upgrade.validate", fake_validate)
 
         result = cmd_upgrade(_Args(paths=[str(tmp_project)], apply=True))
 
@@ -381,7 +381,7 @@ class TestUpgradeCli:
             called.append(1)
             return []
 
-        monkeypatch.setattr("research_buddy.main.validate", tripwire)
+        monkeypatch.setattr("research_buddy.commands.upgrade.validate", tripwire)
 
         result = cmd_upgrade(_Args(paths=[str(tmp_project)], apply=True, no_validate=True))
 
@@ -408,7 +408,7 @@ class TestUpgradeCli:
         def boom() -> dict:
             raise RuntimeError("starter.json missing")
 
-        monkeypatch.setattr("research_buddy.main._load_starter_template", boom)
+        monkeypatch.setattr("research_buddy.commands.upgrade._load_starter_template", boom)
 
         result = cmd_upgrade(_Args(paths=[str(tmp_project)]))
 
