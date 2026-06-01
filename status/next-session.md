@@ -1,5 +1,29 @@
 # Next session
 
+## Session 2026-06-01 (session 26)
+
+### What was done
+
+- **Released v1.11.0** (MINOR bump from 1.10.0). Covers the three feature
+  PRs that shipped against 1.10.0 without a bump: `bump` (#95), `locate` +
+  `diff-summary` (#96), and the starter marker-hygiene fix. Backward-
+  compatible (new CLI subcommands only), so MINOR.
+- Workflow: edited `pyproject.toml`, ran `make version-sync` (propagated to
+  `__init__.py`, `starter.json`, `starter.md`, `README.md`) + `make
+  regen-examples` (both committed HTML examples embed `research_buddy_version`).
+  Gates green: `make lint` (incl. `check-version-sync`), `check-examples-sync`,
+  `test-cov` 452 passed / 89.8%.
+
+### Next steps
+
+- Numbered roadmap (1–14) is complete; remaining work is the "Future
+  improvements" backlog (framework-token-overhead is highest leverage but
+  design-heavy; the two file-I/O cleanups are low-risk warm-ups).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-01 (session 25)
 
 ### What was done
