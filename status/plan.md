@@ -78,13 +78,17 @@ both protect the refactors.
       both content drift and version-footer drift (the examples had
       in fact gone stale at 1.8.0; regenerated to 1.10.0 in this
       change). *Shipped this session.*
-- [ ] **9. Split `main.py` (1007 lines — was 421 when this step was
-      written; it has more than doubled).** Extract `cli.py`
-      (argparse wiring) + `commands/{build,init,validate,...}.py`.
-      Keep `main.py` as a thin shim re-exporting `main` for the
-      console script. **Do this BEFORE #11–#14** — those three queue
-      new subcommands *into* `main.py`, so splitting first stops the
-      file growing further.
+- [x] **9. Split `main.py` (1007 → 66 lines).** Extracted `cli.py`
+      (argparse parser + dispatch) and a `commands/` package
+      (`_shared`, `build`, `validate`, `clean`, `migrate`, `init`,
+      `upgrade`). `main.py` is now a thin re-export façade keeping
+      `from research_buddy.main import …` and the console-script
+      entry point stable. Behaviour-preserving (bodies copied
+      verbatim); only the 3 `cmd_upgrade` monkeypatch targets in
+      `test_upgrade.py` moved to `research_buddy.commands.upgrade.*`.
+      Largest resulting module is `commands/build.py` (336 lines).
+      Now #11–#14 add their handlers as new `commands/*` modules
+      instead of growing `main.py`. *Shipped this session.*
 - [x] **10. Split `build.py` (796 lines).** Folded into the Jinja2
       migration listed in "Future improvements" — the renderer
       split would have been torn out a step later. Each `r_*`

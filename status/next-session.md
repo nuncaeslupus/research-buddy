@@ -1,5 +1,52 @@
 # Next session
 
+## Session 2026-06-01 (session 23)
+
+### What was done
+
+- **Roadmap step #9 shipped — split `main.py` (1007 → 66 lines).**
+  Extracted the CLI into:
+  - `cli.py` — `build_parser()` (all argparse wiring) + `main()`
+    (argcomplete + dispatch table).
+  - `commands/` package, one module per subcommand: `_shared.py`
+    (`_resolve_source` + starter-template loaders), `build.py`
+    (`perform_build`, `perform_build_md`, `cmd_build` — 336 lines, the
+    biggest), `validate.py`, `clean.py`, `migrate.py`, `init.py`
+    (incl. `_set_frontmatter_scalar`, `_init_v1/_v2`), `upgrade.py`
+    (incl. `_upgrade_md_file`).
+  - `main.py` is now a **thin re-export façade**: it exposes `main`
+    for the `research_buddy.main:main` console script and re-exports
+    every command handler + helper (via `__all__`) so existing
+    imports `from research_buddy.main import cmd_build` keep resolving.
+- **Behaviour-preserving.** Function bodies copied verbatim (the only
+  cosmetic change: `\uXXXX` escapes → the literal `…`/`⚠`/`✔` glyphs,
+  identical output bytes). All 411 tests pass unchanged except the 3
+  `cmd_upgrade` monkeypatch targets in `test_upgrade.py`, which moved
+  from `research_buddy.main.{validate,_load_starter_template}` to
+  `research_buddy.commands.upgrade.*` (a patched name must match where
+  the function does its global lookup — documented in CLAUDE.md
+  "Non-obvious things").
+- **Verified.** `make test-cov` 411 passed / 89.3%; `make lint`
+  (ruff + format + mypy, now 23 source files) clean; `make
+  check-examples-sync` green; smoke-tested the console entry point,
+  a real `build`, and `python -m research_buddy.main`.
+- **Docs.** CLAUDE.md layout + a new façade/monkeypatch note;
+  plan.md #9 checked off.
+
+### Next steps
+
+1. Open the PR for `refactor/split-main-py`.
+2. **#11–#14 agent-efficiency helpers** are now unblocked and should
+   land as new `commands/*` modules (e.g. `commands/bump.py`) wired
+   into `cli.py`, not as growth in `main.py`. #11 (`bump`) is the
+   biggest single win.
+3. **Deferred design items** still await a decision (framework token
+   overhead first — highest leverage).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-01 (session 22)
 
 ### What was done
