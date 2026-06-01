@@ -35,8 +35,11 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         try:
             with path.open(encoding="utf-8") as f:
                 doc = json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error: {path.name} is not valid JSON: {e}", file=sys.stderr)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            print(
+                f"Error: {path.name} is not valid JSON or has invalid encoding: {e}",
+                file=sys.stderr,
+            )
             exit_code = 2
             continue
 

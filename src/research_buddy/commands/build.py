@@ -29,8 +29,15 @@ def perform_build(
 ) -> int:
     """Run a single build pass."""
     print(f"Reading {json_path.name}…")
-    with json_path.open(encoding="utf-8") as f:
-        doc = json.load(f)
+    try:
+        with json_path.open(encoding="utf-8") as f:
+            doc = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(
+            f"Error: {json_path.name} is not valid JSON or has invalid encoding: {e}",
+            file=sys.stderr,
+        )
+        return 1
 
     issues = validate(doc)
     if issues:
@@ -274,17 +281,18 @@ def cmd_build(args: argparse.Namespace) -> int:
             if args.all:
                 source_dir = path / "source" if (path / "source").is_dir() else path
 
-                def _version_key(p: Path) -> tuple[int, int]:
-                    # Match only the _vMAJOR.MINOR suffix so project names that contain
-                    # digits (e.g. "2024_report_v1.0.json") still sort by version.
-                    m = re.search(r"_v(\d+)[_.](\d+)\.json$", p.name)
-                    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+                def _version_key(p: Path) -> tuple[int, ...]:
+                    # Match the _vMAJOR.MINOR(.PATCH…) suffix so project names that
+                    # contain digits (e.g. "2024_report_v1.0.3.json") still sort by
+                    # version. Mirrors perform_build's multi-component fallback.
+                    m = re.search(r"_v(\d+(?:[_.]\d+)*)\.json$", p.name)
+                    return tuple(int(x) for x in re.split(r"[_.]", m.group(1))) if m else (0,)
 
                 json_files = sorted(
                     [
                         p
                         for p in source_dir.glob("*.json")
-                        if re.search(r"_v\d+[_.]\d+\.json$", p.name)
+                        if re.search(r"_v\d+(?:[_.]\d+)*\.json$", p.name)
                     ],
                     key=_version_key,
                 )
@@ -316,8 +324,16 @@ def cmd_build(args: argparse.Namespace) -> int:
     for json_path, project_root in to_build:
         if args.validate_only:
             print(f"Validating {json_path.name}…")
-            with json_path.open(encoding="utf-8") as f:
-                doc = json.load(f)
+            try:
+                with json_path.open(encoding="utf-8") as f:
+                    doc = json.load(f)
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                print(
+                    f"Error: {json_path.name} is not valid JSON or has invalid encoding: {e}",
+                    file=sys.stderr,
+                )
+                exit_code = 1
+                continue
             issues = validate(doc)
             if issues:
                 print(f"\n⚠  {len(issues)} issue(s) in {json_path.name}:")
