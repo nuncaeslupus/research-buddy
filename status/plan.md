@@ -129,34 +129,36 @@ lowest-leverage convenience and can land last.
       handlers out of `main.py`). Tests in `tests/test_bump.py`.
       Shipped: writes a NEW `_v{next}-source.md` and validates it with
       the input as `--prior`.
-- [ ] **12. Starter marker hygiene.** `starter.md` currently has
-      prose like *"paste this immediately before its `<!-- @end:
-      rules -->` marker"* outside fenced code blocks. The validator
-      is fence-aware so this doesn't false-positive *validation*,
-      but it does false-positive the agent's `grep` for insertion
-      points (which is what the v1.12 session transcript showed —
-      the agent hit "found multiple times" on `@end: journey` and
-      had to retry str_replace with bigger context). Fix: wrap each
-      scaffolding example in `starter.md` inside a fenced block.
-      Ship an `upgrade` pass so existing v2 projects pick it up.
-      One-line starter change + small `upgrade_md.py` extension.
-- [ ] **13. `research-buddy locate <source.md> <anchor>`.** Returns
-      the line number + ~5 lines of surrounding context for the
-      *live* `@end: <anchor>` marker, skipping fenced and HTML-
-      comment-template instances (reusing `validator_md._line_in_fence`).
-      Lets the agent jump straight to insertion points without
-      grepping. Smaller than `bump` but useful for ad-hoc edits
-      between sessions. New CLI subcommand only — no new module
-      needed, calls into `validator_md` helpers.
-- [ ] **14. `research-buddy diff-summary <old.md> <new.md>`.** Emits
-      the `<!-- @summary-start --> ... <!-- @summary-end -->` block
-      by diffing the two versions: rules added/revised, DAs added,
-      queue rows moved, version bump, append-only-invariant check.
-      Pure-mechanical portions only — the narrative paragraphs at
-      the top of the summary stay agent-authored. Wraps existing
-      diff logic in `validator_md._check_append_only` and
-      `_collect_entry_ids`. New module
-      `src/research_buddy/diff_summary.py` + CLI handler.
+- [x] **12. Starter marker hygiene.** `starter.md` had prose like
+      *"paste this immediately before its `<!-- @end: rules -->`
+      marker"* that embedded the literal marker, so an agent `grep`
+      for an insertion point hit "found multiple times". Shipped:
+      reworded the 7 colliding prose lines to "this section's closing
+      `@end` marker" so each live `@end: X` is the unique occurrence of
+      its ID; `tests/test_starter_hygiene.py` enforces the invariant.
+      Note vs. plan: the fix is *rewording*, not fencing — inline
+      mentions can't be fenced without mangling the sentence, and
+      fencing wouldn't help a plain grep anyway. No `upgrade_md` code
+      change needed: the 4 framework-block lines propagate to existing
+      projects via the existing wholesale framework re-sync; the 3
+      user-section intros reach new projects only (acceptable — `locate`
+      mitigates regardless).
+- [x] **13. `research-buddy locate <source.md> <anchor>`.** Shipped:
+      prints the line of the *live* `<!-- @end: <anchor> -->` marker +
+      context, matching full-line markers outside fenced blocks
+      (reusing `validator_md._line_in_fence`), so inline prose mentions
+      and fenced examples never collide. `commands/locate.py` only — no
+      new top-level module. Accepts `rules`, `@end: rules`, or the full
+      comment form.
+- [x] **14. `research-buddy diff-summary <old.md> <new.md>`.** Shipped:
+      emits the mechanical part of the `@summary` block (version bump,
+      queue→tracker moves, rules added/revised, DAs/sessions added,
+      append-only PASS/FAIL); narrative left as a `{{placeholder}}`.
+      Exit 1 signals an append-only violation. New
+      `src/research_buddy/diff_summary.py` + `commands/diff_summary.py`.
+      Reuses `_check_append_only` / `_extract_section` /
+      `_extract_table_first_column` (used `_entry_blocks` for rule-revision
+      detection rather than `_collect_entry_ids`, which only returns IDs).
 
 ## Future improvements (queued, not in the current batch)
 
@@ -207,6 +209,15 @@ they need a decision before execution rather than being picked up blind.
   pass for parity — ideally a small shared `read_text_or_error` helper
   rather than scattering try/except, so the message/exit-code behaviour
   stays uniform.
+
+- **Consistent temp-file cleanup across all atomic writers.** Surfaced in
+  the #95 review: `bump`, `upgrade`, `migrate`, and `init` all do
+  `tmp.write_text(...)` → `tmp.replace(target)` with no cleanup, so a
+  failed write leaves a `.tmp` behind. Low-severity (atomic-write cruft),
+  but worth one consistent pass — a shared `atomic_write(path, text)`
+  helper wrapping the write/replace in `try/finally` — rather than a
+  one-off in any single command. Pairs naturally with the encoding helper
+  above (both are "centralize a file-I/O concern" cleanups).
 
 - **Mobile-friendly tab bar.** Symptom: when a document has many
   tabs, the top menu overflows off-screen on mobile with no way to

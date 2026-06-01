@@ -1,5 +1,61 @@
 # Next session
 
+## Session 2026-06-01 (session 25)
+
+### What was done
+
+Shipped the remaining three agent-efficiency helpers (#12–#14) in one PR:
+
+- **#13 `locate <source.md> <anchor>`** (`commands/locate.py`) — prints the
+  *live* `<!-- @end: <anchor> -->` marker line + context. Matches **full-line**
+  markers outside fenced blocks (reuses `validator_md._line_in_fence`), so
+  inline prose mentions and fenced template examples never collide. Accepts
+  `rules`, `@end: rules`, or the full comment form. This is the real fix for
+  the v1.12 "found multiple times" grep pain — fence-and-full-line-aware where
+  plain grep isn't.
+- **#14 `diff-summary <old.md> <new.md>`** (`diff_summary.py` +
+  `commands/diff_summary.py`) — emits the mechanical part of the Turn-2
+  `@summary` block (version bump, queue→tracker moves, rules added/revised,
+  DAs/sessions added, append-only PASS/FAIL), narrative left as
+  `{{placeholder}}`. Exit 1 on append-only violation. Rule-revision detection
+  uses a local `_entry_blocks` (block-text compare), since
+  `_collect_entry_ids` only returns IDs.
+- **#12 starter marker hygiene** (`starter.md` + `test_starter_hygiene.py`) —
+  reworded the 7 prose lines that embedded a literal `<!-- @end: X -->` to
+  "this section's closing `@end` marker", so each live `@end: X` is now the
+  unique occurrence of its ID. Invariant test enforces it. **Deviation from
+  the plan, intentional:** the fix is *rewording*, not *fencing* — inline
+  mentions can't be fenced cleanly and fencing wouldn't help a plain grep
+  anyway. No `upgrade_md` change needed: the 4 framework-block lines propagate
+  via the existing wholesale framework re-sync; the 3 user-section intros
+  reach new projects only (acceptable — `locate` covers existing ones).
+
+### Verification
+
+- New tests: `test_locate.py`, `test_diff_summary.py`, `test_starter_hygiene.py`.
+  `make test-cov` 434 → **452 passed, 89.8%**; `make lint` clean;
+  `make check-examples-sync` green after `make regen-md-example` (starter.md
+  edit required the v2 example rebuild). End-to-end CLI smoke for all three.
+- Docs: CLAUDE.md layout + non-obvious notes; plan.md #12/#13/#14 checked off;
+  new backlog item "consistent temp-file cleanup across atomic writers" (from
+  the #95 review) added next to the encoding-handling item.
+
+### Next steps
+
+1. **The numbered roadmap (steps 1–14) is now fully shipped.** Next work comes
+   from "Future improvements" — these are design-heavy / outward-facing and
+   were explicitly flagged as needing a decision before execution, not blind
+   pickup. Highest-leverage: **framework token overhead** (the ~674-line
+   framework rides every upload, every session). Needs a real design pass —
+   any split must not regress the no-tool-call gate or session-state detection.
+2. Two low-risk "centralize a file-I/O concern" cleanups are ready when
+   wanted: the **encoding helper** (`read_text_or_error`) and the **atomic-write
+   helper** (`atomic_write`). Good warm-up tasks; could pair into one PR.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-01 (session 24)
 
 ### What was done
