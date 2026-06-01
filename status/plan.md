@@ -193,6 +193,18 @@ they need a decision before execution rather than being picked up blind.
   internal log but there's no `CHANGELOG.md` for `pip` upgraders — a
   published PyPI package should have a "what changed" surface.
 
+- **Consistent encoding-error handling across all file reads.** PR #93
+  hardened the JSON-read paths (`build`/`validate`/`upgrade`/`migrate`)
+  to catch `UnicodeDecodeError` alongside `json.JSONDecodeError`, so a
+  `.json` with invalid UTF-8 bytes reports cleanly instead of crashing.
+  The remaining `read_text` sites are still unguarded and will traceback
+  on bad bytes: v2 Markdown build (`perform_build_md`), the `--theme`
+  / frontmatter `theme_css` / conventional `theme.css` loads, and the
+  bundled-starter loads in `_shared.py` / `upgrade_md`. Do it in one
+  pass for parity — ideally a small shared `read_text_or_error` helper
+  rather than scattering try/except, so the message/exit-code behaviour
+  stays uniform.
+
 - **Mobile-friendly tab bar.** Symptom: when a document has many
   tabs, the top menu overflows off-screen on mobile with no way to
   scroll. Likely fix in `src/research_buddy/css/`: horizontal
