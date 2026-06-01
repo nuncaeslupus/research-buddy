@@ -54,11 +54,12 @@ src/research_buddy/
   starter.md           # v2 session-zero template, bundled in the wheel
   css/ js/ lib/ images/  # assets inlined into the generated HTML
 scripts/
-  sync_version.py        # Source of truth = pyproject.toml; rewrites the other files
-  check_version_sync.py  # Read-only: fails if anything drifted. Used by CI.
+  sync_version.py         # Source of truth = pyproject.toml; rewrites the other files
+  check_version_sync.py   # Read-only: fails if any version string drifted. Used by CI.
+  check_examples_sync.py  # Read-only: fails if committed starter-example/*.html drifted. Used by CI.
 tests/            # pytest; classes, TDD ceremony enforced
 starter-example/  # starter.html (v1) + starter-md.html (v2)
-Makefile          # make sync | lint | format | test | regen-example | regen-md-example | regen-examples | build | publish | version-sync | check-version-sync
+Makefile          # make sync | lint | format | test | test-cov | regen-examples | check-examples-sync | build | publish | version-sync | check-version-sync
 ```
 
 ## Commands (prefer Make)
@@ -66,12 +67,14 @@ Makefile          # make sync | lint | format | test | regen-example | regen-md-
 | Command                  | What it does                                                                |
 | ------------------------ | --------------------------------------------------------------------------- |
 | `make sync`              | `uv sync --extra dev` — install dev deps (includes weasyprint)              |
-| `make test`              | `pytest tests/ -v` — full suite                                             |
+| `make test`              | `pytest tests/ -v` — full suite, fast and ungated (local iteration)        |
+| `make test-cov`          | Full suite + coverage gate (`--cov-fail-under=85`). CI's test job uses this |
 | `make lint`              | `ruff check` + `ruff format --check` + `mypy` (mirrors CI)                  |
 | `make format`            | `ruff check --fix --unsafe-fixes` + `ruff format`                           |
 | `make regen-example`     | Rebuild `starter-example/starter.html` from `starter.json` (v1)             |
 | `make regen-md-example`  | Rebuild `starter-example/starter-md.html` from `starter.md` (v2)            |
 | `make regen-examples`    | Both of the above                                                           |
+| `make check-examples-sync`| CI gate: fails if either committed `starter-example/*.html` has drifted    |
 | `make version-sync`      | Propagate `pyproject.toml` version into the four downstream files          |
 | `make check-version-sync`| CI gate: fails if any of the five version strings have drifted              |
 | `make build`             | Produce wheel + sdist in `dist/`                                            |
