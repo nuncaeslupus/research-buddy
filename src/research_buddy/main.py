@@ -28,6 +28,7 @@ from research_buddy.commands._shared import (
 from research_buddy.commands.build import cmd_build, perform_build, perform_build_md
 from research_buddy.commands.bump import cmd_bump
 from research_buddy.commands.clean import cmd_clean
+from research_buddy.commands.diff_summary import cmd_diff_summary
 from research_buddy.commands.init import (
     _init_v1,
     _init_v2,
@@ -36,6 +37,7 @@ from research_buddy.commands.init import (
     _set_frontmatter_scalar,
     cmd_init,
 )
+from research_buddy.commands.locate import cmd_locate
 from research_buddy.commands.migrate import cmd_migrate
 from research_buddy.commands.upgrade import _upgrade_md_file, cmd_upgrade
 from research_buddy.commands.validate import cmd_validate
@@ -54,7 +56,9 @@ __all__ = [
     "cmd_build",
     "cmd_bump",
     "cmd_clean",
+    "cmd_diff_summary",
     "cmd_init",
+    "cmd_locate",
     "cmd_migrate",
     "cmd_upgrade",
     "cmd_validate",
