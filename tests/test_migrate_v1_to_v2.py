@@ -18,6 +18,7 @@ from research_buddy.migrate_v1_to_v2 import (
     migrate,
     parse_rule_label,
     render_block,
+    render_subsections,
 )
 from research_buddy.validator_md import validate_md
 
@@ -172,6 +173,133 @@ class TestSectionMapping:
         assert "| A | B |" in out
         assert "|---|---|" in out
         assert "| 1 | 2 |" in out
+
+    def test_paragraph_alias_renders_like_p(self) -> None:
+        assert render_block({"type": "paragraph", "md": "Body."}) == "Body."
+
+
+class TestRichBlockMapping:
+    """v1 rich blocks must keep their chrome, not flatten to prose."""
+
+    def test_svg_renders_verbatim(self) -> None:
+        svg = '<svg viewbox="0 0 10 10"><rect x="0" y="0" width="5" height="5"></rect></svg>'
+        out = render_block({"type": "svg", "html": svg})
+        assert out == svg
+
+    def test_svg_collapses_internal_blank_lines(self) -> None:
+        # A blank line would split the CommonMark HTML block and truncate the
+        # passthrough, so they must be removed.
+        out = render_block({"type": "svg", "html": "<svg>\n\n<rect></rect>\n</svg>"})
+        assert "\n\n" not in out
+        assert "<rect></rect>" in out
+
+    def test_empty_svg_drops(self) -> None:
+        assert render_block({"type": "svg", "html": ""}) == ""
+
+    def test_card_grid_becomes_rb_cards(self) -> None:
+        out = render_block(
+            {
+                "type": "card_grid",
+                "cards": [
+                    {"title": "Research Tab", "md": "New ideas start here."},
+                    {"title": "Theory Tab", "md": "Derivations live here."},
+                ],
+            }
+        )
+        assert out.startswith("```rb-cards")
+        assert "title: Research Tab" in out
+        assert "New ideas start here." in out
+
+    def test_phase_cards_items_become_bullets(self) -> None:
+        out = render_block(
+            {
+                "type": "phase_cards",
+                "cards": [{"phase": "p1", "title": "Phase 1", "items": ["GPU", "RAM"]}],
+            }
+        )
+        assert out.startswith("```rb-cards")
+        assert "title: Phase 1" in out
+        assert "- GPU" in out and "- RAM" in out
+
+    def test_agnostic_banner_becomes_rb_banner(self) -> None:
+        out = render_block(
+            {"type": "agnostic_banner", "title": "Crypto-Agnostic", "md": "Body text."}
+        )
+        assert out.startswith("```rb-banner agnostic")
+        assert "title: Crypto-Agnostic" in out
+        assert "Body text." in out
+
+    def test_cc_banner_becomes_rb_banner(self) -> None:
+        out = render_block({"type": "cc_banner", "title": "CC", "md": "Body."})
+        assert out.startswith("```rb-banner cc")
+
+    def test_usage_banner_becomes_rb_banner(self) -> None:
+        out = render_block({"type": "usage_banner", "title": "How to use", "items": ["a", "b"]})
+        assert out.startswith("```rb-banner usage")
+        assert "- a" in out and "- b" in out
+
+
+class TestSubsectionRecursion:
+    """The v1 schema nests content under `section.subsections`; migration must
+    render that tree instead of silently dropping it."""
+
+    def test_subsection_blocks_are_rendered(self) -> None:
+        sec = {
+            "blocks": [],
+            "subsections": {
+                "Inner Topic": {
+                    "blocks": [{"type": "p", "md": "Deep content survives."}],
+                },
+            },
+        }
+        out = render_subsections(sec, start_level=4)
+        assert "#### Inner Topic" in out
+        assert "Deep content survives." in out
+
+    def test_nested_subsections_recurse_deeper(self) -> None:
+        sec = {
+            "subsections": {
+                "Outer": {
+                    "blocks": [{"type": "p", "md": "outer body"}],
+                    "subsections": {
+                        "Inner": {"blocks": [{"type": "p", "md": "inner body"}]},
+                    },
+                },
+            },
+        }
+        out = render_subsections(sec, start_level=3)
+        assert "### Outer" in out
+        assert "#### Inner" in out
+        assert "inner body" in out
+
+    def test_private_subsections_skipped(self) -> None:
+        sec = {"subsections": {"_meta": {"blocks": [{"type": "p", "md": "hidden"}]}}}
+        assert render_subsections(sec, start_level=3) == ""
+
+    def test_domain_tab_includes_subsection_svg(self) -> None:
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [
+                {
+                    "id": "design",
+                    "label": "Design",
+                    "sections": {
+                        "System Architecture": {
+                            "blocks": [],
+                            "subsections": {
+                                "Pipeline": {
+                                    "blocks": [{"type": "svg", "html": "<svg><g></g></svg>"}],
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+        }
+        out = migrate(doc)
+        assert "#### Pipeline" in out
+        assert "<svg><g></g></svg>" in out
 
 
 class TestEndToEnd:

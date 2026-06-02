@@ -13,6 +13,13 @@ Transformations:
   original section becoming an H3 subsection. Verdict blocks (badge=adopt|rule)
   become <!-- @rule: ... --> blocks; verdict blocks (badge=reject) inside research
   Discarded Alternatives become <!-- @da: ... --> blocks.
+- section.subsections (any depth) → nested H4/H5/H6 headings (see
+  render_subsections). The v1 schema nests most of a mature document's content
+  here; dropping it lost the bulk of theory/discarded/reference material and the
+  architecture diagrams.
+- Rich blocks keep their chrome instead of flattening: svg → raw inline <svg>
+  (EL-09); card_grid / phase_cards → ```rb-cards; agnostic_banner / cc_banner /
+  usage_banner → ```rb-banner.
 - tabs[changelog] → DROPPED (data is in doc.changelog.entries)
 - doc.changelog.entries → ## Changelog with H3 entries newest-first
 
@@ -134,24 +141,87 @@ def _render_callout(blk: Block) -> str:
     return "\n".join(f"> {line}" if line else ">" for line in body.splitlines())
 
 
+def _yaml_block(payload: Any) -> str:
+    """Serialise `payload` to a YAML body suitable for an `rb-*` fence."""
+    return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True).rstrip("\n")
+
+
+def _cards_fence(cards: list[Block]) -> str:
+    """Emit a `rb-cards` fence (v2 EL-12) from a list of `{title, body}` dicts.
+
+    Mirrors the v1 `card_grid` / `phase_cards` chrome instead of flattening the
+    cards to plain prose. Empty card lists collapse to an empty string so the
+    block is dropped rather than emitting an empty fence.
+    """
+    items: list[dict[str, Any]] = []
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        entry: dict[str, Any] = {"title": str(card.get("title", ""))}
+        if card.get("icon"):
+            entry["icon"] = str(card["icon"])
+        body = str(card.get("body", "")).strip()
+        if body:
+            entry["body"] = body
+        items.append(entry)
+    if not items:
+        return ""
+    return f"```rb-cards\n{_yaml_block(items)}\n```"
+
+
 def _render_card_grid(blk: Block) -> str:
-    out: list[str] = []
-    for card in blk.get("cards", []):
-        title = card.get("title", "")
-        md = card.get("md", "").strip()
-        out.append(f"**{title}**\n\n{md}" if title else md)
-    return "\n\n".join(out)
+    cards = [
+        {"title": c.get("title", ""), "body": (c.get("md") or "").strip()}
+        for c in blk.get("cards", [])
+        if isinstance(c, dict)
+    ]
+    return _cards_fence(cards)
+
+
+def _render_phase_cards(blk: Block) -> str:
+    """v1 `phase_cards` → `rb-cards`. Each phase's `items` list becomes a
+    Markdown bullet list in the card body so nothing is lost.
+    """
+    cards: list[dict[str, Any]] = []
+    for c in blk.get("cards", []):
+        if not isinstance(c, dict):
+            continue
+        title = c.get("title") or c.get("phase", "")
+        items = c.get("items") or []
+        body = "\n".join(f"- {it}" for it in items)
+        cards.append({"title": title, "body": body})
+    return _cards_fence(cards)
+
+
+def _render_banner(blk: Block, kind: str) -> str:
+    """v1 `agnostic_banner` / `cc_banner` → `rb-banner <kind>` fence (EL-13)."""
+    payload: dict[str, Any] = {"title": str(blk.get("title", ""))}
+    body = (blk.get("md") or "").strip()
+    if body:
+        payload["body"] = body
+    return f"```rb-banner {kind}\n{_yaml_block(payload)}\n```"
 
 
 def _render_usage_banner(blk: Block) -> str:
-    title = blk.get("title", "")
+    """v1 `usage_banner` → `rb-banner usage` fence (EL-13)."""
+    payload: dict[str, Any] = {"title": str(blk.get("title", ""))}
     items = blk.get("items", [])
-    out: list[str] = []
-    if title:
-        out.append(f"**{title}**")
-    for it in items:
-        out.append(f"- {it}")
-    return "\n".join(out)
+    if items:
+        payload["items"] = [str(it) for it in items]
+    return f"```rb-banner usage\n{_yaml_block(payload)}\n```"
+
+
+def _render_svg(blk: Block) -> str:
+    """v1 `svg` → raw inline SVG (EL-09).
+
+    The v2 renderer passes raw HTML through, so the diagram survives verbatim.
+    Internal blank lines are collapsed: a blank line would split the CommonMark
+    HTML block and truncate the passthrough.
+    """
+    svg = (blk.get("html") or "").strip()
+    if not svg:
+        return ""
+    return re.sub(r"\n\s*\n+", "\n", svg)
 
 
 def parse_rule_label(label: str) -> dict[str, Any]:
@@ -227,7 +297,7 @@ def _render_verdict_as_da(blk: Block) -> str:
 
 def render_block(blk: Block, heading_offset: int = 0) -> str:
     t = blk.get("type")
-    if t == "p":
+    if t in {"p", "paragraph"}:
         return (blk.get("md") or "").strip()
     if t in {"h3", "h4", "h5"}:
         level = {"h3": 3, "h4": 4, "h5": 5}[t] + heading_offset
@@ -269,16 +339,13 @@ def render_block(blk: Block, heading_offset: int = 0) -> str:
             f"**{label}** _(badge: {badge})_\n\n{md}" if md else f"**{label}** _(badge: {badge})_"
         )
     if t == "svg":
-        return "<!-- SVG omitted in migration -->"
-    if t in {"phase_cards", "agnostic_banner", "cc_banner"}:
-        title = blk.get("title", "")
-        md = blk.get("md", "")
-        out: list[str] = []
-        if title:
-            out.append(f"**{title}**")
-        if md:
-            out.append(md)
-        return "\n\n".join(out)
+        return _render_svg(blk)
+    if t == "phase_cards":
+        return _render_phase_cards(blk)
+    if t == "agnostic_banner":
+        return _render_banner(blk, "agnostic")
+    if t == "cc_banner":
+        return _render_banner(blk, "cc")
     return f"<!-- unknown block type: {t} -->"
 
 
@@ -286,6 +353,40 @@ def render_blocks(blocks: list[Block], heading_offset: int = 0) -> str:
     rendered = [render_block(b, heading_offset) for b in blocks if b]
     rendered = [r for r in rendered if r]
     return "\n\n".join(rendered)
+
+
+def render_subsections(sec: Block, start_level: int) -> str:
+    """Render a v1 section's `subsections` recursively as nested Markdown
+    headings.
+
+    The v1 schema nests content under `section.subsections.<name>.{blocks,
+    subsections}`; `build.py` renders that tree recursively. Without this the
+    migration silently dropped every subsection (the bulk of a mature
+    document — theory derivations, discarded-alternative records, per-version
+    reference groups, and the architecture SVGs all live in subsections).
+
+    Each subsection name becomes a heading at `start_level` (clamped to
+    H3-H6), its blocks render one level deeper than that heading, and nested
+    subsections recurse at `start_level + 1`. Names beginning with `_` are
+    treated as private metadata and skipped, matching `build_domain_tab`.
+    """
+    out: list[str] = []
+    for name, sub in (sec.get("subsections") or {}).items():
+        if str(name).startswith("_") or not isinstance(sub, dict):
+            continue
+        level = max(3, min(6, start_level))
+        clean = re.sub(r"^#+\s*", "", str(name)).strip()
+        out.append(f"{_heading_prefix(level)} {clean}")
+        out.append("")
+        body = render_blocks(sub.get("blocks") or [], heading_offset=max(0, level - 2))
+        if body:
+            out.append(body)
+            out.append("")
+        nested = render_subsections(sub, start_level + 1)
+        if nested:
+            out.append(nested)
+            out.append("")
+    return "\n".join(out).rstrip("\n")
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +526,10 @@ def build_domain_tab(tab: Doc) -> str:
         body = render_blocks(sec.get("blocks", []), heading_offset=1)
         if body:
             parts.append(body)
+            parts.append("")
+        subs = render_subsections(sec, start_level=4)
+        if subs:
+            parts.append(subs)
             parts.append("")
 
     parts.append(f"<!-- @end: {anchor_id} -->")
@@ -577,6 +682,9 @@ def build_discarded_alternatives(research_tab: Doc) -> str:
             md = (blk.get("md") or "").strip()
             if md:
                 body_blocks.append(md)
+    subs = render_subsections(section, start_level=3)
+    if subs:
+        body_blocks.append(subs)
     parts.append("\n\n".join(body_blocks) if body_blocks else "*(none recorded)*")
     parts.append("")
     parts.append("<!-- @end: discarded -->")
@@ -625,7 +733,34 @@ def build_session_notes(research_tab: Doc) -> str:
         body = render_blocks(blocks, heading_offset=0)
         if body:
             parts.append(body)
+            parts.append("")
+        subs = render_subsections(sec, start_level=4)
+        if subs:
+            parts.append(subs)
+            parts.append("")
+
+    # Catch-all: research-tab sections that aren't reserved (handled by another
+    # builder) and aren't `Session Notes — Q-NNN` (captured above) are per-topic
+    # research notes under an idiosyncratic v1 layout. Without this they were
+    # dropped entirely. Render each as a topic subsection so their content
+    # (and any nested subsections) survives the migration.
+    for sec_name, sec in (research_tab.get("sections") or {}).items():
+        if sec_name.startswith("_") or sec_name in RESERVED_RESEARCH_SECTIONS:
+            continue
+        if re.match(r"^Session Notes\s*[—-]\s*Q-\d+", sec_name):
+            continue
+        body = render_blocks(sec.get("blocks", []), heading_offset=1)
+        subs = render_subsections(sec, start_level=4)
+        if not body and not subs:
+            continue
+        parts.append(f"### {sec_name}")
         parts.append("")
+        if body:
+            parts.append(body)
+            parts.append("")
+        if subs:
+            parts.append(subs)
+            parts.append("")
 
     parts.append("<!-- @end: sessions -->")
     return "\n".join(parts)
@@ -634,6 +769,8 @@ def build_session_notes(research_tab: Doc) -> str:
 def build_reasoning_journey(research_tab: Doc) -> str:
     section = (research_tab.get("sections") or {}).get("Reasoning Journey") or {}
     body = render_blocks(section.get("blocks", []), heading_offset=0)
+    subs = render_subsections(section, start_level=3)
+    body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
             "<!-- @anchor: journey -->",
@@ -651,6 +788,8 @@ def build_reasoning_journey(research_tab: Doc) -> str:
 def build_references(research_tab: Doc) -> str:
     section = (research_tab.get("sections") or {}).get("References") or {}
     body = render_blocks(section.get("blocks", []), heading_offset=0)
+    subs = render_subsections(section, start_level=3)
+    body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
             "<!-- @anchor: references -->",
@@ -728,6 +867,20 @@ def build_changelog(doc: Doc) -> str:
 
 
 SPECIAL_TABS = {"overview", "research", "changelog"}
+
+# Research-tab sections that have a dedicated builder. Anything else in the
+# research tab is treated as per-topic session notes by `build_session_notes`'s
+# catch-all (some v1 docs name session notes after the topic rather than
+# `Session Notes — Q-NNN`). `Research Methodology` is intentionally dropped —
+# the v2 in-file framework replaces it.
+RESERVED_RESEARCH_SECTIONS = {
+    "Open Research Queue",
+    "Research Tracker",
+    "Reasoning Journey",
+    "References",
+    "Discarded Alternatives",
+    "Research Methodology",
+}
 
 
 def migrate(doc: Doc) -> str:
