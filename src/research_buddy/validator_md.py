@@ -253,6 +253,7 @@ def _check_anchor_pairing(lines: list[str]) -> list[Issue]:
     in_fence = _line_in_fence(lines)
     anchors: dict[str, int] = {}
     ends: dict[str, int] = {}
+    issues: list[Issue] = []
     for i, line in enumerate(lines):
         if in_fence[i]:
             continue
@@ -260,15 +261,35 @@ def _check_anchor_pairing(lines: list[str]) -> list[Issue]:
         if m:
             name = m.group(1)
             if name in anchors:
-                # Duplicate anchor declaration
-                pass  # Not strictly an error — covered by other checks if relevant
-            anchors[name] = i + 1
+                # Anchors are str_replace insertion points — a duplicate makes
+                # the target ambiguous, so the agent's surgery (and `locate`)
+                # can land on the wrong occurrence. Must be unique.
+                issues.append(
+                    Issue(
+                        "error",
+                        "duplicate-anchor",
+                        f"@anchor: {name} declared more than once (first at line {anchors[name]})",
+                        i + 1,
+                    )
+                )
+            else:
+                anchors[name] = i + 1
             continue
         m = _END_RE.match(line)
         if m:
-            ends[m.group(1)] = i + 1
+            name = m.group(1)
+            if name in ends:
+                issues.append(
+                    Issue(
+                        "error",
+                        "duplicate-end",
+                        f"@end: {name} declared more than once (first at line {ends[name]})",
+                        i + 1,
+                    )
+                )
+            else:
+                ends[name] = i + 1
 
-    issues: list[Issue] = []
     for name, ln in sorted(anchors.items()):
         if name not in ends:
             issues.append(
@@ -293,6 +314,7 @@ _A_ID_RE = re.compile(r'<a\s+id="([^"]+)"\s*>\s*</a>')
 def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
     in_fence = _line_in_fence(lines)
     issues: list[Issue] = []
+    seen_entries: dict[str, int] = {}
     for i, line in enumerate(lines):
         if in_fence[i]:
             continue
@@ -301,6 +323,22 @@ def _check_entry_link_targets(lines: list[str]) -> list[Issue]:
             continue
         kind, eid = m.group(1), m.group(2)
         expected = eid.lower()
+        if expected in seen_entries:
+            # Two markers for the same ID mean two `<a id>` targets (invalid
+            # duplicate HTML id) and an ambiguous str_replace insertion point.
+            # Skip the link-target lookahead — the duplicate is already flagged,
+            # and re-checking it only emits noise.
+            issues.append(
+                Issue(
+                    "error",
+                    "duplicate-entry",
+                    f"@{kind}: {eid} declared more than once "
+                    f"(first at line {seen_entries[expected]})",
+                    i + 1,
+                )
+            )
+            continue
+        seen_entries[expected] = i + 1
         # Look ahead up to 3 non-empty lines for matching <a id>
         seen_id: str | None = None
         seen_line: int = 0

@@ -178,10 +178,10 @@ def _cards_fence(cards: list[Block]) -> str:
     for card in cards:
         if not isinstance(card, dict):
             continue
-        entry: dict[str, Any] = {"title": str(card.get("title", ""))}
+        entry: dict[str, Any] = {"title": str(card.get("title") or "")}
         if card.get("icon"):
             entry["icon"] = str(card["icon"])
-        body = str(card.get("body", "")).strip()
+        body = str(card.get("body") or "").strip()
         if body:
             entry["body"] = body
         items.append(entry)
@@ -192,7 +192,7 @@ def _cards_fence(cards: list[Block]) -> str:
 
 def _render_card_grid(blk: Block) -> str:
     cards = [
-        {"title": c.get("title", ""), "body": (c.get("md") or "").strip()}
+        {"title": c.get("title") or "", "body": (c.get("md") or "").strip()}
         for c in _as_dict_list(blk.get("cards"))
     ]
     return _cards_fence(cards)
@@ -204,7 +204,7 @@ def _render_phase_cards(blk: Block) -> str:
     """
     cards: list[dict[str, Any]] = []
     for c in _as_dict_list(blk.get("cards")):
-        title = c.get("title") or c.get("phase", "")
+        title = c.get("title") or c.get("phase") or ""
         body = "\n".join(f"- {it}" for it in _as_str_list(c.get("items")))
         cards.append({"title": title, "body": body})
     return _cards_fence(cards)
@@ -212,7 +212,7 @@ def _render_phase_cards(blk: Block) -> str:
 
 def _render_banner(blk: Block, kind: str) -> str:
     """v1 `agnostic_banner` / `cc_banner` → `rb-banner <kind>` fence (EL-13)."""
-    payload: dict[str, Any] = {"title": str(blk.get("title", ""))}
+    payload: dict[str, Any] = {"title": str(blk.get("title") or "")}
     body = (blk.get("md") or "").strip()
     if body:
         payload["body"] = body
@@ -221,7 +221,7 @@ def _render_banner(blk: Block, kind: str) -> str:
 
 def _render_usage_banner(blk: Block) -> str:
     """v1 `usage_banner` → `rb-banner usage` fence (EL-13)."""
-    payload: dict[str, Any] = {"title": str(blk.get("title", ""))}
+    payload: dict[str, Any] = {"title": str(blk.get("title") or "")}
     items = _as_str_list(blk.get("items"))
     if items:
         payload["items"] = items
@@ -772,7 +772,7 @@ def build_session_notes(research_tab: Doc) -> str:
             continue
         if re.match(r"^Session Notes\s*[—-]\s*Q-\d+", sec_name):
             continue
-        body = render_blocks(sec.get("blocks", []), heading_offset=1)
+        body = render_blocks(sec.get("blocks") or [], heading_offset=1)
         subs = render_subsections(sec, start_level=4)
         if not body and not subs:
             continue
