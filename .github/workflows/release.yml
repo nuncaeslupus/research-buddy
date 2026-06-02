@@ -1,14 +1,67 @@
 name: Release
 
+# Auto-release on merge: whenever a commit lands on `main` whose
+# pyproject.toml version has no corresponding `vX.Y.Z` tag yet, CI tags it,
+# builds, publishes to PyPI (trusted publishing / OIDC), and cuts a GitHub
+# release. No manual tag push is required — bump the version in a PR, merge,
+# and the release happens on its own. Idempotent: pushes that don't introduce
+# a new version are a cheap no-op (the `guard` job exits early).
+#
+# Keep this workflow filename as `release.yml` — the PyPI trusted-publisher
+# config is keyed to repo + workflow filename + the `pypi` environment.
+
 on:
   push:
-    tags:
-      - "v*"
+    branches: ["main"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Serialise releases so two quick merges can't race into a double publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build distributions
+  guard:
+    name: Decide whether to release
     runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install dev extras
+        run: uv sync --extra dev
+      - name: Verify version strings in sync
+        run: make check-version-sync
+      - id: check
+        name: Has this version already been released?
+        run: |
+          VER=$(uv run python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags --exit-code origin "refs/tags/v$VER" >/dev/null 2>&1; then
+            echo "v$VER is already tagged — nothing to release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$VER has no tag yet — will release."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build distributions and tag
+    needs: guard
+    if: needs.guard.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
@@ -18,24 +71,20 @@ jobs:
       - name: Install dev extras
         run: uv sync --extra dev
 
-      - name: Verify version strings in sync
-        run: make check-version-sync
-
-      - name: Verify tag matches pyproject.toml version
-        run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          VER=$(uv run python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-          if [ "$TAG" != "$VER" ]; then
-            echo "::error::Git tag ($TAG) does not match pyproject.toml version ($VER)."
-            echo "Run 'make version-sync', commit, and re-tag."
-            exit 1
-          fi
-
       - name: Build wheel and sdist
         run: make build
 
       - name: Twine metadata check
         run: uv run twine check dist/*
+
+      - name: Tag the release commit
+        env:
+          VER: ${{ needs.guard.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VER" -m "v$VER"
+          git push origin "v$VER"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -46,7 +95,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: build
+    needs: [guard, build]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -61,7 +110,7 @@ jobs:
 
   github-release:
     name: Create GitHub release
-    needs: publish-pypi
+    needs: [guard, publish-pypi]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -74,8 +123,9 @@ jobs:
       - name: Create release with CHANGELOG body and attached dist
         env:
           GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.guard.outputs.version }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "v$VER" \
+            --title "v$VER" \
             --notes-file CHANGELOG.md \
             dist/*
