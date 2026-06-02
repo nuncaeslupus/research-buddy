@@ -146,6 +146,27 @@ def _yaml_block(payload: Any) -> str:
     return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True).rstrip("\n")
 
 
+def _as_str_list(value: Any) -> list[str]:
+    """Coerce a v1 `items`-style value to a list of strings.
+
+    The schema expects a list, but migration may run on unvalidated JSON: a
+    `null` becomes `[]`, and a bare string becomes a single-item list rather
+    than being iterated character-by-character.
+    """
+    if isinstance(value, str):
+        return [value.strip()] if value.strip() else []
+    if isinstance(value, list):
+        return [str(v) for v in value]
+    return []
+
+
+def _as_dict_list(value: Any) -> list[Block]:
+    """Coerce a v1 `cards`-style value to a list of dict blocks (drop the rest)."""
+    if not isinstance(value, list):
+        return []
+    return [v for v in value if isinstance(v, dict)]
+
+
 def _cards_fence(cards: list[Block]) -> str:
     """Emit a `rb-cards` fence (v2 EL-12) from a list of `{title, body}` dicts.
 
@@ -172,8 +193,7 @@ def _cards_fence(cards: list[Block]) -> str:
 def _render_card_grid(blk: Block) -> str:
     cards = [
         {"title": c.get("title", ""), "body": (c.get("md") or "").strip()}
-        for c in blk.get("cards", [])
-        if isinstance(c, dict)
+        for c in _as_dict_list(blk.get("cards"))
     ]
     return _cards_fence(cards)
 
@@ -183,12 +203,9 @@ def _render_phase_cards(blk: Block) -> str:
     Markdown bullet list in the card body so nothing is lost.
     """
     cards: list[dict[str, Any]] = []
-    for c in blk.get("cards", []):
-        if not isinstance(c, dict):
-            continue
+    for c in _as_dict_list(blk.get("cards")):
         title = c.get("title") or c.get("phase", "")
-        items = c.get("items") or []
-        body = "\n".join(f"- {it}" for it in items)
+        body = "\n".join(f"- {it}" for it in _as_str_list(c.get("items")))
         cards.append({"title": title, "body": body})
     return _cards_fence(cards)
 
@@ -205,9 +222,9 @@ def _render_banner(blk: Block, kind: str) -> str:
 def _render_usage_banner(blk: Block) -> str:
     """v1 `usage_banner` → `rb-banner usage` fence (EL-13)."""
     payload: dict[str, Any] = {"title": str(blk.get("title", ""))}
-    items = blk.get("items", [])
+    items = _as_str_list(blk.get("items"))
     if items:
-        payload["items"] = [str(it) for it in items]
+        payload["items"] = items
     return f"```rb-banner usage\n{_yaml_block(payload)}\n```"
 
 
@@ -218,7 +235,10 @@ def _render_svg(blk: Block) -> str:
     Internal blank lines are collapsed: a blank line would split the CommonMark
     HTML block and truncate the passthrough.
     """
-    svg = (blk.get("html") or "").strip()
+    svg = blk.get("html")
+    if not isinstance(svg, str):
+        return ""
+    svg = svg.strip()
     if not svg:
         return ""
     return re.sub(r"\n\s*\n+", "\n", svg)
@@ -370,8 +390,11 @@ def render_subsections(sec: Block, start_level: int) -> str:
     subsections recurse at `start_level + 1`. Names beginning with `_` are
     treated as private metadata and skipped, matching `build_domain_tab`.
     """
+    subsections = sec.get("subsections")
+    if not isinstance(subsections, dict):
+        return ""
     out: list[str] = []
-    for name, sub in (sec.get("subsections") or {}).items():
+    for name, sub in subsections.items():
         if str(name).startswith("_") or not isinstance(sub, dict):
             continue
         level = max(3, min(6, start_level))

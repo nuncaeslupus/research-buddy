@@ -238,6 +238,25 @@ class TestRichBlockMapping:
         assert out.startswith("```rb-banner usage")
         assert "- a" in out and "- b" in out
 
+    @pytest.mark.parametrize(
+        "blk",
+        [
+            {"type": "card_grid", "cards": None},
+            {"type": "phase_cards", "cards": None},
+            {"type": "svg", "html": None},
+            {"type": "svg", "html": 123},
+        ],
+    )
+    def test_null_or_mistyped_fields_do_not_raise(self, blk: dict) -> None:
+        # `.get(key, [])` returns None for an explicit null, so iteration must be
+        # guarded; non-string `html` must not reach `.strip()`.
+        render_block(blk)
+
+    def test_phase_cards_string_items_not_split_into_chars(self) -> None:
+        out = render_block({"type": "phase_cards", "cards": [{"title": "P", "items": "GPU"}]})
+        assert "- GPU" in out
+        assert "- G\n" not in out
+
 
 class TestSubsectionRecursion:
     """The v1 schema nests content under `section.subsections`; migration must
@@ -275,6 +294,10 @@ class TestSubsectionRecursion:
     def test_private_subsections_skipped(self) -> None:
         sec = {"subsections": {"_meta": {"blocks": [{"type": "p", "md": "hidden"}]}}}
         assert render_subsections(sec, start_level=3) == ""
+
+    @pytest.mark.parametrize("value", [None, [], "oops", 42])
+    def test_non_dict_subsections_returns_empty(self, value: object) -> None:
+        assert render_subsections({"subsections": value}, start_level=3) == ""
 
     def test_domain_tab_includes_subsection_svg(self) -> None:
         doc = {
