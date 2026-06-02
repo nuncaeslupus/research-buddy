@@ -178,6 +178,26 @@ class TestAnchorPairing:
         assert "anchor-no-end" not in codes
         assert "end-no-anchor" not in codes
 
+    def test_duplicate_anchor_errors(self, tmp_path: Path) -> None:
+        body = "<!-- @anchor: foo -->\na\n<!-- @anchor: foo -->\nb\n<!-- @end: foo -->\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "duplicate-anchor" in _codes(validate_md(path))
+
+    def test_duplicate_end_errors(self, tmp_path: Path) -> None:
+        body = "<!-- @anchor: foo -->\na\n<!-- @end: foo -->\nb\n<!-- @end: foo -->\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "duplicate-end" in _codes(validate_md(path))
+
+    def test_unique_anchors_no_duplicate_error(self, tmp_path: Path) -> None:
+        body = (
+            "<!-- @anchor: foo -->\nx\n<!-- @end: foo -->\n"
+            "<!-- @anchor: bar -->\ny\n<!-- @end: bar -->\n"
+        )
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        codes = _codes(validate_md(path))
+        assert "duplicate-anchor" not in codes
+        assert "duplicate-end" not in codes
+
 
 class TestEntryAnchors:
     def test_rule_with_matching_id_passes(self, tmp_path: Path) -> None:
@@ -203,6 +223,14 @@ class TestEntryAnchors:
         codes = _codes(validate_md(path))
         assert "entry-no-link-target" not in codes
         assert "entry-id-mismatch" not in codes
+
+    def test_duplicate_entry_errors(self, tmp_path: Path) -> None:
+        body = (
+            '<!-- @da: DA-Q1-1 -->\n<a id="da-q1-1"></a>\n\n**DA-Q1-1.** body\n\n'
+            '<!-- @da: DA-Q1-1 -->\n<a id="da-q1-1"></a>\n\n**DA-Q1-1.** dup\n'
+        )
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "duplicate-entry" in _codes(validate_md(path))
 
     def test_session_with_matching_id(self, tmp_path: Path) -> None:
         body = '<!-- @session: Q-001 -->\n<a id="q-001"></a>\n\n### Q-001 Topic\n'

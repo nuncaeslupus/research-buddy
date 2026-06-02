@@ -252,6 +252,21 @@ class TestRichBlockMapping:
         # guarded; non-string `html` must not reach `.strip()`.
         render_block(blk)
 
+    @pytest.mark.parametrize(
+        "blk",
+        [
+            {"type": "card_grid", "cards": [{"title": None, "md": None}]},
+            {"type": "phase_cards", "cards": [{"title": None, "phase": None, "items": None}]},
+            {"type": "agnostic_banner", "title": None, "md": None},
+            {"type": "cc_banner", "title": None, "md": None},
+            {"type": "usage_banner", "title": None, "items": None},
+        ],
+    )
+    def test_null_titles_never_serialize_literal_none(self, blk: dict) -> None:
+        # An explicit null value must fall back to "" — never the string "None".
+        out = render_block(blk)
+        assert "None" not in out
+
     def test_phase_cards_string_items_not_split_into_chars(self) -> None:
         out = render_block({"type": "phase_cards", "cards": [{"title": "P", "items": "GPU"}]})
         assert "- GPU" in out

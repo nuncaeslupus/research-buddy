@@ -4,6 +4,37 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] — 2026-06-02
+
+Validation-hardening release motivated by a real recovery effort: when a v2
+document is hand-assembled or repaired (e.g. reconstructing content the old
+lossy v1→v2 migration had dropped), it is easy to leave **duplicate anchor or
+entity markers** at section boundaries. The validator previously paired markers
+by name and ignored a second occurrence, so these slipped through — yet they are
+exactly the kind of latent hazard that derails an agent's `str_replace` surgery
+(and `locate`), since the insertion point is no longer unique. This release
+makes anchor/entry uniqueness an enforced invariant. Backwards-compatible for
+any document that was already well-formed.
+
+### Added
+
+- **`duplicate-anchor` / `duplicate-end` validation errors** — a second
+  `<!-- @anchor: X -->` or `<!-- @end: X -->` for the same name is now an error
+  (it reports the line of the first occurrence). Markers inside fenced code
+  blocks are still ignored.
+- **`duplicate-entry` validation error** — a second `<!-- @rule: -->`,
+  `<!-- @da: -->`, or `<!-- @session: -->` for the same ID is now an error
+  (duplicate IDs produce duplicate `<a id>` link targets and an ambiguous
+  insertion point). A flagged duplicate skips the link-target lookahead so it
+  isn't re-reported as a separate error.
+
+### Fixed
+
+- **Migration `None`-handling**: a v1 block field set to an explicit `null`
+  (`title`, `body`, `phase`, `blocks`) no longer serialises as the literal
+  string `"None"` or raises `TypeError` — these spots now coerce via `or ""`
+  / `or []`, completing the unvalidated-JSON hardening from 1.11.x.
+
 ## [1.11.0] — 2026-06-01
 
 Agent-efficiency release: three new read-only/mechanical helper commands that
