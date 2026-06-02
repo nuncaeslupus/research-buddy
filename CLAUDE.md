@@ -132,7 +132,11 @@ Releasing is automatic. `.github/workflows/release.yml` runs on every push to
 commit, builds, publishes to PyPI (trusted publishing / OIDC), and cuts a
 GitHub release. So **merging a version bump to `main` is the release** — no
 manual `git tag` / push. Pushes that don't introduce a new version are a cheap
-no-op. `make publish` remains for manual/local publishing if ever needed.
+no-op. `make publish` remains only as an emergency fallback: it uploads to
+PyPI **without** creating the `vX.Y.Z` tag, so a later merge of that version to
+`main` would see no tag, attempt to release, and fail at the upload step with a
+"file already exists" error. Don't use it in the normal flow — let the merge
+release.
 
 Runtime compatibility rules (see README "Version compatibility"):
 - MAJOR differs → error-level warning.
