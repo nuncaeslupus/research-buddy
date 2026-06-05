@@ -622,6 +622,23 @@ class TestQueueDoneDetection:
         assert not any("Q-002" in t for t in topics)
         assert not any("Q-003" in t for t in topics)
 
+    def test_not_researched_status_is_kept(self) -> None:
+        # Regression: a leading-anchored match must not treat "Not Researched"
+        # or "To be researched" (open statuses) as done.
+        block = {
+            "headers": ["Priority", "Topic", "Status"],
+            "rows": [
+                ["1", "Q-001 Open one", "Not Researched"],
+                ["2", "Q-002 Open two", "To be researched"],
+                ["3", "Q-003 Done one", "Researched v2.1"],
+            ],
+        }
+        _, rows = _strip_done_rows_from_queue(block, {})
+        topics = [" ".join(str(c) for c in r) for r in rows]
+        assert any("Q-001" in t for t in topics)
+        assert any("Q-002" in t for t in topics)
+        assert not any("Q-003" in t for t in topics)
+
     def test_row_in_tracker_stripped_even_without_status(self) -> None:
         block = {
             "headers": ["Topic"],

@@ -741,11 +741,13 @@ def _row_done(row: list[str], status_col: int, done_glyph: str, tracker_ids: set
     invariant)."""
     if status_col >= 0 and status_col < len(row):
         cell = str(row[status_col]).strip()
-        # ✦ glyph (the leading token of e.g. "✦ Researched"), OR plain
-        # "Researched vX.Y" text without the glyph — both mean done.
+        # ✦ glyph (the leading token of e.g. "✦ Researched"), OR a cell that
+        # *starts* with "Researched vX.Y" (no glyph) — both mean done. The
+        # anchor avoids false positives like "Not Researched" / "Not yet
+        # researched", which are open statuses, not done ones.
         if done_glyph and done_glyph in cell:
             return True
-        if cell.startswith("✦") or re.search(r"researched", cell, re.IGNORECASE):
+        if cell.startswith("✦") or re.match(r"researched\b", cell, re.IGNORECASE):
             return True
     if tracker_ids:
         m = re.search(r"\bQ-\d+\b", " ".join(str(c) for c in row))
