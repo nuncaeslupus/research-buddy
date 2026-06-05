@@ -1,5 +1,57 @@
 # Next session
 
+## Session 2026-06-05 (session 27)
+
+### What was done
+
+- **Fixed four `migrate-v1-to-v2` bugs** surfaced migrating a mature v1.14 JSON
+  (~rb 1.4.0 schema, 31 topics) on rb 1.12.0. One crash + three silent-data-loss
+  bugs. All in `src/research_buddy/migrate_v1_to_v2.py`:
+  1. **[crash] `meta.language` as a string** killed `build_frontmatter`
+     (`(meta.get("language") or {}).get("code")` assumed an object). New
+     `resolve_language()` coerces `str → {code, label}`, mapping the label via
+     `build._LANGUAGE_NAME_TO_CODE`, falling back to `"und"` for unknown labels.
+  2. **[data loss] project spec read only from `agent_guidelines.project_specific`**
+     — in mature docs that block is the untouched `[FILL]` template; the real
+     spec lives at top-level `doc["project_specific"]`. New `resolve_project_spec()`
+     does a per-field merge (filled agent_guidelines value wins, else recover the
+     top-level one) via `_is_filled` (recursive, treats `[FILL]`/empty as unfilled)
+     + `_normalize_top_level_ps` (key aliases: `deliverable→deliverable_type`,
+     `timeline→timing`, `source_tiers.tier_3→discovery`, `never_tier→never`).
+     Used by both `build_frontmatter` and `migrate`.
+  3. **[data loss] `tabs[overview]` dropped unconditionally.** New
+     `build_overview_tab()` renders an Overview H2 (placed right after Project
+     Specification) carrying substantive sections as H3s; only nav sections
+     (`OVERVIEW_NAV_SECTIONS`: Quick Links / How to Navigate / …) are dropped.
+     Returns "" for a pure-nav tab so `migrate` omits it. `build_domain_tab` grew
+     a `skip_sections` param.
+  4. **[structural] queue done-detection keyed only on the ✦ glyph.** A row whose
+     status read "Researched v1.3" (no glyph) stayed in the Open Research Queue
+     *and* the Research Tracker (violating "no ID in both"). New `_row_done`
+     also matches `/researched/i` text and any row whose Q-NNN is already in the
+     tracker (`_tracker_ids`). `_strip_done_rows_from_queue` + `build_open_research_queue`
+     thread the tracker IDs through.
+- **Regression tests** (`tests/test_migrate_v1_to_v2.py`, +22): `TestLanguageCoercion`,
+  `TestProjectSpecResolution`, `TestOverviewTabSurvival`, `TestQueueDoneDetection`,
+  and `TestSessionNotesCatchAll` (guards the monolithic `Session Notes` catch-all
+  that already works — flagged "not a bug, add a guard"). Suite 483 → **505 passed**,
+  coverage **91.16%**.
+- **Released 1.12.1** (PATCH — bug fix). `make version-sync` + `make regen-examples`
+  (starter.md embeds the version). Gates green: `make lint`, `make check-examples-sync`,
+  `make test-cov`. End-to-end smoke on a synthetic repro doc confirmed all four
+  fixes; the only `validate` warning is the expected filename-mismatch from a custom
+  `-o` name.
+
+### Next steps
+
+- Numbered roadmap (1–14) remains complete; backlog ("Future improvements") is the
+  next pickup — framework-token-overhead is highest leverage but design-heavy; the
+  two file-I/O cleanups (`read_text_or_error`, `atomic_write`) are low-risk warm-ups.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-01 (session 26)
 
 ### What was done
