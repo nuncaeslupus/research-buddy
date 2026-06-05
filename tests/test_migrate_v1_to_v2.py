@@ -11,7 +11,10 @@ import yaml
 
 from research_buddy import __version__
 from research_buddy.migrate_v1_to_v2 import (
+    _strip_done_rows_from_queue,
+    _tracker_ids,
     build_frontmatter,
+    build_overview_tab,
     derive_output_path,
     load_framework_block_from_starter,
     main,
@@ -19,6 +22,8 @@ from research_buddy.migrate_v1_to_v2 import (
     parse_rule_label,
     render_block,
     render_subsections,
+    resolve_language,
+    resolve_project_spec,
 )
 from research_buddy.validator_md import validate_md
 
@@ -422,3 +427,314 @@ class TestCli:
         in_path.write_text("{not json", encoding="utf-8")
         rc = main([str(in_path)])
         assert rc == 2
+
+
+class TestLanguageCoercion:
+    """Bug 1 — meta.language may be a bare string in older docs."""
+
+    def test_string_language_does_not_crash(self) -> None:
+        # Regression: `(meta.get("language") or {}).get(...)` crashed with
+        # AttributeError when language was the string "English".
+        doc = {"meta": {"version": "1.0", "language": "English"}}
+        fm = yaml.safe_load(build_frontmatter(doc)[4:-3])
+        assert fm["language"] == {"code": "en", "label": "English"}
+
+    def test_object_language_preserved(self) -> None:
+        meta = {"language": {"code": "es", "label": "Spanish"}}
+        assert resolve_language(meta) == {"code": "es", "label": "Spanish"}
+
+    def test_unknown_string_label_falls_back_to_und(self) -> None:
+        assert resolve_language({"language": "Klingon"}) == {"code": "und", "label": "Klingon"}
+
+    def test_known_string_label_maps_to_code(self) -> None:
+        assert resolve_language({"language": "Spanish"}) == {"code": "es", "label": "Spanish"}
+
+    def test_missing_language_defaults_to_english(self) -> None:
+        assert resolve_language({}) == {"code": "en", "label": "English"}
+
+    def test_object_without_code_maps_from_label(self) -> None:
+        assert resolve_language({"language": {"label": "French"}}) == {
+            "code": "fr",
+            "label": "French",
+        }
+
+
+class TestProjectSpecResolution:
+    """Bug 2 — the real spec lives at top-level project_specific; the
+    agent_guidelines copy is often the untouched [FILL] template."""
+
+    def _doc(self) -> dict:
+        return {
+            "agent_guidelines": {
+                "project_specific": {
+                    "domain": "[FILL: one-line description]",
+                    "deliverable_type": "[FILL: ...]",
+                    "final_goal": "[FILL: ...]",
+                    "source_tiers": {
+                        "tier_1": "[FILL in session_zero]",
+                        "tier_2": "[FILL in session_zero]",
+                        "discovery": "[FILL in session_zero]",
+                        "never": "[FILL in session_zero]",
+                    },
+                }
+            },
+            "project_specific": {
+                "domain": "Distributed systems",
+                "deliverable": "software",
+                "final_goal": "Ship a consensus library",
+                "timeline": "Q3 2026",
+                "validation_gate": "All tests pass",
+                "source_tiers": {
+                    "tier_1": "Peer-reviewed papers",
+                    "tier_2": "Official docs",
+                    "tier_3": "Engineering blogs",
+                    "never_tier": "Anonymous PDFs",
+                },
+            },
+        }
+
+    def test_recovers_top_level_scalars(self) -> None:
+        ps = resolve_project_spec(self._doc())
+        assert ps["domain"] == "Distributed systems"
+        assert ps["final_goal"] == "Ship a consensus library"
+        assert ps["validation_gate"] == "All tests pass"
+
+    def test_normalizes_key_aliases(self) -> None:
+        ps = resolve_project_spec(self._doc())
+        assert ps["deliverable_type"] == "software"
+        assert ps["timing"] == "Q3 2026"
+
+    def test_normalizes_tier_aliases(self) -> None:
+        ps = resolve_project_spec(self._doc())
+        assert ps["source_tiers"]["discovery"] == "Engineering blogs"
+        assert ps["source_tiers"]["never"] == "Anonymous PDFs"
+
+    def test_filled_guidelines_wins_over_top_level(self) -> None:
+        doc = self._doc()
+        doc["agent_guidelines"]["project_specific"]["domain"] = "Real filled domain"
+        ps = resolve_project_spec(doc)
+        assert ps["domain"] == "Real filled domain"
+
+    def test_migrate_renders_recovered_spec(self) -> None:
+        doc = self._doc()
+        doc["meta"] = {"version": "1.0"}
+        out = migrate(doc)
+        assert "Distributed systems" in out
+        assert "Ship a consensus library" in out
+        assert "Engineering blogs" in out
+        # The [FILL] stub must not leak into the rendered spec.
+        assert "[FILL" not in out.split("## Project Specification")[1].split("---")[0]
+
+    def test_no_top_level_falls_back_to_guidelines(self) -> None:
+        doc = {
+            "agent_guidelines": {"project_specific": {"domain": "only here", "timing": "now"}},
+        }
+        ps = resolve_project_spec(doc)
+        assert ps["domain"] == "only here"
+        assert ps["timing"] == "now"
+
+
+class TestOverviewTabSurvival:
+    """Bug 3 — substantive overview content must survive; only nav is dropped."""
+
+    def _overview_tab(self) -> dict:
+        return {
+            "id": "overview",
+            "label": "Overview",
+            "sections": {
+                "Quick Links": {"blocks": [{"type": "p", "md": "see other tabs"}]},
+                "How to Navigate": {"blocks": [{"type": "p", "md": "click around"}]},
+                "Project Goal": {"blocks": [{"type": "p", "md": "Build the best thing."}]},
+                "Working Hypotheses": {
+                    "blocks": [{"type": "ul", "items": ["H1 holds", "H2 is open"]}]
+                },
+            },
+        }
+
+    def test_substantive_sections_survive_as_subsections(self) -> None:
+        out = build_overview_tab(self._overview_tab())
+        assert "## Overview" in out
+        assert "### Project Goal" in out
+        assert "Build the best thing." in out
+        assert "### Working Hypotheses" in out
+        assert "H1 holds" in out
+
+    def test_nav_sections_dropped(self) -> None:
+        out = build_overview_tab(self._overview_tab())
+        assert "Quick Links" not in out
+        assert "How to Navigate" not in out
+        assert "click around" not in out
+
+    def test_pure_nav_tab_returns_empty(self) -> None:
+        tab = {
+            "id": "overview",
+            "sections": {
+                "Quick Links": {"blocks": [{"type": "p", "md": "x"}]},
+                "How to Navigate": {"blocks": [{"type": "p", "md": "y"}]},
+            },
+        }
+        assert build_overview_tab(tab) == ""
+
+    def test_migrate_places_overview_after_project_spec(self) -> None:
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [self._overview_tab()],
+        }
+        out = migrate(doc)
+        assert "## Overview" in out
+        assert "Build the best thing." in out
+        assert out.index("## Project Specification") < out.index("## Overview")
+
+    def test_migrate_omits_pure_nav_overview(self) -> None:
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [
+                {
+                    "id": "overview",
+                    "label": "Overview",
+                    "sections": {"Quick Links": {"blocks": [{"type": "p", "md": "x"}]}},
+                }
+            ],
+        }
+        out = migrate(doc)
+        assert "## Overview" not in out
+
+
+class TestQueueDoneDetection:
+    """Bug 4 — completed rows without the ✦ glyph must leave the open queue."""
+
+    def _queue_block(self) -> dict:
+        return {
+            "headers": ["Priority", "Topic", "Status"],
+            "rows": [
+                ["1", "Q-001 Pending topic", "OPEN"],
+                ["2", "Q-002 Glyph done", "✦ Researched"],
+                ["3", "Q-003 No-glyph done", "Researched v1.3"],
+            ],
+        }
+
+    def test_no_glyph_researched_row_stripped(self) -> None:
+        _, rows = _strip_done_rows_from_queue(self._queue_block(), {})
+        topics = [" ".join(str(c) for c in r) for r in rows]
+        assert any("Q-001" in t for t in topics)
+        assert not any("Q-002" in t for t in topics)
+        assert not any("Q-003" in t for t in topics)
+
+    def test_not_researched_status_is_kept(self) -> None:
+        # Regression: a leading-anchored match must not treat "Not Researched"
+        # or "To be researched" (open statuses) as done.
+        block = {
+            "headers": ["Priority", "Topic", "Status"],
+            "rows": [
+                ["1", "Q-001 Open one", "Not Researched"],
+                ["2", "Q-002 Open two", "To be researched"],
+                ["3", "Q-003 Done one", "Researched v2.1"],
+            ],
+        }
+        _, rows = _strip_done_rows_from_queue(block, {})
+        topics = [" ".join(str(c) for c in r) for r in rows]
+        assert any("Q-001" in t for t in topics)
+        assert any("Q-002" in t for t in topics)
+        assert not any("Q-003" in t for t in topics)
+
+    def test_row_in_tracker_stripped_even_without_status(self) -> None:
+        block = {
+            "headers": ["Topic"],
+            "rows": [["Q-001 Pending"], ["Q-009 Already tracked"]],
+        }
+        _, rows = _strip_done_rows_from_queue(block, {}, tracker_ids={"Q-009"})
+        flat = [" ".join(str(c) for c in r) for r in rows]
+        assert any("Q-001" in t for t in flat)
+        assert not any("Q-009" in t for t in flat)
+
+    def test_tracker_ids_extracted(self) -> None:
+        research_tab = {
+            "sections": {
+                "Research Tracker": {
+                    "blocks": [
+                        {
+                            "type": "table",
+                            "headers": ["ID", "Topic"],
+                            "rows": [["Q-002", "Done thing"], ["Q-003", "Other"]],
+                        }
+                    ]
+                }
+            }
+        }
+        assert _tracker_ids(research_tab) == {"Q-002", "Q-003"}
+
+    def test_no_id_in_both_queue_and_tracker(self) -> None:
+        # End-to-end: a no-glyph completed row that is also in the tracker must
+        # appear in the Research Tracker but NOT in the Open Research Queue.
+        research_tab = {
+            "id": "research",
+            "sections": {
+                "Open Research Queue": {
+                    "blocks": [
+                        {
+                            "type": "table",
+                            "headers": ["Priority", "Topic", "Status"],
+                            "rows": [
+                                ["1", "Q-001 Pending", "OPEN"],
+                                ["2", "Q-002 Completed", "Researched v1.3"],
+                            ],
+                        }
+                    ]
+                },
+                "Research Tracker": {
+                    "blocks": [
+                        {
+                            "type": "table",
+                            "headers": ["ID", "Topic", "Status"],
+                            "rows": [["Q-002", "Completed", "✦ Researched v1.3"]],
+                        }
+                    ]
+                },
+            },
+        }
+        doc = {
+            "meta": {"version": "1.4"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [research_tab],
+        }
+        out = migrate(doc)
+        # Anchors (not H2 text) — the framework block mentions the section names.
+        queue = out.split("<!-- @anchor: queue -->")[1].split("<!-- @end: queue -->")[0]
+        tracker = out.split("<!-- @anchor: tracker -->")[1].split("<!-- @end: tracker -->")[0]
+        assert "Q-002" not in queue
+        assert "Q-001" in queue
+        assert "Q-002" in tracker
+
+
+class TestSessionNotesCatchAll:
+    """Regression guard — monolithic `Session Notes` section content survives
+    the catch-all (worked in 1.12.0; keep it that way)."""
+
+    def test_monolithic_session_notes_survive(self) -> None:
+        research_tab = {
+            "id": "research",
+            "sections": {
+                "Session Notes": {
+                    "blocks": [
+                        {"type": "h3", "md": "Topic Alpha"},
+                        {"type": "p", "md": "Findings for alpha."},
+                        {"type": "h3", "md": "Topic Beta"},
+                        {"type": "p", "md": "Findings for beta."},
+                    ]
+                }
+            },
+        }
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [research_tab],
+        }
+        out = migrate(doc)
+        # Anchors (not H2 text) — the framework block mentions "Session Notes".
+        sessions = out.split("<!-- @anchor: sessions -->")[1].split("<!-- @end: sessions -->")[0]
+        assert "Findings for alpha." in sessions
+        assert "Findings for beta." in sessions
+        assert "Topic Alpha" in sessions
+        assert "Topic Beta" in sessions

@@ -1,10 +1,13 @@
 """Migrate a research-buddy v1 JSON document to a v2 Markdown source file.
 
 Transformations:
-- meta.* + agent_guidelines.project_specific.* → YAML frontmatter
+- meta.* + project spec (the filled top-level `project_specific`, falling back to
+  `agent_guidelines.project_specific`) → YAML frontmatter
 - agent_guidelines.framework + session_protocol → DROPPED (replaced by v2 framework
   block, copied from the installed starter.md)
-- tabs[overview] → DROPPED (Quick Links / How to Navigate are obsolete in MD)
+- tabs[overview] → an "Overview" domain tab placed after Project Specification; only
+  navigation sections (Quick Links / How to Navigate) are dropped, substantive
+  sections (Project Goal, Working Hypotheses, …) survive as H3 subsections
 - tabs[research] sections → top-level H2 sections (Open Research Queue, Research
   Tracker, Reasoning Journey, References, Discarded Alternatives, and per-Q
   Session Notes coalesced into a single ## Session Notes H2)
@@ -46,9 +49,115 @@ from typing import Any
 import yaml
 
 from research_buddy import __version__
+from research_buddy.build import _LANGUAGE_NAME_TO_CODE
 
 Doc = dict[str, Any]
 Block = dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Project-specification + language resolution
+# ---------------------------------------------------------------------------
+
+# Older v1 docs (pre-1.x schema) keep the real, filled project spec at the top
+# level as doc["project_specific"], while the agent_guidelines copy stays an
+# untouched [FILL] template. The two blocks also diverge on a handful of key
+# names; normalize the top-level vocabulary to the agent_guidelines one.
+_TOP_LEVEL_PS_ALIASES = {
+    "deliverable": "deliverable_type",
+    "timeline": "timing",
+}
+_TOP_LEVEL_TIER_ALIASES = {
+    "tier_3": "discovery",
+    "never_tier": "never",
+}
+
+
+def _is_filled(value: Any) -> bool:
+    """True if `value` carries real content (not empty, not a `[FILL]` stub)."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        s = value.strip()
+        return bool(s) and "[fill" not in s.lower()
+    if isinstance(value, list):
+        return any(_is_filled(v) for v in value)
+    if isinstance(value, dict):
+        return any(_is_filled(v) for k, v in value.items() if not str(k).startswith("_"))
+    return True
+
+
+def _normalize_top_level_ps(raw: Any) -> Doc:
+    """Rename the divergent top-level keys to the agent_guidelines vocabulary."""
+    if not isinstance(raw, dict):
+        return {}
+    ps: Doc = {_TOP_LEVEL_PS_ALIASES.get(str(key), str(key)): val for key, val in raw.items()}
+    st = ps.get("source_tiers")
+    if isinstance(st, dict):
+        ps["source_tiers"] = {
+            _TOP_LEVEL_TIER_ALIASES.get(str(key), str(key)): val for key, val in st.items()
+        }
+    return ps
+
+
+def _merge_ps(primary: Doc, fallback: Doc) -> Doc:
+    """Field-level merge: keep `primary` values that are filled, else fall back.
+
+    `source_tiers` is merged per-tier so a half-filled tiers block recovers the
+    missing tiers from `fallback` instead of being taken wholesale.
+    """
+    merged: Doc = dict(fallback)
+    for key, val in primary.items():
+        if key == "source_tiers":
+            continue
+        if _is_filled(val) or key not in merged:
+            merged[key] = val
+
+    p_st = primary.get("source_tiers")
+    f_st = fallback.get("source_tiers")
+    if isinstance(p_st, dict) or isinstance(f_st, dict):
+        st_merged: Doc = dict(f_st) if isinstance(f_st, dict) else {}
+        if isinstance(p_st, dict):
+            for key, val in p_st.items():
+                if _is_filled(val) or key not in st_merged:
+                    st_merged[key] = val
+        merged["source_tiers"] = st_merged
+    return merged
+
+
+def resolve_project_spec(doc: Doc) -> Doc:
+    """The effective project spec for migration.
+
+    Mature v1 docs leave `agent_guidelines.project_specific` as the untouched
+    `[FILL]` template and keep the real spec at the top level
+    (`doc["project_specific"]`, with a few divergent key names). Prefer the
+    agent_guidelines copy per-field when it has actually been filled in,
+    otherwise recover the (key-normalized) top-level value — so domain / goal /
+    source tiers aren't lost to the stale template.
+    """
+    guidelines = (doc.get("agent_guidelines") or {}).get("project_specific") or {}
+    if not isinstance(guidelines, dict):
+        guidelines = {}
+    top = _normalize_top_level_ps(doc.get("project_specific") or {})
+    return _merge_ps(guidelines, top)
+
+
+def resolve_language(meta: Doc) -> dict[str, str]:
+    """Coerce `meta.language` (string or object) to a `{code, label}` dict.
+
+    Older docs store the language as a bare string (`"English"`); the v2
+    frontmatter wants an object. Map a known label to a BCP-47 code, falling
+    back to `"und"` (undetermined) for an unrecognized label.
+    """
+    raw = meta.get("language")
+    if isinstance(raw, dict):
+        label = str(raw.get("label") or "English")
+        code = raw.get("code") or _LANGUAGE_NAME_TO_CODE.get(label.strip().lower(), "und")
+        return {"code": str(code), "label": label}
+    if isinstance(raw, str) and raw.strip():
+        label = raw.strip()
+        return {"code": _LANGUAGE_NAME_TO_CODE.get(label.lower(), "und"), "label": label}
+    return {"code": "en", "label": "English"}
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +167,7 @@ Block = dict[str, Any]
 
 def build_frontmatter(doc: Doc) -> str:
     meta = doc.get("meta", {}) or {}
-    ps = (doc.get("agent_guidelines") or {}).get("project_specific") or {}
+    ps = resolve_project_spec(doc)
     file_name = (meta.get("file_name") or "").rstrip()
     # Strip .json extension first, THEN strip any version suffix like "_v1_14"
     file_name = re.sub(r"\.json$", "", file_name)
@@ -81,10 +190,7 @@ def build_frontmatter(doc: Doc) -> str:
         "file_name": file_name or None,
         "title": meta.get("title"),
         "subtitle": meta.get("subtitle"),
-        "language": {
-            "code": (meta.get("language") or {}).get("code", "en"),
-            "label": (meta.get("language") or {}).get("label", "English"),
-        },
+        "language": resolve_language(meta),
         "project": {
             "domain": ps.get("domain"),
             "deliverable_type": ps.get("deliverable_type"),
@@ -531,9 +637,16 @@ def build_project_specification(ps: Doc) -> str:
     return "\n".join(parts)
 
 
-def build_domain_tab(tab: Doc) -> str:
+def build_domain_tab(tab: Doc, skip_sections: set[str] | None = None) -> str:
+    """Render a domain-specific tab as an H2 section.
+
+    `skip_sections` (matched case-insensitively) is dropped — used for the
+    overview tab, whose navigation sections (Quick Links / How to Navigate) are
+    obsolete in v2 but whose substantive sections must survive.
+    """
     label = tab.get("label") or tab.get("id") or "Untitled"
     anchor_id = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+    skip = {s.strip().lower() for s in (skip_sections or set())}
 
     parts = [
         f"<!-- @anchor: {anchor_id} -->",
@@ -542,7 +655,7 @@ def build_domain_tab(tab: Doc) -> str:
     ]
 
     for sec_name, sec in tab.get("sections", {}).items():
-        if sec_name.startswith("_"):
+        if sec_name.startswith("_") or sec_name.strip().lower() in skip:
             continue
         parts.append(f"### {sec_name}")
         parts.append("")
@@ -559,10 +672,99 @@ def build_domain_tab(tab: Doc) -> str:
     return "\n".join(parts)
 
 
-def _strip_done_rows_from_queue(table_block: Block, ui: Doc) -> tuple[list[str], list[list[str]]]:
+# Overview-tab sections that are pure navigation chrome — obsolete in v2 (the
+# single-page layout has no tabs to link between), so they're dropped. Anything
+# else in the overview tab is substantive research content and is preserved.
+OVERVIEW_NAV_SECTIONS = {
+    "quick links",
+    "quick navigation",
+    "how to navigate",
+    "how-to-navigate",
+    "navigation",
+    "navigate",
+    "at a glance",
+}
+
+
+def _section_has_content(sec: Doc) -> bool:
+    return bool(render_blocks(sec.get("blocks", []), heading_offset=1)) or bool(
+        render_subsections(sec, start_level=4)
+    )
+
+
+def build_overview_tab(tab: Doc) -> str:
+    """Render the v1 `overview` tab, dropping only navigation sections.
+
+    Returns "" when nothing substantive survives (a pure Quick-Links / How-to-
+    Navigate tab), so the caller can omit the section entirely.
+    """
+    substantive = {
+        name: sec
+        for name, sec in (tab.get("sections") or {}).items()
+        if not str(name).startswith("_")
+        and str(name).strip().lower() not in OVERVIEW_NAV_SECTIONS
+        and isinstance(sec, dict)
+        and _section_has_content(sec)
+    }
+    if not substantive:
+        return ""
+    return build_domain_tab(
+        {
+            "id": tab.get("id", "overview"),
+            "label": tab.get("label") or "Overview",
+            "sections": substantive,
+        },
+        skip_sections=OVERVIEW_NAV_SECTIONS,
+    )
+
+
+def _tracker_ids(research_tab: Doc) -> set[str]:
+    """Q-NNN IDs already recorded in the Research Tracker."""
+    section = (research_tab.get("sections") or {}).get("Research Tracker") or {}
+    table_block = next(
+        (b for b in section.get("blocks", []) if b.get("type") == "table"),
+        None,
+    )
+    if table_block is None:
+        return set()
+    ids: set[str] = set()
+    for row in table_block.get("rows", []):
+        m = re.search(r"\bQ-\d+\b", " ".join(str(c) for c in row))
+        if m:
+            ids.add(m.group(0))
+    return ids
+
+
+def _row_done(row: list[str], status_col: int, done_glyph: str, tracker_ids: set[str]) -> bool:
+    """A master-queue row is done if its status reads researched/✦, or its ID
+    is already in the Research Tracker (the "no ID in both queue and tracker"
+    invariant)."""
+    if status_col >= 0 and status_col < len(row):
+        cell = str(row[status_col]).strip()
+        # ✦ glyph (the leading token of e.g. "✦ Researched"), OR a cell that
+        # *starts* with "Researched vX.Y" (no glyph) — both mean done. The
+        # anchor avoids false positives like "Not Researched" / "Not yet
+        # researched", which are open statuses, not done ones.
+        if done_glyph and done_glyph in cell:
+            return True
+        if cell.startswith("✦") or re.match(r"researched\b", cell, re.IGNORECASE):
+            return True
+    if tracker_ids:
+        m = re.search(r"\bQ-\d+\b", " ".join(str(c) for c in row))
+        if m and m.group(0) in tracker_ids:
+            return True
+    return False
+
+
+def _strip_done_rows_from_queue(
+    table_block: Block, ui: Doc, tracker_ids: set[str] | None = None
+) -> tuple[list[str], list[list[str]]]:
     headers = list(table_block.get("headers", []))
     rows = list(table_block.get("rows", []))
     status_done_token = ui.get("status_done", "✦ Researched")
+    glyph_tokens = status_done_token.split()
+    done_glyph = glyph_tokens[0] if glyph_tokens else ""
+    tracker_ids = tracker_ids or set()
 
     drop_idx: set[int] = set()
     for i, h in enumerate(headers):
@@ -574,10 +776,8 @@ def _strip_done_rows_from_queue(table_block: Block, ui: Doc) -> tuple[list[str],
     )
     keep_rows: list[list[str]] = []
     for row in rows:
-        if status_col >= 0 and status_col < len(row):
-            cell = str(row[status_col]).strip()
-            if status_done_token.split()[0] in cell or cell.startswith("\u2726"):
-                continue
+        if _row_done(row, status_col, done_glyph, tracker_ids):
+            continue
         keep_rows.append(row)
 
     new_headers = [h for i, h in enumerate(headers) if i not in drop_idx]
@@ -610,7 +810,7 @@ def build_open_research_queue(research_tab: Doc, ui: Doc) -> str:
     if table_block is None:
         body = "*(no queue table found in source)*"
     else:
-        headers, rows = _strip_done_rows_from_queue(table_block, ui)
+        headers, rows = _strip_done_rows_from_queue(table_block, ui, _tracker_ids(research_tab))
         if rows:
             body = _md_table(headers, rows)
         else:
@@ -908,10 +1108,11 @@ RESERVED_RESEARCH_SECTIONS = {
 
 def migrate(doc: Doc) -> str:
     meta = doc.get("meta", {}) or {}
-    ps = (doc.get("agent_guidelines") or {}).get("project_specific") or {}
+    ps = resolve_project_spec(doc)
     ui = meta.get("ui_strings") or {}
 
     domain_tabs = [t for t in doc.get("tabs", []) if t.get("id") not in SPECIAL_TABS]
+    overview_tab: Doc = next((t for t in doc.get("tabs", []) if t.get("id") == "overview"), {})
     research_tab: Doc = next((t for t in doc.get("tabs", []) if t.get("id") == "research"), {})
 
     sections: list[str] = []
@@ -929,6 +1130,13 @@ def migrate(doc: Doc) -> str:
     sections.append("")
     sections.append("---")
     sections.append("")
+
+    overview_md = build_overview_tab(overview_tab) if overview_tab else ""
+    if overview_md:
+        sections.append(overview_md)
+        sections.append("")
+        sections.append("---")
+        sections.append("")
 
     domain_tab_labels: list[str] = []
     for tab in domain_tabs:
