@@ -145,6 +145,22 @@ class TestBuildBriefSkeleton:
         with pytest.raises(Turn1Error, match="frontmatter"):
             build_brief_skeleton("# no frontmatter\n")
 
+    def test_malformed_project_raises_clean_error_not_attributeerror(self) -> None:
+        # `project` parsed as a string (malformed YAML) must not crash with
+        # AttributeError on `.get()` — surface a clean Turn1Error instead.
+        bad = "---\ndoc_format_version: 2\nproject: oops-a-string\n---\n\n# body\n"
+        with pytest.raises(Turn1Error):
+            build_brief_skeleton(bad)
+
+    def test_helpers_tolerate_non_dict_sections(self) -> None:
+        from research_buddy.turn1 import _accepted_sources, _project_description
+
+        assert _project_description({"project": "oops"}) == "{{PROJECT_AND_BASIC_CHARACTERISTICS}}"
+        assert (
+            _accepted_sources({"project": {"source_tiers": "oops"}})
+            == "{{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}"
+        )
+
 
 class TestCmdTurn1:
     def _write(self, tmp_path: Path, text: str, name: str = "demo_v1.2-source.md") -> Path:

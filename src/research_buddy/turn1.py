@@ -56,6 +56,13 @@ _NEVER_TIER = (
 _QID_RE = re.compile(r"(?i)^[QT]-\d+$")
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Coerce a frontmatter section to a mapping. Malformed YAML may parse a
+    field as a string/list; returning {} for non-dicts keeps `.get()` from
+    raising AttributeError (we surface a clean Turn1Error instead)."""
+    return value if isinstance(value, dict) else {}
+
+
 def _parse_frontmatter(text: str) -> dict[str, Any]:
     lines = text.splitlines()
     if not lines or lines[0].rstrip() != "---":
@@ -101,7 +108,7 @@ def first_queue_row(text: str) -> tuple[str, str, str] | None:
 
 
 def _project_description(fm: dict[str, Any]) -> str:
-    project = fm.get("project") or {}
+    project = _as_dict(fm.get("project"))
     domain = project.get("domain")
     deliverable = project.get("deliverable_type")
     goal = project.get("final_goal")
@@ -119,7 +126,7 @@ def _project_description(fm: dict[str, Any]) -> str:
 
 
 def _accepted_sources(fm: dict[str, Any]) -> str:
-    tiers = (fm.get("project") or {}).get("source_tiers") or {}
+    tiers = _as_dict(_as_dict(fm.get("project")).get("source_tiers"))
     t1 = tiers.get("tier_1")
     t2 = tiers.get("tier_2")
     parts = []
@@ -142,7 +149,7 @@ def build_brief_skeleton(text: str) -> tuple[str, list[str]]:
     frontmatter.
     """
     fm = _parse_frontmatter(text)
-    if (fm.get("project") or {}).get("domain") is None:
+    if _as_dict(fm.get("project")).get("domain") is None:
         raise Turn1Error(
             "this is a starter file (project.domain is null) — run session zero "
             "first; there is no queue topic to brief on yet"

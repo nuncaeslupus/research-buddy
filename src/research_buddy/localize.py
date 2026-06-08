@@ -41,9 +41,11 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
 }
 
 
-def _primary_subtag(lang_code: str) -> str:
-    """`es-419` → `es`; `EN` → `en`; `""` → `""`."""
-    return (lang_code or "").split("-")[0].strip().lower()
+def _primary_subtag(lang_code: str | None) -> str:
+    """`es-419` → `es`; `EN` → `en`; `""` / non-string → `""`."""
+    if not isinstance(lang_code, str):
+        return ""
+    return lang_code.split("-")[0].strip().lower()
 
 
 def localized_label(
@@ -58,7 +60,7 @@ def localized_label(
     English original unchanged. Headings that are not framework sections, and
     languages with no translation, fall through to English.
     """
-    if overrides:
+    if isinstance(overrides, dict):
         ov = overrides.get(english)
         if isinstance(ov, str) and ov.strip():
             return ov

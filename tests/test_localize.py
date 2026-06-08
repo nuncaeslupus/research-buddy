@@ -41,6 +41,13 @@ class TestLocalizedLabel:
         overrides = {"References": ["not", "a", "string"]}  # type: ignore[dict-item]
         assert localized_label("References", "es", overrides) == "Referencias"
 
+    def test_non_dict_overrides_is_ignored(self) -> None:
+        # A malformed `section_labels` (e.g. a list) must not crash .get().
+        assert localized_label("References", "es", ["nope"]) == "Referencias"  # type: ignore[arg-type]
+
+    def test_non_string_lang_code_is_noop(self) -> None:
+        assert localized_label("References", None) == "References"  # type: ignore[arg-type]
+
 
 class TestSectionLabelsTable:
     def test_every_label_has_spanish(self) -> None:
