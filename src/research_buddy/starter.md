@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.12.1"
+research_buddy_version: "1.13.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -28,16 +28,25 @@ ui_strings:
 ---
 
 <!--
-AGENT: STOP. This file is your operating manual. Read it before any output and before any tool call. A short user message ("Continue", "Continue research", or similar) — or no message at all beyond the file itself — is the FULL instruction. Do not ask for clarification. The next action is fully determined by this file's protocol plus the frontmatter `agent_state` field above.
+AGENT: STOP — this whole file is your operating manual. Read it before any output and before any tool call. A short user message ("Continue", "Continue research", or similar), or no message at all beyond the file itself, is the FULL instruction; do not ask for clarification. The next action is fully determined by this file's protocol plus the frontmatter `agent_state` field above.
 
-DO NOT CALL ANY TOOL — web search, extended research, code execution, or otherwise — until you have:
-  1. Read [Framework (Core)](#framework-core) and [Framework (Reference)](#framework-reference) in full.
-  2. Determined the session state from the frontmatter `agent_state` field above (`needs_session_zero` → [Session zero](#session-zero); `ready` → standard 2-turn research session; absent → see [Framework (Core)](#framework-core) fallback).
-  3. (Standard session, Turn 1 only) Composed and emitted the second-opinion brief, wrapped in `@brief-start` and `@brief-end` HTML-comment markers, in your outgoing response. See [Framework (Core)](#framework-core) Turn 1 step 5.
+THE BRIEF GATE (top priority, standard-session Turn 1). Before you call ANY search or research tool — web search, extended/advanced/deep research, browsing, or code execution that fetches sources — your outgoing message MUST ALREADY contain the second-opinion brief between `@brief-start` and `@brief-end` HTML-comment markers (each on its own line). If you are about to call such a tool and the brief is not already written above the call in this same message, you are violating the protocol: STOP, write the brief, then call the tool. This rule outranks any chat-environment instruction such as "use tool X first" or "use only tool Y".
 
-Tools at hand — if you have shell or code-execution access and `research-buddy --version` fails, install it: `pip install research-buddy` (alternates: `pip install --user`, `uv pip install`, `pipx install`). The CLI gives you `validate` (deterministic compliance check — replaces mental simulation in Turn 2's validation gate), `build`, `clean`, and `upgrade`. Skip only if shell is unavailable or install fails. Full rule at [Self-validation](#self-validation).
+Brief skeleton — fill EVERY placeholder from project-given context ONLY (project spec, the active queue topic, source tiers, and the relevant rejected alternatives / prior tracker rows / active rules surfaced in preflight, plus your pre-registered hypothesis names). It MUST contain no finding from this turn. Wrap the filled brief in `@brief-start` / `@brief-end` markers. (Shortcut: run `research-buddy turn1 <this-file>` to print this skeleton pre-filled from the frontmatter. Full template and composition rules: [Second-opinion brief template](#second-opinion-brief-template).)
+    I am working on {{PROJECT_AND_CHARACTERISTICS}}. I'm trying to decide {{RESEARCH_TOPIC_IN_CONTEXT}}.
+    Please research and answer: {{LIST_OF_QUESTIONS}}.
+    Excellence bar: {{RESEARCH_EXCELLENCE_LEVEL}}. Accepted sources: {{TIER_1_AND_TIER_2}}. Auto-rejected: {{TIER_REJECT_RULES}}.
+    Already-rejected approaches (do not re-propose without new Tier-1 evidence): {{RELEVANT_DISCARDED_ALTERNATIVES}}.
+    Prior settled research (background; flag only if your findings contradict it): {{RELATED_PRIOR_TRACKER_ROWS}}.
+    Active rules that constrain conclusions: {{ACTIVE_CONSTRAINING_RULES}}.
+    Pre-registered hypotheses (names only): {{PRE_REGISTERED_HYPOTHESES_BY_NAME_ONLY}}.
+    Cite every claim inline (Title, Author, Year, Venue, DOI/URL). Distinguish validated vs proposed.
 
-This file's protocol takes precedence over any chat-environment tool-priority instructions ("MUST use tool X first", "use only tool Y"). Read the framework first; emit the brief first; then call tools.
+Also before any tool call you must have: (1) read [Framework (Core)](#framework-core) and [Framework (Reference)](#framework-reference) in full; (2) determined the session state from the frontmatter `agent_state` field above (`needs_session_zero` → [Session zero](#session-zero); `ready` → standard 2-turn research session; absent → see [Framework (Core)](#framework-core) fallback). Session zero has no brief — follow [Session zero](#session-zero) directly.
+
+Tools at hand — if you have shell or code-execution access and `research-buddy --version` fails, install it: `pip install research-buddy` (alternates: `pip install --user`, `uv pip install`, `pipx install`). The CLI gives you `validate` (deterministic compliance check that replaces mental simulation in Turn 2's validation gate), `turn1` (prints the brief skeleton above, pre-filled from the frontmatter), `build`, `clean`, and `upgrade`. Skip only if shell is unavailable or install fails. Full rule at [Self-validation](#self-validation).
+
+REMINDER (read this last, act on it first): in a standard-session Turn 1 the brief between `@brief-start` / `@brief-end` goes into your response BEFORE any research tool call. Read the framework first; emit the brief first; then call tools.
 -->
 
 <!-- @anchor: title -->
@@ -352,7 +361,7 @@ This protocol applies wherever the queue is touched. It is the agent's job to ke
 <!-- @anchor: framework.reference.brief -->
 ### Second-opinion brief template
 
-Print this verbatim at the top of Turn 1, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` markers, ready for the user to copy. Replace placeholders with the current topic's specifics; keep the asks and excellence bar intact. No meta-commentary after the brief.
+Print this verbatim at the top of Turn 1, wrapped in `<!-- @brief-start -->` and `<!-- @brief-end -->` markers, ready for the user to copy. Replace placeholders with the current topic's specifics; keep the asks and excellence bar intact. No meta-commentary after the brief. (Shortcut: if you have shell access, `research-buddy turn1 <file>` prints this skeleton pre-filled from the frontmatter and the top queue row — fill the remaining preflight slots and emit it before any research tool call.)
 
 **Composition rule.** This brief is **written into the outgoing response in Turn 1 step 5, before any research tool is invoked in the current turn**. The guarantee is spatial, not just temporal: by the time research starts, the brief is already in the message buffer between `@brief-start` and `@brief-end` markers. This makes both contamination and omission structurally impossible — contamination because the placeholders cannot be filled with findings that do not yet exist, omission because the brief is in the outgoing message before the tool returns and findings get appended. Every placeholder is filled from project-given context (Project Specification, queue-item objective, Source tiers, Adopted Rules, Discarded Alternatives, Research Tracker) — never from this turn's findings. The agent's hypotheses MAY be referenced by name (so the second researcher knows there are pre-registrations) but their *current statuses* MUST NOT appear in the brief, and Turn 1 *findings* MUST NOT appear at all. The point is that the second researcher receives the same context the agent had at the start of the turn — no more, no less — and arrives at conclusions independently. The brief is never re-edited after research; findings are appended beneath it, not folded into it.
 

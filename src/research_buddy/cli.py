@@ -23,6 +23,7 @@ from research_buddy.commands.diff_summary import cmd_diff_summary
 from research_buddy.commands.init import cmd_init
 from research_buddy.commands.locate import cmd_locate
 from research_buddy.commands.migrate import cmd_migrate
+from research_buddy.commands.turn1 import cmd_turn1
 from research_buddy.commands.upgrade import cmd_upgrade
 from research_buddy.commands.validate import cmd_validate
 
@@ -168,6 +169,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_diff.add_argument("old", help="Path to the prior *_v*-source.md file")
     p_diff.add_argument("new", help="Path to the new *_v*-source.md file")
 
+    # turn1
+    p_t1 = sub.add_parser(
+        "turn1",
+        help=(
+            "Print the Turn-1 second-opinion brief skeleton, pre-filled from the "
+            "frontmatter and the top queue row"
+        ),
+    )
+    p_t1.add_argument("path", help="Path to the *_v*-source.md file")
+
     # init
     p_init = sub.add_parser(
         "init",
@@ -229,6 +240,7 @@ def main() -> None:
         "bump": cmd_bump,
         "locate": cmd_locate,
         "diff-summary": cmd_diff_summary,
+        "turn1": cmd_turn1,
         "migrate-v1-to-v2": cmd_migrate,
         "init": cmd_init,
         "upgrade": cmd_upgrade,

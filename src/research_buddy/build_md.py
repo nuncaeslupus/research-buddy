@@ -41,6 +41,7 @@ from research_buddy.clean_md import (
     strip_framework_block,
     unwrap_framework_links,
 )
+from research_buddy.localize import localized_label
 from research_buddy.table_layout import TableLayout, compute_layouts
 from research_buddy.validator_md import _line_in_fence
 
@@ -595,6 +596,34 @@ def _dedupe_heading_ids(tokens: list[Any], state: BuildState) -> None:
             tok.attrs["id"] = unique
 
 
+def _localize_headings(tokens: list[Any], lang_code: str, overrides: dict[str, str] | None) -> None:
+    """Swap the DISPLAYED text of framework H3/H4 headings to the document's
+    language while leaving their slug ids (already assigned from the English
+    text by the anchors plugin) intact.
+
+    Only headings whose inline text is an exact framework section name get
+    swapped, and only when a translation exists — so prose headings and
+    untranslated languages are untouched. Runs before `_process_headings` so the
+    sidebar nav title and the numbered span both pick up the localized text.
+    H2s never reach here (they were consumed into tabs); their tab labels are
+    localized in the tab-bar pass of `build_md_html`.
+    """
+    for i, tok in enumerate(tokens):
+        if tok.type != "heading_open" or tok.tag not in ("h3", "h4"):
+            continue
+        if i + 1 >= len(tokens) or tokens[i + 1].type != "inline":
+            continue
+        inline = tokens[i + 1]
+        english = inline.content
+        display = localized_label(english, lang_code, overrides)
+        if display == english:
+            continue
+        text_tok = Token("text", "", 0)
+        text_tok.content = display
+        inline.children = [text_tok]
+        inline.content = display
+
+
 # ---------------------------------------------------------------------------
 # Slugs (also used to derive tab IDs)
 # ---------------------------------------------------------------------------
@@ -672,6 +701,16 @@ def build_md_html(
     md = _md_renderer()
     banners_html = _render_frontmatter_banners(md, fm.get("banners"))
 
+    # Localization: framework section headings display in the document's
+    # language (`language.code`) while their slugs/ids stay English so
+    # cross-links never break. `section_labels` frontmatter overrides/extends
+    # the built-in table. English (or unset) is a no-op.
+    lang_code = _resolve_lang_code(
+        {"language": fm.get("language") or {"code": "en", "label": "English"}}
+    )
+    raw_overrides = fm.get("section_labels")
+    section_overrides = raw_overrides if isinstance(raw_overrides, dict) else None
+
     # ── tab bar ────────────────────────────────────────────────────────────
     # Tab IDs are derived from the raw label (data-tab attribute must be a
     # plain slug); button text is rendered through markdown-it so inline
@@ -680,9 +719,11 @@ def build_md_html(
     rendered_labels: list[str] = []
     tab_btns: list[str] = []
     for i, (label, _) in enumerate(tabs):
+        # Slug/id from the ENGLISH label (load-bearing for cross-links);
+        # displayed text localized.
         tid = state.unique_id(_slugify(label))
         tab_ids.append(tid)
-        rendered_label = md.renderInline(label)
+        rendered_label = md.renderInline(localized_label(label, lang_code, section_overrides))
         rendered_labels.append(rendered_label)
         active = " active" if i == 0 else ""
         tab_btns.append(
@@ -708,6 +749,7 @@ def build_md_html(
         _transform_rb_fences(tokens, md)
         _mark_references_list(tokens, initial_armed=(i == references_idx))
         _dedupe_heading_ids(tokens, state)
+        _localize_headings(tokens, lang_code, section_overrides)
         nav_entries = _process_headings(tokens, tab_num)
         tab_tables = _extract_table_cells(tokens)
         layout_start = len(all_tables)
@@ -769,9 +811,8 @@ def build_md_html(
     )
 
     # ── chrome assembly ────────────────────────────────────────────────────
-    lang_code = _resolve_lang_code(
-        {"language": fm.get("language") or {"code": "en", "label": "English"}}
-    )
+    # `lang_code` was resolved above (drives both heading localization and the
+    # <html lang> attribute).
     rb_footer_html = _build_rb_footer_html(
         {"research_buddy_version": fm.get("research_buddy_version", "")}
     )

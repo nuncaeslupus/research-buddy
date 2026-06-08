@@ -13,6 +13,7 @@ from research_buddy.clean_md import (
     derive_clean_path,
     parse_frontmatter,
     regenerate_title_block,
+    strip_agent_preamble,
     strip_framework_block,
     unwrap_framework_links,
 )
@@ -228,3 +229,59 @@ class TestEndToEnd:
         cleaned = out.read_text(encoding="utf-8")
         assert "Framework (Core)" not in cleaned
         assert "## Project Specification" in cleaned
+
+
+class TestAgentPreambleStrip:
+    """The clean view must NOT carry the agent operating-manual preamble: it
+    points at framework sections the clean view strips out (the dangling-
+    reference trap). It is replaced by a short self-identifying note."""
+
+    _PREAMBLE = (
+        "<!--\n"
+        "AGENT: STOP — this file is your operating manual.\n"
+        "THE BRIEF GATE: emit the brief between `@brief-start` / `@brief-end`.\n"
+        "Read [Framework (Core)](#framework-core) and "
+        "[Framework (Reference)](#framework-reference) in full.\n"
+        "-->\n"
+    )
+
+    def _doc_with_preamble(self) -> str:
+        body = (
+            f"{self._PREAMBLE}\n{_TITLE_BLOCK}\n---\n\n{_FRAMEWORK_BLOCK}\n---\n\n"
+            "## Project Specification\n\nThe real content.\n"
+        )
+        return _FM + "\n" + body
+
+    def test_preamble_removed_and_note_inserted(self) -> None:
+        full = self._doc_with_preamble()
+        fm, _ = parse_frontmatter(full)
+        assert fm is not None
+        cleaned = clean_md_text(full, fm)
+        assert "AGENT: STOP" not in cleaned
+        assert "THE BRIEF GATE" not in cleaned
+        assert "CLEAN VIEW" in cleaned  # the self-identifying note
+        assert "demo_v1.0-source.md" in cleaned  # points back at the real source
+
+    def test_no_dangling_framework_reference(self) -> None:
+        # The bug: the preamble told the agent to read framework sections that
+        # clean strips. After cleaning, neither the framework nor a link to it
+        # should remain.
+        full = self._doc_with_preamble()
+        fm, _ = parse_frontmatter(full)
+        assert fm is not None
+        cleaned = clean_md_text(full, fm)
+        assert "Framework (Core)" not in cleaned
+        assert "framework-core" not in cleaned
+
+    def test_noop_without_title_anchor(self) -> None:
+        # Defensive: no title anchor → leave content untouched.
+        text = _FM + "\nsome content with no title anchor\n"
+        fm, _ = parse_frontmatter(text)
+        assert fm is not None
+        assert strip_agent_preamble(text, fm) == text
+
+    def test_source_filename_falls_back_when_fields_missing(self) -> None:
+        from research_buddy.clean_md import CLEAN_VIEW_NOTE, _source_filename
+
+        assert _source_filename({}) == "{file_name}_v{version}-source.md"
+        assert "{source_name}" in CLEAN_VIEW_NOTE

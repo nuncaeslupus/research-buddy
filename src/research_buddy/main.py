@@ -39,6 +39,7 @@ from research_buddy.commands.init import (
 )
 from research_buddy.commands.locate import cmd_locate
 from research_buddy.commands.migrate import cmd_migrate
+from research_buddy.commands.turn1 import cmd_turn1
 from research_buddy.commands.upgrade import _upgrade_md_file, cmd_upgrade
 from research_buddy.commands.validate import cmd_validate
 
@@ -60,6 +61,7 @@ __all__ = [
     "cmd_init",
     "cmd_locate",
     "cmd_migrate",
+    "cmd_turn1",
     "cmd_upgrade",
     "cmd_validate",
     "main",

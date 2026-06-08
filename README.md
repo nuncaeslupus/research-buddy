@@ -1,4 +1,4 @@
-# Research Buddy v1.12.1
+# Research Buddy v1.13.0
 
 <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
 
@@ -266,9 +266,19 @@ my-project/
 
 ## Multi-language support
 
-The document language is set in session_zero based on the user's preference. `meta.language` accepts a string (`"English"`) or an object (`{"code": "es", "label": "Español"}`). The HTML `lang` attribute is set automatically. `agent_guidelines` always stays in English.
+The document language is set in session_zero based on the user's preference and recorded in frontmatter. `language` accepts a string (`"Spanish"`) or an object (`{code: es, label: Español}`). It drives two things:
 
-UI labels (`"OPEN"`, `"✦ Researched"`, `"Next Topic"`, etc.) are stored in `meta.ui_strings` and translated by the agent in session_zero — no hard-coded strings in document content.
+- The HTML `lang` attribute (set automatically).
+- **Localized section headings (v2 HTML).** The framework names its user-facing sections in English ("Open Research Queue", "References", …) because their slugs are load-bearing cross-link targets — translating them in the source would break every `[Queue](#open-research-queue)` link. So when `language.code` is a shipped language (currently **Spanish**), the HTML build *displays* those headings in that language while keeping the English slugs/ids, so nothing breaks. Add or override labels — and enable languages not shipped built-in — with an optional `section_labels:` frontmatter mapping (English heading → label):
+
+  ```yaml
+  section_labels:
+    Open Research Queue: Cola de tareas
+  ```
+
+  Localization is HTML-render-only; the clean-view Markdown keeps English headings (there a heading's slug *is* its text, so display and link target can't diverge). The framework prose itself stays English and is stripped from the clean view / HTML.
+
+Research *content* (findings, decisions, status text) is authored in the document language by the agent. The legacy v1 `meta.ui_strings` field is carried forward on migration but is **not** rendered in v2 — there is no fixed status column, so the agent writes status text (and `rb-ok`/`rb-flag` chips) directly in the document language.
 
 ## Document format
 

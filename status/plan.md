@@ -160,6 +160,39 @@ lowest-leverage convenience and can land last.
       `_extract_table_first_column` (used `_entry_blocks` for rule-revision
       detection rather than `_collect_entry_ids`, which only returns IDs).
 
+## Brief-gate hardening + localization (from a real session, 2026-06-08)
+
+- [x] **15. Brief-gate hardening + `turn1` + Spanish localization (1.13.0).**
+      Driven by a real research session where the agent skipped the second-
+      opinion brief. Root cause (verified): the agent had been given a *clean
+      view*, whose surviving operating-manual preamble still said "read
+      [Framework (Core)] … emit the brief" while `clean` had stripped that
+      framework — dangling references that turn "fill a template" into "generate
+      from scratch", which agents under tool-pressure skip. Shipped together:
+      - **`clean` strips the agent preamble** (`clean_md.strip_agent_preamble`)
+        and replaces it with a one-line self-identifying note pointing back at
+        the `*-source.md`. The clean view is a reader artifact, not an agent
+        file. (HTML never carried it — it sits before the first H2, which the
+        tab split drops.)
+      - **Hardened starter preamble:** brief gate stated first AND last
+        (primacy + recency), concrete tool families named ("web search,
+        extended/advanced/deep research, browsing, code execution that fetches
+        sources"), and an inline fill-in brief skeleton so it survives a short
+        read window. Propagates to existing docs via `upgrade --apply`
+        (`_replace_preamble`).
+      - **`research-buddy turn1 <file>`** prints the Turn-1 brief skeleton
+        pre-filled from frontmatter + the top queue row, judgement slots left as
+        `{{placeholders}}` (`turn1.py` + `commands/turn1.py`). "Fill, don't
+        remember."
+      - **HTML section-heading localization** (`localize.py`): headings display
+        in `language.code` (ships `es`) while slugs/ids stay English so
+        cross-links never break; `section_labels` frontmatter overrides/extends.
+        Clean MD keeps English headings (link integrity).
+      Tests: `test_turn1.py`, `test_localize.py`, + clean/build/upgrade
+      additions (543 passed, 91% cov). Finding recorded: `ui_strings` is dead v1
+      carryover with no v2 render path — not wired; the agent writes status text
+      directly.
+
 ## Future improvements (queued, not in the current batch)
 
 Surfaced 2026-06-01 in a project-review pass. These are higher-leverage
