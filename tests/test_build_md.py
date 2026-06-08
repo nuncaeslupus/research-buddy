@@ -297,6 +297,54 @@ class TestBuildMdCli:
         assert "body{color:lime}" in html
 
 
+_FM_ES = _FM.replace("code: en", "code: es").replace("label: English", "label: Español")
+
+
+class TestHeadingLocalization:
+    """Framework section headings display in the document's language while their
+    slugs/ids stay English so cross-links never break."""
+
+    def test_tab_label_localized_with_english_slug(self) -> None:
+        html = build_md_html(_FM_ES + "\n## Open Research Queue\n\nbody\n")
+        # slug/ids stay English (load-bearing for cross-links and the JS tab map)
+        assert 'data-tab="open-research-queue"' in html
+        assert 'id="tab-open-research-queue"' in html
+        # displayed text is Spanish
+        assert "Cola de investigación" in html
+        # the English heading no longer appears as visible element text
+        assert ">Open Research Queue<" not in html
+
+    def test_h3_localized_with_english_id(self) -> None:
+        body = "## Project Specification\n\n### Source tiers\n\nbody\n"
+        html = build_md_html(_FM_ES + "\n" + body)
+        assert 'id="source-tiers"' in html  # slug preserved
+        assert "Niveles de fuentes" in html  # displayed text localized
+        assert ">Source tiers<" not in html
+
+    def test_html_lang_attribute_set(self) -> None:
+        html = build_md_html(_FM_ES + "\n## Open Research Queue\n\nbody\n")
+        assert 'lang="es"' in html
+
+    def test_english_doc_not_translated(self) -> None:
+        html = build_md_html(_doc("## Open Research Queue\n\nbody\n"))
+        assert ">Open Research Queue<" in html
+        assert "Cola de investigación" not in html
+
+    def test_frontmatter_override_wins(self) -> None:
+        fm = _FM_ES.replace(
+            "project:\n",
+            "section_labels:\n  Open Research Queue: Cola personalizada\nproject:\n",
+        )
+        html = build_md_html(fm + "\n## Open Research Queue\n\nbody\n")
+        assert "Cola personalizada" in html
+        assert "Cola de investigación" not in html
+
+    def test_non_framework_heading_untouched(self) -> None:
+        html = build_md_html(_FM_ES + "\n## Mi Apartado\n\n### Detalle propio\n\nbody\n")
+        assert "Mi Apartado" in html
+        assert "Detalle propio" in html
+
+
 @pytest.fixture(autouse=True)
 def _clear_md_renderer_cache() -> None:
     """The markdown-it renderer is module-cached. Tests don't share token state,

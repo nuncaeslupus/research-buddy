@@ -266,7 +266,7 @@ class TestPreambleReplacement:
         assert "preamble ← starter.md" in changes
         assert "OLD PREAMBLE" not in upgraded
         # Starter's preamble landmark is present.
-        assert "DO NOT CALL ANY TOOL" in upgraded
+        assert "THE BRIEF GATE" in upgraded
 
     def test_idempotent_when_preamble_already_in_sync(self) -> None:
         starter = _starter_text()

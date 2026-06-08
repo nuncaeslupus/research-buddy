@@ -1,5 +1,65 @@
 # Next session
 
+## Session 2026-06-08 (session 28)
+
+### What was done
+
+Released **1.13.0** (MINOR — additive). Driven by a real research session
+(pasted by the user) where the agent skipped the second-opinion brief and
+mis-diagnosed the cause as "the framework is missing from the file".
+
+- **Root cause found (and it corrects the agent's own diagnosis).** The
+  framework is intact in `starter.md`. The agent had almost certainly been
+  given a **clean view** (`*_v*.md`), not the source (`*_v*-source.md`):
+  `clean`/`build_md` strip the framework block but the AGENT-STOP **preamble**
+  sits *before* `<!-- @anchor: title -->`, outside both the framework and title
+  regions, so it survived — and `unwrap_framework_links` rewrote its
+  `[Framework (Core)](#framework-core)` links into dangling plain text. Result:
+  an operating manual pointing at sections that no longer exist. Exact match
+  for the transcript symptom.
+- **Fix 1 — `clean` strips the preamble.** New `clean_md.strip_agent_preamble`
+  removes it and inserts a one-line self-identifying note pointing back at the
+  `*-source.md`, so a mis-uploaded clean view self-corrects. (HTML build never
+  carried the preamble — it's dropped with everything before the first H2.)
+- **Fix 2 — hardened starter preamble.** Brief gate is now the first imperative
+  AND the closing line (primacy + recency); names concrete tool families;
+  inlines a fill-in brief skeleton (markers referenced as backticked tokens to
+  avoid breaking the enclosing HTML comment). Propagates to existing docs via
+  `upgrade --apply`. Updated `test_upgrade_md.py` landmark
+  (`DO NOT CALL ANY TOOL` → `THE BRIEF GATE`).
+- **Fix 3 — `research-buddy turn1 <file>`.** New read-only helper (`turn1.py` +
+  `commands/turn1.py`, wired into `cli.py` + `main.py`) prints the brief
+  skeleton pre-filled from frontmatter + top queue row; reuses `bump`'s
+  comment-aware queue parser; body mirrors the canonical brief template. Also
+  surfaced in the preamble + brief-template section.
+- **Translation — `localize.py`.** HTML build displays framework section
+  headings in `language.code` (ships Spanish) while keeping English slugs/ids
+  (verified: `data-tab="open-research-queue"` + visible "Cola de investigación"
+  + `<html lang="es">`); `section_labels` frontmatter overrides/extends.
+  Display-only — clean MD keeps English headings (a heading's slug *is* its
+  text there). README "Multi-language support" rewritten.
+- **Finding: `ui_strings` is dead config in v2.** No renderer reads it; v2 has
+  no fixed status column. Documented as a v1 carryover; not wired. The agent
+  writes localized status text / `rb-ok`/`rb-flag` chips directly.
+
+Gates green: `make lint`, `make test-cov` (543 passed, 91.39%),
+`make check-examples-sync`. `make version-sync` + `make regen-examples` ran for
+the 1.13.0 bump.
+
+### Next steps
+
+- Empirical: watch whether the hardened preamble + `turn1` + clean-view fix
+  actually stop the brief skip downstream (agent compliance is empirical, per
+  sessions 16/17).
+- Backlog unchanged (framework token overhead highest-leverage; the two
+  file-I/O cleanups are low-risk warm-ups). Could add more `localize.py`
+  languages on demand, or wire `section_labels` into the starter frontmatter as
+  a documented optional field if discoverability matters.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-05 (session 27)
 
 ### What was done

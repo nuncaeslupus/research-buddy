@@ -50,17 +50,20 @@ src/research_buddy/
     bump.py            #   bump   (v2 Turn-2 mechanical edits; cmd_bump)
     locate.py          #   locate (live @end insertion point; cmd_locate)
     diff_summary.py    #   diff-summary (mechanical Turn-2 summary; cmd_diff_summary)
+    turn1.py           #   turn1 (pre-filled brief skeleton; cmd_turn1)
     migrate.py         #   migrate-v1-to-v2
     init.py            #   init (+ _set_frontmatter_scalar, _init_v1/_v2)
     upgrade.py         #   upgrade (+ _upgrade_md_file)
   build.py             # v1 JSON → HTML (block renderers, table widths, lang resolution)
-  build_md.py          # v2 MD  → HTML (reuses v1 chrome via base.html.j2)
+  build_md.py          # v2 MD  → HTML (reuses v1 chrome via base.html.j2; localizes headings)
   upgrade.py           # v1 template refresh: re-sync agent_guidelines from starter.json
   upgrade_md.py        # v2 framework refresh: re-sync framework block + frontmatter from starter.md
   validator.py         # v1 jsonschema + reference ordering + doc/tool version compat
   validator_md.py      # v2 mechanical validator (frontmatter, anchors, links, IDs, prior diff)
-  clean_md.py          # v2 source MD → clean MD (strip framework, regen title)
+  clean_md.py          # v2 source MD → clean MD (strip framework + agent preamble, regen title)
   bump.py              # v2 Turn-2 mechanical edits (queue→tracker, stubs, version/date)
+  turn1.py             # v2 Turn-1 brief skeleton, pre-filled from frontmatter + top queue row
+  localize.py          # HTML-render section-heading labels per language (display-only; slugs stay English)
   diff_summary.py      # v2 old→new diff → mechanical @summary block
   migrate_v1_to_v2.py  # v1 JSON  → v2 MD source
   schema.json          # v1 Draft 2020-12 schema, bundled in the wheel
@@ -217,6 +220,37 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   moves, rules added/revised, DAs/sessions added, append-only PASS/FAIL),
   leaving the narrative as a `{{placeholder}}`; exit 1 signals an append-only
   violation. Logic in `diff_summary.py`; both handlers in `commands/`.
+- **`turn1` is a read-only brief-gate helper.** `research-buddy turn1
+  <file>.md` prints the Turn-1 second-opinion brief wrapped in real
+  `<!-- @brief-start -->` / `<!-- @brief-end -->` markers, pre-filled from the
+  frontmatter (project description, source tiers, fixed Never-tier) plus the
+  first live Open Research Queue row (topic + objective, reusing `bump`'s
+  comment-aware row parser). Judgement slots (relevant DAs / tracker rows /
+  rules, hypotheses, excellence bar) stay `{{placeholders}}`; guidance prints to
+  stderr so the stdout block is clean to paste. The body mirrors the canonical
+  brief template in `starter.md` — keep them in sync. Refuses starter files.
+  Pure logic in `turn1.py`; handler in `commands/turn1.py`. Surfaced in the
+  starter preamble + brief-template section as the "fill, don't remember" path.
+- **`clean` strips the agent preamble, not just the framework.** The operating-
+  manual HTML comment between the frontmatter and `<!-- @anchor: title -->`
+  references the framework (`read [Framework (Core)](#framework-core)`, "emit the
+  brief") — which `clean` removes. Leaving it would point an agent at sections
+  that no longer exist (and `unwrap_framework_links` would rewrite those links to
+  dangling plain text). So `clean_md.strip_agent_preamble` replaces the preamble
+  with a one-line self-identifying note pointing back at the `*-source.md`. The
+  HTML build never carried the preamble (it sits before the first H2, which
+  `split_into_tabs` drops). This is the fix for "agent skipped the brief because
+  the uploaded file had no framework" — usually a clean view uploaded by mistake.
+- **HTML localizes section headings; slugs stay English.** `build_md` displays
+  framework headings ("Open Research Queue", "References", the Project-Spec H3s)
+  in the doc's `language.code` while keeping the English slug/id (tab `data-tab`,
+  `tab-{id}`, heading `<a id>`) so `[Queue](#open-research-queue)` cross-links
+  never break. Table in `localize.py` (ships `es`); frontmatter `section_labels`
+  (English heading → label) overrides/extends it and enables unshipped languages.
+  Display-only: the clean-view **Markdown keeps English headings** (there a
+  heading's slug *is* its text). The legacy `ui_strings` frontmatter is a v1
+  carryover — **not rendered in v2** (no fixed status column); the agent writes
+  status text / `rb-ok`/`rb-flag` chips directly in the doc language.
 - **Starter marker hygiene is invariant-tested.** Every live `<!-- @end: X
   -->` marker is the unique occurrence of `@end: X` in `starter.md` (so an
   agent grep for an insertion point gets one hit). Prose that used to embed

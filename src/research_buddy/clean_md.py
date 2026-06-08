@@ -161,6 +161,67 @@ def strip_framework_block(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Agent-preamble stripping
+# ---------------------------------------------------------------------------
+
+CLEAN_VIEW_NOTE = (
+    "<!-- CLEAN VIEW (derived, read-only). The Research Buddy framework and the "
+    "agent operating manual have been stripped from this file; it is for reading "
+    "and sharing only, NOT a file for an agent to act on. To continue research, "
+    "upload the source file `{source_name}` (which carries the full framework) "
+    "instead of this file. -->"
+)
+
+
+def _source_filename(fm: dict[str, Any]) -> str:
+    """Best-effort ``{file_name}_v{version}-source.md`` from frontmatter."""
+    file_name = fm.get("file_name") or "{file_name}"
+    version = fm.get("version") or "{version}"
+    return f"{file_name}_v{version}-source.md"
+
+
+def strip_agent_preamble(text: str, fm: dict[str, Any]) -> str:
+    """Replace the agent operating-manual preamble with a short self-identifying
+    note.
+
+    The preamble is the HTML comment between the frontmatter's closing ``---``
+    and the ``<!-- @anchor: title -->`` line. In the source file it tells the
+    agent to read the framework and emit the second-opinion brief — but the
+    clean view strips that framework, so leaving the preamble here would point
+    an agent at sections that no longer exist (and `unwrap_framework_links`
+    would even rewrite those links into dangling plain text). The clean view is
+    a reader artifact; it must carry no agent instructions. A mis-uploaded clean
+    view then self-identifies and tells the agent to fetch the real source.
+
+    Leaves the file untouched when frontmatter or the title anchor can't be
+    located (defensive — never destroy content on a malformed file).
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].rstrip() != "---":
+        return text
+    fm_close = -1
+    for i in range(1, len(lines)):
+        if lines[i].rstrip() == "---":
+            fm_close = i
+            break
+    if fm_close < 0:
+        return text
+    title_idx = -1
+    for i in range(fm_close + 1, len(lines)):
+        if lines[i].strip() == TITLE_START:
+            title_idx = i
+            break
+    if title_idx < 0:
+        return text
+    note = CLEAN_VIEW_NOTE.format(source_name=_source_filename(fm))
+    new_lines = [*lines[: fm_close + 1], "", note, "", *lines[title_idx:]]
+    out = "\n".join(new_lines)
+    if text.endswith("\n") and not out.endswith("\n"):
+        out += "\n"
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Title regeneration
 # ---------------------------------------------------------------------------
 
@@ -206,6 +267,7 @@ def regenerate_title_block(text: str, fm: dict[str, Any]) -> str:
 def clean_md_text(text: str, fm: dict[str, Any]) -> str:
     """Apply all clean-view transformations."""
     framework_targets = collect_framework_targets(text)
+    text = strip_agent_preamble(text, fm)
     text = strip_framework_block(text)
     text = unwrap_framework_links(text, framework_targets)
     text = regenerate_title_block(text, fm)
