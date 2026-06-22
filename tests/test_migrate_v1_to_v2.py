@@ -800,6 +800,20 @@ class TestMigrateHardening:
         assert "Q-001" not in ids  # no tracker collision
         assert ids.count("Q-003") == 1  # inline ID preserved, not duplicated
 
+    def test_queue_id_synthesis_handles_empty_row(self) -> None:
+        # A row that becomes empty after dropping the Priority/Status columns
+        # must not raise IndexError during ID synthesis (regression: the two-pass
+        # rewrite briefly indexed row[0] unconditionally).
+        tb = {
+            "headers": ["Topic", "Priority"],
+            "rows": [["A", "hi"], [], ["C", "lo"]],
+        }
+        headers, rows = _strip_done_rows_from_queue(tb, {}, set())
+        assert headers[0] == "ID"
+        ids = [r[0] for r in rows]
+        assert ids == ["Q-001", "Q-002", "Q-003"]
+        assert rows[1] == ["Q-002"]  # empty row → just the ID cell
+
     def test_verdict_rule_anchor_id_is_slugified(self) -> None:
         # A label without a clean R-/DA- prefix must still yield a valid HTML id
         # (no spaces or punctuation in the <a id>).

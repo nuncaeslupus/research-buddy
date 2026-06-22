@@ -864,7 +864,8 @@ def _strip_done_rows_from_queue(
                     counter += 1
                 qid = f"Q-{counter:03d}"
                 used.add(qid)
-            row[0] = topic_text
+            if row:  # an all-dropped-columns row can be empty; don't index it
+                row[0] = topic_text
             row.insert(0, qid)
         new_headers.insert(0, "ID")
 
