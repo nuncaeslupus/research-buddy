@@ -82,10 +82,18 @@ class TestStripFramework:
     def test_malformed_no_closer_leaves_text_intact(self) -> None:
         text = "<!-- @anchor: framework.core -->\nbody with no end\n"
         out = strip_framework_block(text)
-        # Should not silently destroy content when @end is missing.
-        # Behavior: stop processing at the malformed opener (out is whatever
-        # came before it, which here is empty).
-        assert "framework.core" not in out
+        # No matching @end: we can't locate the block boundary, so content is
+        # preserved verbatim rather than dropped from the opener to EOF.
+        assert "body with no end" in out
+
+    def test_malformed_no_closer_preserves_surrounding_content(self) -> None:
+        # Regression for the EOF content-loss bug: a framework opener with no
+        # closer used to `break`, dropping every line after it (Body2/Body3).
+        text = "Body1\n<!-- @anchor: framework.core -->\nBody2\nBody3\n"
+        out = strip_framework_block(text)
+        assert "Body1" in out
+        assert "Body2" in out
+        assert "Body3" in out
 
 
 class TestUnwrapLinks:
@@ -108,6 +116,24 @@ class TestUnwrapLinks:
         assert "framework-core" in targets
         assert "framework-reference" in targets
         assert "framework-detail-anchor" in targets
+
+    def test_collect_framework_targets_skips_fenced_examples(self) -> None:
+        # Heading/anchor examples inside a fenced template block are not real
+        # framework targets and must not be collected (else a body link to the
+        # same slug — e.g. a promoted Q-001 — would be wrongly unwrapped).
+        text = (
+            "<!-- @anchor: framework.core -->\n"
+            "## Real Heading\n\n"
+            "```\n"
+            "### Fenced Heading\n"
+            '<a id="q-001"></a>\n'
+            "```\n\n"
+            "<!-- @end: framework.reference -->\n"
+        )
+        targets = collect_framework_targets(text)
+        assert "real-heading" in targets
+        assert "fenced-heading" not in targets
+        assert "q-001" not in targets
 
 
 class TestTitleRegen:
