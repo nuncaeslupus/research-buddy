@@ -34,4 +34,4 @@ repos:
         entry: uv run scripts/check_version_sync.py
         language: system
         pass_filenames: false
-        files: ^(pyproject\.toml|src/research_buddy/__init__\.py|src/research_buddy/starter\.json|README\.md)$
+        files: ^(pyproject\.toml|src/research_buddy/__init__\.py|src/research_buddy/starter\.json|src/research_buddy/starter\.md|README\.md)$

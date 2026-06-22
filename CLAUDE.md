@@ -74,7 +74,7 @@ scripts/
   sync_version.py         # Source of truth = pyproject.toml; rewrites the other files
   check_version_sync.py   # Read-only: fails if any version string drifted. Used by CI.
   check_examples_sync.py  # Read-only: fails if committed starter-example/*.html drifted. Used by CI.
-tests/            # pytest; classes, TDD ceremony enforced
+tests/            # pytest; class-grouped, TDD by convention
 starter-example/  # starter.html (v1) + starter-md.html (v2)
 Makefile          # make sync | lint | format | test | test-cov | regen-examples | check-examples-sync | build | publish | version-sync | check-version-sync
 ```

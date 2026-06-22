@@ -59,15 +59,6 @@ REQUIRED_FRONTMATTER_FIELDS: list[str | tuple[str, ...]] = [
     ("project", "domain"),
 ]
 
-# Fields that may legitimately be null in "starter mode" (project.domain is null).
-STARTER_NULLABLE: set[str] = {
-    "version",
-    "date",
-    "file_name",
-    "title",
-    ("project", "domain"),  # type: ignore[arg-type]
-}
-
 
 @dataclass
 class Issue:

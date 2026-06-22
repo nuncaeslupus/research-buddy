@@ -19,7 +19,7 @@ from research_buddy.turn1 import (
 _FM = """\
 ---
 doc_format_version: 2
-research_buddy_version: "1.13.0"
+research_buddy_version: "1.0.0"
 agent_state: ready
 version: "1.2"
 date: "2026-06-08"

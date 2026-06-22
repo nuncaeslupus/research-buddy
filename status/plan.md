@@ -193,6 +193,71 @@ lowest-leverage convenience and can land last.
       carryover with no v2 render path — not wired; the agent writes status text
       directly.
 
+## Opus review fix initiative (2026-06-22)
+
+Comprehensive codebase audit by Claude Opus. Full findings in
+`tmp/review-fix-list.md`. 13 PR batches, ordered by impact. Each batch
+ships as its own PR against `main`.
+
+- [ ] **PR-1: Release safety + changelog.** P0-2 (release.yml: move tag after
+      publish), P3-1 (backfill CHANGELOG.md gaps since v1.2.0), P3-5 (release.yml:
+      extract current-version section for release notes).
+- [ ] **PR-2: Append-only enforcement.** P0-1(b) (validator: add tracker-row +
+      session-id + bullet-level reference preservation to `_check_append_only`),
+      P2-1 (add `_check_unclosed_fence`), P2-2 (promote broken-cross-link to
+      error), P2-3 (make `_collect_entry_ids` fence-aware).
+- [ ] **PR-3: Framework ↔ tooling truth-up.** P0-1(a) (starter.md: teach `bump`,
+      `locate`, `diff-summary` as the blessed Turn-2 path), P1-1 (same — surface
+      the three helpers), P1-4 (fix version-compat pause contradiction), P1-6
+      (fix "validate mechanically flags plain-text refs" claim), P3-8 (add
+      `research_buddy_version` to required-fields list in starter.md).
+- [ ] **PR-4: Brief-skeleton unification.** P1-2 (single canonical template;
+      unify preamble skeleton + turn1.py wording; sync test).
+- [ ] **PR-5: Methodology completeness.** P1-3 (Turn-2 hypothesis resolution
+      step + session-note template matches bump.py), P1-5 (excellence bar
+      guidance, queue prioritization rubric, rule supersession mechanics,
+      queue/tracker dual-membership rule).
+- [ ] **PR-6: clean_md correctness.** P2-8 (make `collect_framework_targets`
+      fence-aware), P2-9 (fix `strip_framework_block` EOF content loss).
+- [ ] **PR-7: migrate hardening.** P0-4 (three ID/version collision bugs:
+      `_normalize_version`, two-pass queue ID collision, slugify verdict labels),
+      P2-10 (deduplicate verdict labels), P2-11 (reserve canonical anchors for
+      domain-tab labels), P2-12 (references block: render version + date),
+      P2-13 (changelog date, source_tiers/domain_rules in frontmatter, dropped
+      content marker).
+- [ ] **PR-8: build safety + render bugs.** P0-3 (gate HTML render on validator
+      errors), P2-14 (escape tab label double-quotes), P2-15 (fix
+      `_md_render_inline` multi-paragraph `<li>` nesting), P2-16 (guard
+      non-UTF-8 MD source), P2-17 (neutralize `</style>` in theme_css),
+      P3-V2-TRUST (validator warning for `<script>`, `on*=`, `javascript:` in body).
+- [x] **PR-9: Script/test hygiene.** P3-9 (delete broken `test-all` + unused
+      markers), P3-10 (fix hard-coded `1.13.0` in test_turn1.py → `1.0.0`),
+      P3-11 (add `starter.md` to pre-commit version-sync files trigger),
+      P2-18 (sync_version.py: count-check all four updaters, align README regex),
+      P2-7 (delete dead `STARTER_NULLABLE`), P3-12 (soften "TDD ceremony enforced"
+      in CLAUDE.md).
+      *Shipped this session.*
+- [ ] **PR-10: File-I/O helpers.** P2-19 (shared `read_text_or_error` + `atomic_write`
+      helpers), P2-16 (fold non-UTF-8 MD guard in), P2-20 (fold temp-file cleanup in).
+- [ ] **PR-11: upgrade edge cases.** P2-21 (v1 upgrade: add forward-only version
+      guard matching v2), P2-22 (skip only version bump when doc is ahead of tool,
+      still refresh framework), P2-23 (sniff YAML indent; make preamble/blockquote
+      replacement fence-aware).
+- [ ] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
+      lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+- [ ] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
+      Synthesis` section in starter.md with `@anchor: synthesis` / `@end: synthesis`,
+      triggered by 5th Empty-queue option; cite-or-cut guardrails; living section
+      excluded from append-only invariant.
+- [ ] **PR-14: Design spikes** (decisions needed): P1-8 framework token overhead,
+      v1 sunset with a dated target, P1-7 empty-queue UX.
+
+Notes:
+- P3-6 (framework headings use em-dashes its own rule forbids) and P3-7
+  (`ui_strings` dead frontmatter) fold into PR-3 or PR-5 respectively.
+- P3-13, P3-14 nits fold into whichever PR touches the relevant file.
+- PRs follow the one-concern-per-PR rule [[feedback_pr_separation]].
+
 ## Future improvements (queued, not in the current batch)
 
 Surfaced 2026-06-01 in a project-review pass. These are higher-leverage

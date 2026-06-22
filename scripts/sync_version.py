@@ -23,7 +23,9 @@ def update_init(version: str) -> None:
     content = path.read_text(encoding="utf-8")
     pattern = r'^__version__\s*=\s*"[^"]+"'
     replacement = f'__version__ = "{version}"'
-    content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    content, count = re.subn(pattern, replacement, content, flags=re.MULTILINE)
+    if count == 0:
+        raise ValueError(f"Could not find __version__ in {path}")
     path.write_text(content, encoding="utf-8")
     print(f"Updated {path}")
 
@@ -33,7 +35,9 @@ def update_starter(version: str) -> None:
     content = path.read_text(encoding="utf-8")
     pattern = r'"research_buddy_version":\s*"[^"]+"'
     replacement = f'"research_buddy_version": "{version}"'
-    content = re.sub(pattern, replacement, content)
+    content, count = re.subn(pattern, replacement, content)
+    if count == 0:
+        raise ValueError(f"Could not find research_buddy_version in {path}")
     path.write_text(content, encoding="utf-8")
     print(f"Updated {path}")
 
@@ -53,9 +57,11 @@ def update_starter_md(version: str) -> None:
 def update_readme(version: str) -> None:
     path = Path("README.md")
     content = path.read_text(encoding="utf-8")
-    pattern = r"^# Research Buddy v\d+\.\d+\.\d+"
+    pattern = r"^# Research Buddy v\S+"
     replacement = f"# Research Buddy v{version}"
-    content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    content, count = re.subn(pattern, replacement, content, flags=re.MULTILINE)
+    if count == 0:
+        raise ValueError(f"Could not find '# Research Buddy v...' heading in {path}")
     path.write_text(content, encoding="utf-8")
     print(f"Updated {path}")
 
