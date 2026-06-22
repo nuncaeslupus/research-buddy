@@ -66,6 +66,7 @@ src/research_buddy/
   localize.py          # HTML-render section-heading labels per language (display-only; slugs stay English)
   diff_summary.py      # v2 old→new diff → mechanical @summary block
   migrate_v1_to_v2.py  # v1 JSON  → v2 MD source
+  fileio.py            # shared file-I/O: read_text_or_error (UTF-8 guard) + atomic_write
   schema.json          # v1 Draft 2020-12 schema, bundled in the wheel
   starter.json         # v1 session-zero template, bundled in the wheel
   starter.md           # v2 session-zero template, bundled in the wheel
@@ -286,6 +287,16 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   (`{"code": "en", "label": "English"}`). The string form is mapped to a BCP-47
   code via `_LANGUAGE_NAME_TO_CODE` in `build.py`; unknown names fall back to the
   first token truncated to 10 chars.
+- **`fileio.py` centralizes two file-I/O concerns.** `read_text_or_error(path)`
+  reads UTF-8 and raises `FileReadError` on invalid bytes (so a `.md` source or
+  `theme.css` with bad bytes reports cleanly instead of tracebacking — parity
+  with the JSON reads PR #93 hardened); callers catch it, print to stderr, return
+  a non-zero code. `atomic_write(path, text)` does temp-sibling-write→rename with
+  `try/finally` cleanup, so a failed write leaves no `.tmp` behind. Used by
+  `build` (the v2 source + theme reads) and the atomic writers (`bump`, `upgrade`,
+  `migrate`, `init`). The bundled-starter loads (our own ASCII via
+  `importlib.resources`) stay unguarded — they're not user input and use a
+  `Traversable`, not a `Path`.
 - CI (`.github/workflows/ci.yml`) runs lint on 3.12 only, tests on 3.11 + 3.12.
   `make check-version-sync` is part of the lint job.
 - `tmp/`, `.vscode/`, `dist/` are gitignored. `starter-example/` is committed

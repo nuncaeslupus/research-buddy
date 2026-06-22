@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from research_buddy.commands._shared import _load_starter_md_text, _load_starter_template
+from research_buddy.fileio import atomic_write
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -80,9 +81,7 @@ def _init_v1(args: argparse.Namespace) -> int:
     doc["meta"]["date"] = datetime.now(tz=UTC).strftime("%B %Y")
 
     doc_path = source_dir / "research-document.json"
-    with doc_path.open("w", encoding="utf-8") as f:
-        json.dump(doc, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    atomic_write(doc_path, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
 
     target = Path(args.path).resolve()
     rb_ver = doc["meta"].get("research_buddy_version", "?")
@@ -119,7 +118,7 @@ def _init_v2(args: argparse.Namespace) -> int:
         text = _set_frontmatter_scalar(text, "subtitle", args.subtitle)
 
     doc_path = source_dir / "research-document.md"
-    doc_path.write_text(text, encoding="utf-8")
+    atomic_write(doc_path, text)
 
     target = Path(args.path).resolve()
     print(f"Created {_rel_to_cwd(target)}/")

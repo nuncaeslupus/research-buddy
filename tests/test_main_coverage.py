@@ -521,6 +521,29 @@ class TestPerformBuildMd:
         assert versions.exists()
         assert not list(versions.glob("*.html"))
 
+    def test_invalid_utf8_source_reports_cleanly(self, tmp_path: Path, capsys) -> None:
+        """A non-UTF-8 .md source returns exit 1 with a clean error, no traceback."""
+        from research_buddy.main import perform_build_md
+
+        md = self._scaffold_md(tmp_path)
+        md.write_bytes(b"---\nbad\xff bytes\n---\n")
+        rc = perform_build_md(md, md.parent.parent)
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "invalid UTF-8 encoding" in err
+
+    def test_invalid_utf8_theme_reports_cleanly(self, tmp_path: Path, capsys) -> None:
+        """A non-UTF-8 theme file returns exit 1 with a clean error, no traceback."""
+        from research_buddy.main import perform_build_md
+
+        md = self._scaffold_md(tmp_path)
+        theme = tmp_path / "bad-theme.css"
+        theme.write_bytes(b":root { --x: \xff }\n")
+        rc = perform_build_md(md, md.parent.parent, theme=str(theme))
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "invalid UTF-8 encoding" in err
+
 
 # ---------------------------------------------------------------------------
 # _set_frontmatter_scalar — line 828/835 edge cases

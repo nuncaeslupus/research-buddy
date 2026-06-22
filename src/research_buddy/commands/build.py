@@ -15,6 +15,7 @@ from research_buddy.build import build_html
 from research_buddy.build_md import build_md_html
 from research_buddy.clean_md import parse_frontmatter as parse_md_frontmatter
 from research_buddy.commands._shared import _resolve_source
+from research_buddy.fileio import FileReadError, read_text_or_error
 from research_buddy.validator import validate
 from research_buddy.validator_md import validate_md
 
@@ -49,8 +50,12 @@ def perform_build(
     # load optional theme CSS
     theme_css = None
     theme_path = Path(theme) if theme else project_root / "theme.css"
-    if theme_path.exists():
-        theme_css = theme_path.read_text(encoding="utf-8")
+    if theme_path.is_file():
+        try:
+            theme_css = read_text_or_error(theme_path)
+        except FileReadError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         print(f"Using theme: {theme_path.name}")
 
     print("Building HTML…")
@@ -121,7 +126,11 @@ def perform_build_md(
 ) -> int:
     """Build HTML from a v2 Markdown source file."""
     print(f"Reading {md_path.name}…")
-    text = md_path.read_text(encoding="utf-8")
+    try:
+        text = read_text_or_error(md_path)
+    except FileReadError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
 
     md_issues = validate_md(md_path)
     errors = [i for i in md_issues if i.severity == "error"]
@@ -152,8 +161,12 @@ def perform_build_md(
             theme_path = (project_root / str(fm["theme_css"])).resolve()
     else:
         theme_path = project_root / "theme.css"
-    if theme_path.exists():
-        theme_css = theme_path.read_text(encoding="utf-8")
+    if theme_path.is_file():
+        try:
+            theme_css = read_text_or_error(theme_path)
+        except FileReadError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         print(f"Using theme: {theme_path.name}")
 
     print("Building HTML…")

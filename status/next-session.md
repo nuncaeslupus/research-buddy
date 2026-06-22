@@ -1,5 +1,67 @@
 # Next session
 
+## Session 2026-06-22 (session 30)
+
+### What was done
+
+Shipped **PR-10: File-I/O helpers** (Opus review fix initiative, the
+recommended-next batch).
+
+- **New `src/research_buddy/fileio.py`** with two shared helpers:
+  - `read_text_or_error(path)` — reads UTF-8, raises `FileReadError` on invalid
+    bytes with a uniform message. Closes the gap where user `.md`/`theme.css`
+    files with bad bytes would traceback (parity with the JSON reads PR #93
+    hardened).
+  - `atomic_write(path, text)` — temp-sibling write → `replace`, wrapped in
+    `try/finally` so a failed write removes the `.tmp` (P2-20). After a
+    successful rename the temp path is gone, so cleanup is a happy-path no-op.
+- **Encoding guard wired into the build path** (the documented P2-16 gap):
+  `perform_build_md` source read + the v1 (`perform_build`) and v2 theme loads
+  now use `read_text_or_error` and return exit 1 with a clean stderr message.
+- **`atomic_write` adopted by every atomic writer:** `commands/bump.py`,
+  `commands/upgrade.py` (both the md text and the json dump — serialize to a
+  string first), `commands/migrate.py`, `commands/init.py` (md + json), and
+  `migrate_v1_to_v2.py`'s module `main()`.
+- **Scoping note:** the bundled-starter loads in `_shared.py` / `upgrade_md`
+  were left unguarded on purpose — they read our own ASCII files via
+  `importlib.resources` (a `Traversable`, not a `Path`), so invalid UTF-8 isn't
+  a real risk and the helper's `Path` API doesn't fit. Recorded in CLAUDE.md.
+- Tests: `tests/test_fileio.py` (10 unit tests: valid/invalid UTF-8, message
+  shape, atomic write/overwrite/non-ascii, no-tmp-on-success, tmp-cleanup when
+  rename fails via monkeypatched `Path.replace`) + 2 integration tests in
+  `TestPerformBuildMd` (bad-UTF-8 source and theme both report cleanly).
+
+Gates: `make lint` clean, `make test-cov` **558 passed** (↑11 from 547),
+**91.40%** coverage; end-to-end `init` smoke confirmed no `.tmp` leftover.
+
+### Next steps
+
+Continue the Opus review fix initiative. Recommended order (from session 29,
+still valid):
+1. **PR-6 (clean_md correctness)** — already scoped this session by a
+   background agent. Two bugs: **P2-8** make `collect_framework_targets`
+   fence-aware (reuse `validator_md._line_in_fence`, the same pattern
+   `commands/locate.py` uses — iterate lines, skip `in_fence[i]` before the
+   heading/`<a id>` regexes); **P2-9** `strip_framework_block` EOF content
+   loss. **Heads-up on P2-9:** the agent could NOT pin the exact boundary from
+   inspection alone — the happy paths it traced all preserved content. Start by
+   writing reproduction tests (framework block at EOF; blank line(s) then body
+   after `@end`; `---` + blank + body) and find which one actually drops
+   content before touching the slicing at `clean_md.py:147-153`. Don't assume
+   there's an off-by-one until a test proves it; it may be a thinner fix than
+   the finding implies.
+2. **PR-7 (migrate hardening)** — three P0-4 ID/version collision bugs + four
+   P2-10..13 correctness fixes, all in `migrate_v1_to_v2.py`.
+3. **PR-2 (append-only enforcement)** — validator-side P0-1(b) + unclosed-fence
+   + broken-cross-link promotion.
+
+PRs 3–5 (starter.md framework text) are the biggest editorial lift; keep doing
+code fixes first.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-22 (session 29)
 
 ### What was done

@@ -17,6 +17,7 @@ from pathlib import Path
 
 from research_buddy.bump import BumpError, bump_md_text, next_minor_version
 from research_buddy.clean_md import parse_frontmatter
+from research_buddy.fileio import atomic_write
 from research_buddy.validator_md import validate_md
 
 
@@ -83,9 +84,7 @@ def cmd_bump(args: argparse.Namespace) -> int:
         )
         return 2
 
-    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
-    tmp.write_text(new_text, encoding="utf-8")
-    tmp.replace(out_path)
+    atomic_write(out_path, new_text)
     print(f"  → wrote {out_path}")
 
     if args.no_validate:

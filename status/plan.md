@@ -237,8 +237,16 @@ ships as its own PR against `main`.
       P2-7 (delete dead `STARTER_NULLABLE`), P3-12 (soften "TDD ceremony enforced"
       in CLAUDE.md).
       *Shipped this session.*
-- [ ] **PR-10: File-I/O helpers.** P2-19 (shared `read_text_or_error` + `atomic_write`
+- [x] **PR-10: File-I/O helpers.** P2-19 (shared `read_text_or_error` + `atomic_write`
       helpers), P2-16 (fold non-UTF-8 MD guard in), P2-20 (fold temp-file cleanup in).
+      *Shipped this session: new `src/research_buddy/fileio.py` with
+      `read_text_or_error` (UTF-8 guard → `FileReadError`) + `atomic_write`
+      (temp-sibling rename, `try/finally` cleanup). Encoding guard wired into the
+      build path user-file reads (v2 MD source + v1/v2 theme loads); `atomic_write`
+      adopted by `bump`, `upgrade` (md + json), `migrate` (+ module main), `init`
+      (md + json). `tests/test_fileio.py` (10) + 2 build-path integration tests;
+      558 passed, 91.40%. Bundled-starter `Traversable` loads left unguarded
+      (our own ASCII, not user input).*
 - [ ] **PR-11: upgrade edge cases.** P2-21 (v1 upgrade: add forward-only version
       guard matching v2), P2-22 (skip only version bump when doc is ahead of tool,
       still refresh framework), P2-23 (sniff YAML indent; make preamble/blockquote
