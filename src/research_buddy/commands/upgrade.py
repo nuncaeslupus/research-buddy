@@ -17,6 +17,7 @@ from research_buddy.commands._shared import (
     _load_starter_template,
     _resolve_source,
 )
+from research_buddy.fileio import atomic_write
 from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
 from research_buddy.upgrade_md import UpgradeError, upgrade_md
 from research_buddy.validator import validate
@@ -59,9 +60,7 @@ def _upgrade_md_file(path: Path, args: argparse.Namespace) -> int:
         print()
         return 1
 
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(upgraded, encoding="utf-8")
-    tmp.replace(path)
+    atomic_write(path, upgraded)
     print(f"  → wrote {path}")
 
     exit_code = 0
@@ -146,11 +145,8 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
             continue
 
         stamp_format_note(upgraded, __version__)
-        tmp = json_path.with_suffix(json_path.suffix + ".tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(upgraded, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-        tmp.replace(json_path)
+        payload = json.dumps(upgraded, indent=2, ensure_ascii=False) + "\n"
+        atomic_write(json_path, payload)
         print(f"  → wrote {json_path}")
 
         if not args.no_validate:

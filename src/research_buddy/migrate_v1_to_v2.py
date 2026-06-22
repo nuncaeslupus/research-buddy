@@ -50,6 +50,7 @@ import yaml
 
 from research_buddy import __version__
 from research_buddy.build import _LANGUAGE_NAME_TO_CODE
+from research_buddy.fileio import atomic_write
 
 Doc = dict[str, Any]
 Block = dict[str, Any]
@@ -1238,7 +1239,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     text = migrate(doc)
-    out.write_text(text, encoding="utf-8")
+    atomic_write(out, text)
 
     in_size = args.input.stat().st_size
     out_size = out.stat().st_size

@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from research_buddy.fileio import atomic_write
 from research_buddy.migrate_v1_to_v2 import (
     derive_output_path as derive_md_output_path,
 )
@@ -56,7 +57,7 @@ def cmd_migrate(args: argparse.Namespace) -> int:
 
         try:
             text = migrate_v1_to_v2(doc)
-            out.write_text(text, encoding="utf-8")
+            atomic_write(out, text)
         except (ValueError, RuntimeError) as e:
             print(f"Error: {e}", file=sys.stderr)
             exit_code = 2
