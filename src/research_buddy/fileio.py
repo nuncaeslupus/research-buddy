@@ -18,6 +18,7 @@ Two concerns centralized here so every command behaves the same way:
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 
@@ -53,10 +54,13 @@ def atomic_write(path: Path, text: str) -> None:
     leaves a ``.tmp`` sibling behind. After a successful rename the temp path no
     longer exists, so the cleanup is a no-op on the happy path.
     """
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_name(path.name + ".tmp")
     try:
         tmp.write_text(text, encoding="utf-8")
         tmp.replace(path)
     finally:
-        if tmp.exists():
-            tmp.unlink()
+        # Best-effort cleanup. After a successful rename `tmp` is gone, so this
+        # is a no-op on the happy path; on failure it removes the partial temp
+        # file. Suppress OSError so a cleanup failure never masks the real error.
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)

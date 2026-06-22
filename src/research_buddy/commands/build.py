@@ -50,7 +50,7 @@ def perform_build(
     # load optional theme CSS
     theme_css = None
     theme_path = Path(theme) if theme else project_root / "theme.css"
-    if theme_path.exists():
+    if theme_path.is_file():
         try:
             theme_css = read_text_or_error(theme_path)
         except FileReadError as e:
@@ -161,7 +161,7 @@ def perform_build_md(
             theme_path = (project_root / str(fm["theme_css"])).resolve()
     else:
         theme_path = project_root / "theme.css"
-    if theme_path.exists():
+    if theme_path.is_file():
         try:
             theme_css = read_text_or_error(theme_path)
         except FileReadError as e:

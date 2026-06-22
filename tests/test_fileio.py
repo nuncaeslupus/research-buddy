@@ -54,6 +54,13 @@ class TestAtomicWrite:
         atomic_write(p, "café — ✓\n")
         assert p.read_text(encoding="utf-8") == "café — ✓\n"
 
+    def test_suffixless_target(self, tmp_path: Path) -> None:
+        # `with_name` appends `.tmp` cleanly even when the target has no suffix.
+        p = tmp_path / "README"
+        atomic_write(p, "no suffix\n")
+        assert p.read_text(encoding="utf-8") == "no suffix\n"
+        assert not (tmp_path / "README.tmp").exists()
+
     def test_leaves_no_tmp_sibling_on_success(self, tmp_path: Path) -> None:
         p = tmp_path / "out.md"
         atomic_write(p, "content\n")
