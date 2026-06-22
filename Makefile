@@ -1,4 +1,4 @@
-.PHONY: lint format test test-cov test-all clean sync regen-example regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
+.PHONY: lint format test test-cov clean sync regen-example regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
 
 sync:
 	uv sync --extra dev
@@ -64,9 +64,6 @@ test:
 # ungated for local iteration.
 test-cov:
 	uv run pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=85
-
-test-all:
-	uv run pytest tests/ -v --run-slow
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

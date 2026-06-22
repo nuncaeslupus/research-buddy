@@ -1,5 +1,55 @@
 # Next session
 
+## Session 2026-06-22 (session 29)
+
+### What was done
+
+Started the **Opus review fix initiative** — a comprehensive audit (findings
+in `tmp/review-fix-list.md`) surfaced 13 PR batches. This session:
+
+1. **Created the plan** — added "Opus review fix initiative" section to
+   `status/plan.md` with all 13 PR batches, each item cross-referenced to
+   the review finding code (P0-N, P1-N, etc.).
+2. **Shipped PR-9: Script/test hygiene** (all 6 items):
+   - **P3-9** — deleted broken `test-all` Makefile target (used
+     `--run-slow`, an unregistered pytest option under `--strict-markers`);
+     removed the unused `slow`/`integration` marker declarations from
+     `pyproject.toml`.
+   - **P3-10** — `tests/test_turn1.py` `_FM` fixture: changed hard-coded
+     `research_buddy_version: "1.13.0"` to `"1.0.0"` so it won't rot.
+   - **P3-11** — `.pre-commit-config.yaml` version-sync hook: added
+     `src/research_buddy/starter\.md` to the `files:` trigger pattern.
+   - **P2-18** — `scripts/sync_version.py`: all four updaters now use
+     `re.subn` and raise `ValueError` on count==0 (previously three of
+     four silently no-oped and printed "Updated"). README pattern widened
+     from `v\d+\.\d+\.\d+` to `v\S+` to match the checker's pattern.
+   - **P2-7** — deleted dead `STARTER_NULLABLE` constant from
+     `validator_md.py` (7 lines, never referenced anywhere).
+   - **P3-12** — `CLAUDE.md`: softened "TDD ceremony enforced" →
+     "class-grouped, TDD by convention".
+
+Gates: `make lint` clean, `make test-cov` **547 passed** (↑4), **91.43%**
+coverage.
+
+### Next steps
+
+Pick the next PR batch from `status/plan.md`. Recommended order:
+1. **PR-10 (File-I/O helpers)** — `read_text_or_error` + `atomic_write`
+   helpers. Low-risk, self-contained, unblocks PR-8 (build safety).
+2. **PR-6 (clean_md correctness)** — `collect_framework_targets` fence-
+   awareness + EOF content-loss fix. Small, focused.
+3. **PR-7 (migrate hardening)** — three P0-4 ID/version collision bugs plus
+   four P2-10..13 correctness fixes. All in `migrate_v1_to_v2.py`.
+4. **PR-2 (append-only enforcement)** — the validator-side P0-1(b) + unclosed-
+   fence + broken-cross-link promotion. High-value correctness work.
+
+PRs 3–5 (starter.md framework text) are the biggest editorial lift; do code
+fixes first so the framework changes ship on a solid base.
+
+### Blockers
+
+None.
+
 ## Session 2026-06-08 (session 28)
 
 ### What was done

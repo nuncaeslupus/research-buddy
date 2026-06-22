@@ -88,10 +88,6 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--strict-markers --tb=short"
-markers = [
-    "slow: marks tests as slow",
-    "integration: marks tests as integration tests",
-]
 
 # Coverage is gated in CI via `make test-cov` (`--cov-fail-under`). The source
 # is configured here so a bare `--cov` (no path) measures the package only.
