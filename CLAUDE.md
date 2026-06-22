@@ -242,6 +242,16 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   HTML build never carried the preamble (it sits before the first H2, which
   `split_into_tabs` drops). This is the fix for "agent skipped the brief because
   the uploaded file had no framework" — usually a clean view uploaded by mistake.
+- **`clean` is fence-aware and EOF-safe.** `collect_framework_targets` skips
+  lines inside fenced blocks (reusing `validator_md._line_in_fence`): the
+  framework's `### Templates` examples carry placeholder headings + `<a
+  id="q-001">`-style anchors that are NOT real targets — collecting them would
+  make `unwrap_framework_links` strip a legitimate body link like
+  `[Q-001](#q-001)` (a promoted tracker row) down to plain text. Separately,
+  `strip_framework_block`'s malformed-opener path (a `framework.core` anchor with
+  no matching `@end`) preserves the opener + every remaining line verbatim
+  instead of `break`ing, which used to silently drop everything from the opener
+  to EOF.
 - **HTML localizes section headings; slugs stay English.** `build_md` displays
   framework headings ("Open Research Queue", "References", the Project-Spec H3s)
   in the doc's `language.code` while keeping the English slug/id (tab `data-tab`,

@@ -217,8 +217,19 @@ ships as its own PR against `main`.
       step + session-note template matches bump.py), P1-5 (excellence bar
       guidance, queue prioritization rubric, rule supersession mechanics,
       queue/tracker dual-membership rule).
-- [ ] **PR-6: clean_md correctness.** P2-8 (make `collect_framework_targets`
+- [x] **PR-6: clean_md correctness.** P2-8 (make `collect_framework_targets`
       fence-aware), P2-9 (fix `strip_framework_block` EOF content loss).
+      *Shipped this session. Both verified as REAL bugs first: (P2-8) the
+      starter's `### Templates` fenced examples carry `<a id="q-001">` + heading
+      placeholders that were being collected as framework targets, so a promoted
+      `[Q-001](#q-001)` body link got unwrapped to plain text in the clean view —
+      fixed by skipping fenced lines via `validator_md._line_in_fence`. (P2-9)
+      the malformed-opener `break` dropped everything from the opener to EOF
+      (contradicting its own "leave untouched" comment) — now preserves the
+      opener + remaining lines verbatim. The existing
+      `test_malformed_no_closer_leaves_text_intact` had encoded the buggy
+      drop-the-body behavior; corrected to assert the body survives. 561 passed,
+      91.42%.*
 - [ ] **PR-7: migrate hardening.** P0-4 (three ID/version collision bugs:
       `_normalize_version`, two-pass queue ID collision, slugify verdict labels),
       P2-10 (deduplicate verdict labels), P2-11 (reserve canonical anchors for

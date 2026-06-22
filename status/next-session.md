@@ -1,5 +1,58 @@
 # Next session
 
+## Session 2026-06-22 (session 31)
+
+### What was done
+
+Shipped **PR-6: clean_md correctness** (Opus review fix initiative). Both items
+were confirmed as REAL bugs before touching code:
+
+- **P2-8 — `collect_framework_targets` fence-awareness.** Verified against the
+  live `starter.md`: the framework's `### Templates` subsection has fenced
+  example blocks carrying `<a id="r-example-1">`, `<a id="da-example-1">`,
+  `<a id="q-001">` and placeholder headings (`### Q-001: {{topic}}`, etc.).
+  These were being collected as framework targets. The real harm: once an agent
+  promotes Q-001 to the Research Tracker (emitting a genuine `<a id="q-001">`),
+  a body link `[Q-001](#q-001)` would be unwrapped to plain text in the clean
+  view — a broken/lost link. Fix: skip fenced lines using
+  `validator_md._line_in_fence` (the same helper `commands/locate.py` reuses),
+  iterating the framework region by absolute index. End-to-end check confirms a
+  promoted `[Q-001](#q-001)` body link now survives `clean_md_text`.
+- **P2-9 — `strip_framework_block` EOF content loss.** The last session's
+  heads-up was right that the happy paths preserved content; the actual bug was
+  the **malformed-opener path**. A `framework.core` opener with no matching
+  `@end` did `break`, which dropped the opener and *every line after it* to EOF
+  — directly contradicting its own comment ("leave the file untouched … to
+  avoid silently destroying content"). Repro: `strip_framework_block("Body1\n
+  <opener>\nBody2\nBody3\n")` returned just `"Body1\n"`. Fix: `out.extend(
+  lines[i:]); break` so everything from the opener on is preserved verbatim.
+  The existing `test_malformed_no_closer_leaves_text_intact` had encoded the
+  buggy behavior (asserted only that the marker was absent, while its own
+  comment admitted the body was dropped); corrected it to assert the body
+  survives, and added `test_malformed_no_closer_preserves_surrounding_content`.
+
+No import cycle: `validator_md` does not import `clean_md`. Tests: +2 net new
+in `test_clean_md.py` (fence-skip + malformed-preserve) plus the corrected
+existing test. Gates: `make lint` clean, `make test-cov` **561 passed**,
+**91.42%**.
+
+### Next steps
+
+Continue the Opus review fix initiative (code fixes before the starter.md
+editorial batches):
+1. **PR-7 (migrate hardening)** — three P0-4 ID/version collision bugs
+   (`_normalize_version`, two-pass queue-ID collision, slugify verdict labels)
+   + four P2-10..13 correctness fixes, all in `migrate_v1_to_v2.py`.
+2. **PR-2 (append-only enforcement)** — validator-side P0-1(b) (tracker-row +
+   session-id + bullet-level reference preservation in `_check_append_only`),
+   P2-1 (`_check_unclosed_fence`), P2-2 (promote broken-cross-link to error),
+   P2-3 (make `_collect_entry_ids` fence-aware).
+3. Then PR-8 (build safety) and the PR-3/4/5 starter.md editorial batches.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-22 (session 30)
 
 ### What was done

@@ -36,6 +36,8 @@ from typing import Any
 
 import yaml
 
+from research_buddy.validator_md import _line_in_fence
+
 FRAMEWORK_START = "<!-- @anchor: framework.core -->"
 FRAMEWORK_END = "<!-- @end: framework.reference -->"
 TITLE_START = "<!-- @anchor: title -->"
@@ -59,6 +61,13 @@ def collect_framework_targets(text: str) -> set[str]:
     Boundaries are matched as full lines (line.strip() == MARKER) so literal
     mentions of the markers in prose (e.g. inside backticks documenting the
     strip range) are ignored.
+
+    Lines inside fenced code blocks are skipped: the framework's `### Templates`
+    subsection embeds fenced example blocks (rule / DA / session) carrying
+    placeholder headings and `<a id="q-001">`-style anchors. Those are not real
+    framework targets — collecting them would make `unwrap_framework_links`
+    strip a legitimate body link (e.g. `[Q-001](#q-001)` once Q-001 is promoted
+    to the tracker) down to plain text.
     """
     lines = text.splitlines()
     start_idx = end_idx = -1
@@ -69,15 +78,23 @@ def collect_framework_targets(text: str) -> set[str]:
             end_idx = i  # keep updating; we want the last line-anchored match
     if start_idx < 0 or end_idx < 0 or end_idx <= start_idx:
         return set()
-    inner = "\n".join(lines[start_idx : end_idx + 1])
+
+    in_fence = _line_in_fence(lines)
+    heading_re = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+    anchor_re = re.compile(r'<a\s+id="([^"]+)"\s*>\s*</a>')
 
     targets: set[str] = set()
-    for m in re.finditer(r"^(#{1,6})\s+(.+?)\s*$", inner, re.MULTILINE):
-        slug = _slugify(m.group(2))
-        if slug:
-            targets.add(slug)
-    for m in re.finditer(r'<a\s+id="([^"]+)"\s*>\s*</a>', inner):
-        targets.add(m.group(1))
+    for i in range(start_idx, end_idx + 1):
+        if in_fence[i]:
+            continue
+        line = lines[i]
+        m = heading_re.match(line)
+        if m:
+            slug = _slugify(m.group(2))
+            if slug:
+                targets.add(slug)
+        for am in anchor_re.finditer(line):
+            targets.add(am.group(1))
     return targets
 
 
@@ -141,8 +158,11 @@ def strip_framework_block(text: str) -> str:
             while j < len(lines) and lines[j].strip() != FRAMEWORK_END:
                 j += 1
             if j >= len(lines):
-                # Malformed: framework opener with no closer. Leave the file
-                # untouched in that section to avoid silently destroying content.
+                # Malformed: framework opener with no matching closer. We can't
+                # locate the block boundary, so preserve the opener and every
+                # remaining line verbatim rather than silently dropping
+                # everything from here to EOF.
+                out.extend(lines[i:])
                 break
             j += 1  # past @end line
             # Skip trailing blank lines plus at most one --- separator
