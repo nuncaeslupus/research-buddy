@@ -1,5 +1,63 @@
 # Next session
 
+## Session 2026-06-22 (session 32)
+
+### What was done
+
+Shipped **PR-7: migrate hardening (bulk)** — 5 of the 7 audit items, all in
+`migrate_v1_to_v2.py`, each confirmed against a repro before fixing:
+
+- **P0-4a — patch-aware changelog sort.** `build_changelog._key` returned
+  `(major, minor)`, collapsing `1.1.0` and `1.1.4` to the same key → unstable
+  order. Now `re.findall(r"\d+", …)` → a padded 3-tuple `(maj, min, patch)`.
+  (There is no literal `_normalize_version`; the version-normalization collision
+  the audit named manifested here.)
+- **P0-4b — collision-free queue IDs.** `_strip_done_rows_from_queue` synthesized
+  `Q-{i+1}` from the row index, which could dup a tracker ID or an inline ID on
+  another row. Now two-pass: collect existing inline IDs + `tracker_ids` into a
+  `used` set, then assign the lowest free `Q-NNN`. Repro: an unlabeled first row
+  + inline `Q-003` later + tracker `{Q-001}` produced `[Q-001, Q-003, Q-003,
+  Q-004]` (two collisions); now `[Q-002, Q-003, Q-004, Q-005]`.
+- **P0-4c — slugified verdict `<a id>`.** Both `_render_verdict_as_rule/_da` did
+  `aid = rid.lower()`, leaving spaces/punctuation in the id when a label lacked a
+  clean `R-`/`DA-` prefix. New `_slug()` helper; idempotent for well-formed ids
+  (`R-FM-1` → `r-fm-1`, still pairs with `<!-- @rule: R-FM-1 -->`).
+- **P2-11 — reserve canonical anchors.** `build_domain_tab` now mangles a label
+  that slugs to a framework anchor (`References`, `Changelog`, …) to `…-tab`
+  via a `CANONICAL_ANCHORS` set, so the framework section keeps the canonical id.
+- **P2-12 / P2-13a — changelog dates.** Entries render `### vX.Y — DATE`; the
+  synthetic top entry carries `meta.date`.
+- **P2-13b — frontmatter tiers/rules.** `build_frontmatter` now writes
+  `project.source_tiers` (tier_1 / tier_2 / discovery, matching `starter.md`) +
+  `project.domain_rules`, recovered from the resolved project spec.
+
+**Deferred to a follow-up (PR-7b), documented in plan.md:**
+- **P2-10 (dedup verdict labels)** — needs a `seen_ids` set threaded through the
+  whole `render_block`/`render_blocks`/`render_subsections` pipeline; too
+  invasive to bundle safely with the collision fixes.
+- **P2-13c (dropped-content marker)** — emit an HTML comment when content is
+  intentionally dropped (e.g. `Research Methodology`). A design choice (what to
+  mark, where) that needs a clearer spec than the audit gave.
+
+8 new tests (`TestMigrateHardening`). Gates: `make lint` clean, `make test-cov`
+**569 passed**, **91.53%**. The existing `TestEndToEnd` runs `validate_md` on
+migrated output, so the new frontmatter + changelog-date format validate clean.
+
+### Next steps
+
+1. **PR-2 (append-only enforcement)** — validator-side P0-1(b) (tracker-row +
+   session-id + bullet-level reference preservation in `_check_append_only`),
+   P2-1 (`_check_unclosed_fence`), P2-2 (promote broken-cross-link to error),
+   P2-3 (make `_collect_entry_ids` fence-aware). High-value correctness work.
+2. **PR-8 (build safety + render bugs)** — P0-3 (gate HTML render on validator
+   errors) + several P2 render escaping fixes.
+3. **PR-7b** (the two deferred items above) when convenient.
+4. Then the PR-3/4/5 starter.md editorial batches (biggest editorial lift).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-22 (session 31)
 
 ### What was done

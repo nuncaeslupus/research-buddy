@@ -166,6 +166,22 @@ def resolve_language(meta: Doc) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
+def _frontmatter_source_tiers(ps: Doc) -> Doc:
+    """The `project.source_tiers` frontmatter block (tier_1 / tier_2 / discovery).
+
+    Mirrors the canonical shape in `starter.md`: the three named tiers, each
+    carrying the resolved value or `None` when the v1 spec didn't supply it.
+    (The fixed "Never" tier lives in the framework, not the frontmatter.)
+    """
+    st = ps.get("source_tiers")
+    st = st if isinstance(st, dict) else {}
+    return {
+        "tier_1": st.get("tier_1"),
+        "tier_2": st.get("tier_2"),
+        "discovery": st.get("discovery"),
+    }
+
+
 def build_frontmatter(doc: Doc) -> str:
     meta = doc.get("meta", {}) or {}
     ps = resolve_project_spec(doc)
@@ -198,6 +214,8 @@ def build_frontmatter(doc: Doc) -> str:
             "final_goal": ps.get("final_goal"),
             "timing": ps.get("timing"),
             "validation_gate": ps.get("validation_gate"),
+            "source_tiers": _frontmatter_source_tiers(ps),
+            "domain_rules": ps.get("domain_rules"),
         },
         "ui_strings": {
             "status_open": (meta.get("ui_strings") or {}).get("status_open", "OPEN"),
@@ -376,11 +394,21 @@ def parse_rule_label(label: str) -> dict[str, Any]:
     return {"id": rule_id, "tags": tags, "status": status, "extras": extras}
 
 
+def _slug(text: str) -> str:
+    """Lowercase, hyphenate non-alphanumerics — a valid HTML id / anchor slug.
+
+    For a well-formed rule id (`R-FM-1`) this is a no-op beyond lowercasing
+    (`r-fm-1`); for a label that lacks a clean `R-`/`DA-` prefix it strips
+    spaces and punctuation that would otherwise produce an invalid `<a id>`.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
 def _render_verdict_as_rule(blk: Block) -> str:
     label = blk.get("label", "")
     parsed = parse_rule_label(label)
     rid = parsed["id"]
-    aid = rid.lower()
+    aid = _slug(rid)
     tags_md = " ".join(f"[{t}]" for t in parsed["tags"])
     status = parsed["status"]
     extras = parsed["extras"]
@@ -411,7 +439,7 @@ def _render_verdict_as_da(blk: Block) -> str:
     label = blk.get("label", "")
     parsed = parse_rule_label(label)
     rid = parsed["id"] or label.strip()
-    aid = rid.lower()
+    aid = _slug(rid)
     md = (blk.get("md") or "").strip()
     parts = [
         f"<!-- @da: {rid} -->",
@@ -638,6 +666,25 @@ def build_project_specification(ps: Doc) -> str:
     return "\n".join(parts)
 
 
+# Plain-slug anchors the framework's own sections own. A migrated domain tab
+# whose label slugs to one of these is mangled (suffixed `-tab`) so the two
+# never emit the same `<!-- @anchor: X -->`. Dotted anchors (framework.core,
+# project.tiers, …) can't collide with a slugified label, so they're omitted.
+CANONICAL_ANCHORS = {
+    "title",
+    "project",
+    "overview",
+    "queue",
+    "tracker",
+    "journey",
+    "references",
+    "discarded",
+    "rules",
+    "sessions",
+    "changelog",
+}
+
+
 def build_domain_tab(tab: Doc, skip_sections: set[str] | None = None) -> str:
     """Render a domain-specific tab as an H2 section.
 
@@ -646,7 +693,12 @@ def build_domain_tab(tab: Doc, skip_sections: set[str] | None = None) -> str:
     obsolete in v2 but whose substantive sections must survive.
     """
     label = tab.get("label") or tab.get("id") or "Untitled"
-    anchor_id = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+    anchor_id = _slug(label)
+    # A domain-tab label that slugs to a canonical framework anchor (e.g. a tab
+    # literally named "References" or "Changelog") would emit a duplicate
+    # `@anchor`. Mangle it so the framework's own section keeps the canonical id.
+    if anchor_id in CANONICAL_ANCHORS:
+        anchor_id = f"{anchor_id}-tab"
     skip = {s.strip().lower() for s in (skip_sections or set())}
 
     parts = [
@@ -788,14 +840,31 @@ def _strip_done_rows_from_queue(
 
     has_id_col = bool(new_rows) and bool(re.match(r"^Q-\d+", str(new_rows[0][0])))
     if not has_id_col and new_rows:
-        for i, row in enumerate(new_rows):
+        # First pass: pull the IDs rows already carry, so synthesized IDs can
+        # avoid colliding with them OR with IDs already in the tracker. The old
+        # `Q-{i+1}` (row-index) scheme could hand an unlabeled row the same ID
+        # as a labeled sibling, or one already used by a done (tracker) item.
+        used: set[str] = set(tracker_ids)
+        parsed: list[tuple[str | None, str]] = []  # (existing_id, topic_text)
+        for row in new_rows:
             topic = row[0] if row else ""
             m = re.match(r"^(Q-\d+)\b", topic)
             if m:
-                qid = m.group(1)
-                row[0] = topic[m.end() :].lstrip(" -—:")
+                used.add(m.group(1))
+                parsed.append((m.group(1), topic[m.end() :].lstrip(" -—:")))
             else:
-                qid = f"Q-{i + 1:03d}"
+                parsed.append((None, topic))
+        # Second pass: assign, synthesizing the lowest free Q-NNN for the rest.
+        counter = 1
+        for row, (existing, topic_text) in zip(new_rows, parsed, strict=True):
+            if existing is not None:
+                qid = existing
+            else:
+                while f"Q-{counter:03d}" in used:
+                    counter += 1
+                qid = f"Q-{counter:03d}"
+                used.add(qid)
+            row[0] = topic_text
             row.insert(0, qid)
         new_headers.insert(0, "ID")
 
@@ -1031,10 +1100,12 @@ def build_references(research_tab: Doc) -> str:
 def build_changelog(doc: Doc) -> str:
     entries = list((doc.get("changelog") or {}).get("entries", []))
 
-    def _key(e: Doc) -> tuple[int, int]:
-        ver = str(e.get("version", ""))
-        m = re.search(r"(\d+)\.(\d+)", ver)
-        return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+    def _key(e: Doc) -> tuple[int, ...]:
+        # Sort on (major, minor, patch). The old (major, minor)-only key
+        # collapsed 1.1.0 and 1.1.4 to the same value, so distinct entries
+        # sorted unstably and could swap order between runs.
+        nums = [int(n) for n in re.findall(r"\d+", str(e.get("version", "")))]
+        return tuple([*nums, 0, 0, 0][:3])
 
     entries.sort(key=_key, reverse=True)
 
@@ -1049,6 +1120,7 @@ def build_changelog(doc: Doc) -> str:
         if meta_version != top_ver:
             synth = {
                 "version": meta_version,
+                "date": meta.get("date"),
                 "blocks": [
                     {
                         "type": "p",
@@ -1074,8 +1146,10 @@ def build_changelog(doc: Doc) -> str:
     for entry in entries:
         ver = entry.get("version", "?")
         ver_clean = re.sub(r"^v", "", str(ver), flags=re.IGNORECASE)
+        date = str(entry.get("date") or "").strip()
         body = render_blocks(entry.get("blocks", []) or [], heading_offset=1)
-        parts.append(f"### v{ver_clean}")
+        heading = f"### v{ver_clean} — {date}" if date else f"### v{ver_clean}"
+        parts.append(heading)
         parts.append("")
         if body:
             parts.append(body)
