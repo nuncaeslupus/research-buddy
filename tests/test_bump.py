@@ -8,13 +8,17 @@ stubs) and `{{placeholders}}` for the agent. The headline guarantee is that
 
 from __future__ import annotations
 
+import re
 from argparse import Namespace
+from importlib import resources
 from pathlib import Path
 
 import pytest
 
+import research_buddy
 from research_buddy.bump import (
     BumpError,
+    _session_skeleton,
     append_tracker_row,
     next_minor_version,
     pop_queue_row,
@@ -205,3 +209,48 @@ class TestBumpViaMain:
             main()
         assert exc.value.code == 0
         assert (tmp_path / "demo_v1.1-source.md").is_file()
+
+
+class TestSessionSkeletonSyncWithStarterTemplate:
+    """PR-5 sync guard: the session-note template in starter.md must stay
+    structurally consistent with what bump.py's _session_skeleton() generates."""
+
+    def _starter_session_template(self) -> str:
+        starter = (
+            resources.files(research_buddy).joinpath("starter.md").read_text(encoding="utf-8")
+        )
+        m = re.search(
+            r"When adding a new session note.*?````\n(.*?)````",
+            starter,
+            re.DOTALL,
+        )
+        assert m, "session-note template fenced block not found in starter.md"
+        return m.group(1)
+
+    def test_section_headings_match_skeleton(self) -> None:
+        """Every bold section heading in _session_skeleton must appear in the
+        starter.md template (names have not diverged)."""
+        skeleton = _session_skeleton("Q-001", "test topic", "2026-01-01")
+        template = self._starter_session_template()
+
+        heading_re = re.compile(r"\*\*[^*]+\*\*")
+        skeleton_headings = {m.group() for m in heading_re.finditer(skeleton)}
+
+        for heading in skeleton_headings:
+            assert heading in template, (
+                f"section heading {heading!r} from _session_skeleton is missing "
+                "from the starter.md session-note template — they have diverged"
+            )
+
+    def test_table_headers_match_skeleton(self) -> None:
+        """Table header rows in _session_skeleton must appear in the
+        starter.md template."""
+        skeleton = _session_skeleton("Q-001", "test topic", "2026-01-01")
+        template = self._starter_session_template()
+
+        table_header_re = re.compile(r"^\| [A-Z].+\|$", re.MULTILINE)
+        for row in table_header_re.findall(skeleton):
+            assert row in template, (
+                f"table header row {row!r} from _session_skeleton is missing "
+                "from the starter.md session-note template — they have diverged"
+            )
