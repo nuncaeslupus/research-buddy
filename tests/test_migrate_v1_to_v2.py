@@ -11,6 +11,7 @@ import yaml
 
 from research_buddy import __version__
 from research_buddy.migrate_v1_to_v2 import (
+    _dropped_research_sections,
     _render_verdict_as_da,
     _render_verdict_as_rule,
     _strip_done_rows_from_queue,
@@ -25,6 +26,7 @@ from research_buddy.migrate_v1_to_v2 import (
     migrate,
     parse_rule_label,
     render_block,
+    render_blocks,
     render_subsections,
     resolve_language,
     resolve_project_spec,
@@ -851,3 +853,182 @@ class TestMigrateHardening:
         # tier_3 is aliased to `discovery` by the top-level normalizer.
         assert project["source_tiers"]["discovery"] == "blogs"
         assert project["domain_rules"] == "Prefer RCTs"
+
+
+class TestVerdictLabelDedup:
+    """P2-10 — duplicate verdict <a id> values must be deduplicated."""
+
+    def _rule_blk(self, label: str = "R-FM-1 VALIDATED") -> dict:
+        return {"type": "verdict", "badge": "adopt", "label": label, "md": "body"}
+
+    def _da_blk(self, label: str = "DA-Q1-1 reason") -> dict:
+        return {"type": "verdict", "badge": "reject", "label": label, "md": "why"}
+
+    def test_first_occurrence_unchanged(self) -> None:
+        seen: set[str] = set()
+        out = _render_verdict_as_rule(self._rule_blk(), seen)
+        assert '<a id="r-fm-1"></a>' in out
+        assert "r-fm-1" in seen
+
+    def test_duplicate_rule_gets_numeric_suffix(self) -> None:
+        seen = {"r-fm-1"}
+        out = _render_verdict_as_rule(self._rule_blk(), seen)
+        assert '<a id="r-fm-1-2"></a>' in out
+        assert "r-fm-1-2" in seen
+
+    def test_third_occurrence_gets_suffix_3(self) -> None:
+        seen = {"r-fm-1", "r-fm-1-2"}
+        out = _render_verdict_as_rule(self._rule_blk(), seen)
+        assert '<a id="r-fm-1-3"></a>' in out
+
+    def test_da_dedup(self) -> None:
+        seen: set[str] = set()
+        out1 = _render_verdict_as_da(self._da_blk(), seen)
+        out2 = _render_verdict_as_da(self._da_blk(), seen)
+        assert '<a id="da-q1-1"></a>' in out1
+        assert '<a id="da-q1-1-2"></a>' in out2
+
+    def test_none_seen_ids_no_dedup(self) -> None:
+        # Backward compat: no seen_ids argument → ids are returned unchanged.
+        out1 = _render_verdict_as_rule(self._rule_blk())
+        out2 = _render_verdict_as_rule(self._rule_blk())
+        assert out1.count('<a id="r-fm-1"></a>') == 1
+        assert out2.count('<a id="r-fm-1"></a>') == 1
+
+    def test_dedup_propagates_via_render_blocks(self) -> None:
+        blk = self._rule_blk()
+        seen: set[str] = set()
+        out = render_blocks([blk, blk], seen_ids=seen)
+        assert '<a id="r-fm-1"></a>' in out
+        assert '<a id="r-fm-1-2"></a>' in out
+
+    def test_dedup_propagates_via_render_subsections(self) -> None:
+        blk = self._rule_blk()
+        sec = {
+            "subsections": {
+                "Sub A": {"blocks": [blk]},
+                "Sub B": {"blocks": [blk]},
+            }
+        }
+        seen: set[str] = set()
+        out = render_subsections(sec, start_level=3, seen_ids=seen)
+        assert '<a id="r-fm-1"></a>' in out
+        assert '<a id="r-fm-1-2"></a>' in out
+
+    def test_dedup_across_domain_tabs_via_migrate(self) -> None:
+        # Two domain tabs each carrying the same R-FM-1 rule — migrate() must
+        # deduplicate so the HTML has only one <a id="r-fm-1">.
+        rule_blk = {"type": "verdict", "badge": "adopt", "label": "R-FM-1 VALIDATED", "md": "x"}
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [
+                {"id": "tab1", "label": "Tab One", "sections": {"Rules": {"blocks": [rule_blk]}}},
+                {"id": "tab2", "label": "Tab Two", "sections": {"Rules": {"blocks": [rule_blk]}}},
+            ],
+        }
+        out = migrate(doc)
+        assert out.count('<a id="r-fm-1">') == 1
+        assert '<a id="r-fm-1-2">' in out
+
+    def test_dedup_across_tab_and_discarded(self) -> None:
+        # A DA that appears in both a domain tab and the Discarded Alternatives
+        # section should also be deduplicated document-wide.
+        da_blk = {"type": "verdict", "badge": "reject", "label": "DA-Q1-1 reason", "md": "no"}
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [
+                {
+                    "id": "design",
+                    "label": "Design",
+                    "sections": {"Discards": {"blocks": [da_blk]}},
+                },
+                {
+                    "id": "research",
+                    "sections": {
+                        "Discarded Alternatives": {"blocks": [da_blk]},
+                    },
+                },
+            ],
+        }
+        out = migrate(doc)
+        assert out.count('<a id="da-q1-1">') == 1
+        assert '<a id="da-q1-1-2">' in out
+
+
+class TestDroppedContentMarker:
+    """P2-13c — intentionally-dropped v1 sections must emit a visible marker."""
+
+    def _doc_with_methodology(self) -> dict:
+        return {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [
+                {
+                    "id": "research",
+                    "sections": {
+                        "Research Methodology": {
+                            "blocks": [{"type": "p", "md": "We use systematic review."}]
+                        }
+                    },
+                }
+            ],
+        }
+
+    def test_dropped_sections_helper_detects_methodology(self) -> None:
+        research_tab = {
+            "sections": {
+                "Research Methodology": {"blocks": []},
+                "Open Research Queue": {"blocks": []},
+            }
+        }
+        assert _dropped_research_sections(research_tab) == ["Research Methodology"]
+
+    def test_dropped_sections_helper_empty_when_absent(self) -> None:
+        assert _dropped_research_sections({"sections": {"Open Research Queue": {}}}) == []
+
+    def test_migrate_embeds_comment_when_methodology_present(self) -> None:
+        out = migrate(self._doc_with_methodology())
+        assert "MIGRATION NOTE" in out
+        assert "Research Methodology" in out
+
+    def test_migrate_comment_placed_before_project_spec(self) -> None:
+        out = migrate(self._doc_with_methodology())
+        assert out.index("MIGRATION NOTE") < out.index("## Project Specification")
+
+    def test_methodology_content_not_in_output(self) -> None:
+        # The section body is intentionally dropped; only the marker comment survives.
+        out = migrate(self._doc_with_methodology())
+        assert "We use systematic review." not in out
+
+    def test_no_comment_when_methodology_absent(self) -> None:
+        doc = {
+            "meta": {"version": "1.0"},
+            "agent_guidelines": {"project_specific": {}},
+            "tabs": [],
+        }
+        assert "MIGRATION NOTE" not in migrate(doc)
+
+    def test_main_prints_stderr_warning_when_methodology_present(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        in_path = tmp_path / "in.json"
+        in_path.write_text(
+            json.dumps(self._doc_with_methodology()),
+            encoding="utf-8",
+        )
+        rc = main([str(in_path), "-o", str(tmp_path / "out.md")])
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "Research Methodology" in captured.err
+
+    def test_main_no_stderr_when_no_dropped_sections(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        doc = {"meta": {"version": "1.0"}, "agent_guidelines": {"project_specific": {}}}
+        in_path = tmp_path / "in.json"
+        in_path.write_text(json.dumps(doc), encoding="utf-8")
+        rc = main([str(in_path), "-o", str(tmp_path / "out.md")])
+        assert rc == 0
+        assert capsys.readouterr().err == ""
