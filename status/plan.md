@@ -267,13 +267,15 @@ ships as its own PR against `main`.
       P2-13b (`build_frontmatter` writes `project.source_tiers` {tier_1/tier_2/
       discovery} + `project.domain_rules`, matching the starter shape). 8 new
       tests; 569 passed, 91.53%.
-  - [ ] **PR-7b: migrate dedup + drop marker (deferred).** P2-10 (deduplicate
-        verdict labels) needs a `seen_ids` set threaded through the whole
-        `render_block`/`render_blocks`/`render_subsections` pipeline — too
-        invasive to bundle with the collision fixes. P2-13c (HTML marker when
-        content is intentionally dropped, e.g. `Research Methodology`) is a
-        design choice (what to mark, where) needing a clearer spec. Both split
-        out to keep PR-7 reviewable and low-risk.
+  - [x] **PR-7b: migrate dedup + drop marker.** P2-10 (deduplicate verdict
+        `<a id>` labels across all tabs, session notes, changelog, reasoning
+        journey, and references by threading a `seen_ids` set through the full
+        render pipeline; `_unique_aid` helper handles collisions with `-2`/`-3`
+        suffix and guards against empty `base_aid`). P2-13c (HTML comment placed
+        before `## Project Specification` when v1 sections are intentionally
+        dropped, e.g. `Research Methodology`; stderr warning printed from
+        `main()`). 17 new tests (`TestVerdictLabelDedup`, `TestDroppedContentMarker`);
+        631 passed, 91.79% coverage. PR #125 merged.
 - [x] **PR-8: build safety + render bugs.** Shipped this session. P0-3
       (`perform_build_md` aborts with exit 1 and writes no HTML when the
       validator finds error-severity issues; warnings don't block). P2-14
