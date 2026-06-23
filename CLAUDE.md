@@ -274,6 +274,17 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   protects. `validate --prior` enforces append-only invariants
   (anchors / DAs / changelog / references never disappear). Renaming
   an anchor is a breaking change.
+- **Append-only coverage + structural checks (PR-2).** `_check_append_only`
+  also preserves **Research Tracker rows** (`Q-`/`T-` first-column ids; the seed
+  `T-000` is exempt) and **individual reference bullets** (the H3 check only
+  caught whole per-version subsections). Session ids need no separate check —
+  `_collect_anchors` already collects `@session` markers, so a removed session
+  fires `anchor-removed`. `_collect_entry_ids` is now fence-aware (a `@da`/`@rule`
+  in a fenced template example isn't a live entry). `validate_md` runs
+  `_check_unclosed_fence` (an open ``` with no closer is an error pointing at the
+  opener — otherwise it silently swallows the rest of the doc). A
+  `broken-cross-link` is now an **error** (was a warning), except for the
+  starter's illustrative example targets, which stay `info`.
 - **`doc_format_version` vs `research_buddy_version`.** The frontmatter
   field `doc_format_version: 2` is the *format generation* — it bumps
   when v2 itself changes shape (rare). `research_buddy_version` is the

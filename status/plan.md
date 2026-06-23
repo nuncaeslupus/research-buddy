@@ -202,10 +202,17 @@ ships as its own PR against `main`.
 - [ ] **PR-1: Release safety + changelog.** P0-2 (release.yml: move tag after
       publish), P3-1 (backfill CHANGELOG.md gaps since v1.2.0), P3-5 (release.yml:
       extract current-version section for release notes).
-- [ ] **PR-2: Append-only enforcement.** P0-1(b) (validator: add tracker-row +
-      session-id + bullet-level reference preservation to `_check_append_only`),
-      P2-1 (add `_check_unclosed_fence`), P2-2 (promote broken-cross-link to
-      error), P2-3 (make `_collect_entry_ids` fence-aware).
+- [x] **PR-2: Append-only enforcement.** Shipped this session. P0-1(b):
+      `_check_append_only` now preserves Research Tracker rows (`Q-`/`T-` ids,
+      `T-000` seed exempt) and individual reference bullets (the H3 check only
+      caught whole subsections). *Session-id preservation was already enforced* —
+      `_collect_anchors` collects `@session`, so a removed session fires
+      `anchor-removed`; a dedicated check would just double-report, so it was
+      intentionally not added. P2-1 (`_check_unclosed_fence` — error at the
+      opener when a fence is never closed). P2-2 (broken-cross-link promoted
+      warning→error; starter illustrative targets stay `info`). P2-3
+      (`_collect_entry_ids` made fence-aware; `_collect_anchors` already was).
+      7 new tests; 577 passed, 91.64%. Starter still validates error-clean.
 - [ ] **PR-3: Framework ↔ tooling truth-up.** P0-1(a) (starter.md: teach `bump`,
       `locate`, `diff-summary` as the blessed Turn-2 path), P1-1 (same — surface
       the three helpers), P1-4 (fix version-compat pause contradiction), P1-6

@@ -114,6 +114,42 @@ def _line_in_fence(lines: list[str]) -> list[bool]:
     return in_fence
 
 
+def _check_unclosed_fence(lines: list[str]) -> list[Issue]:
+    """Error if a fenced code block is opened but never closed before EOF.
+
+    An unclosed fence swallows the rest of the document — every later marker,
+    link, and heading is treated as code — so the other structural checks go
+    quiet. Flagging it explicitly turns that silent corruption into one clear
+    error pointing at the opener.
+    """
+    current: str | None = None
+    opening_line = 0
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if current is None:
+            m = _FENCE_RE.match(stripped)
+            if m:
+                current = m.group(1)
+                opening_line = i + 1
+        else:
+            # A closer is a line of the same fence char, at least as long as the
+            # opener, with only trailing whitespace — matching `_line_in_fence`'s
+            # semantics without recompiling a regex each iteration.
+            body = stripped.rstrip()
+            if body and len(body) >= len(current) and body == current[0] * len(body):
+                current = None
+    if current is not None:
+        return [
+            Issue(
+                "error",
+                "unclosed-fence",
+                f"fenced code block opened with {current!r} is never closed",
+                opening_line,
+            )
+        ]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # Frontmatter
 # ---------------------------------------------------------------------------
@@ -425,7 +461,11 @@ def _check_cross_links(text: str, lines: list[str]) -> list[Issue]:
             label, target = m.group(1), m.group(2)
             if target in targets:
                 continue
-            severity = "warning"
+            # A link to a non-existent target is a real defect (a dangling
+            # reference in the rendered doc), so it's an error — except in the
+            # starter, where the framework's illustrative examples are expected
+            # to be unresolved.
+            severity = "error"
             if starter_mode and illustrative_patterns.match(target):
                 severity = "info"
             issues.append(
@@ -628,9 +668,48 @@ def _check_anchor_preservation(prior_text: str, new_text: str, new_lines: list[s
 
 
 def _collect_entry_ids(text: str, kind: str) -> set[str]:
-    """Collect all entry IDs of a given kind (rule | da | session)."""
-    pattern = re.compile(rf"^\s*<!-- @{kind}:\s*(\S+)\s*-->\s*$", re.MULTILINE)
-    return set(pattern.findall(text))
+    """Collect all entry IDs of a given kind (rule | da | session).
+
+    Markers inside fenced code blocks (the framework's template examples) are
+    skipped, so a `<!-- @da: DA-EXAMPLE -->` in a fence isn't mistaken for a
+    live entry the append-only check must preserve.
+    """
+    lines = text.splitlines()
+    in_fence = _line_in_fence(lines)
+    pattern = re.compile(rf"^\s*<!-- @{kind}:\s*(\S+)\s*-->\s*$")
+    out: set[str] = set()
+    for i, line in enumerate(lines):
+        if in_fence[i]:
+            continue
+        m = pattern.match(line)
+        if m:
+            out.add(m.group(1))
+    return out
+
+
+def _reference_bullets(section: str) -> set[str]:
+    """Unordered list items (`-`/`*`/`+`/`•` + space) in a section, outside
+    fenced blocks.
+
+    Used to compare References at the individual-source level: the H3 check
+    only catches whole per-version subsections, not a single citation dropped
+    from within one. A `---` thematic break (`-` not followed by a space) is
+    not a bullet, so it's excluded.
+
+    Ordered list items (`1.` …) are intentionally NOT matched: their marker
+    renumbers when a sibling is added or removed, so exact-text membership
+    would report a spurious removal. References are bullet lists by convention.
+    """
+    lines = section.splitlines()
+    in_fence = _line_in_fence(lines)
+    out: set[str] = set()
+    for i, line in enumerate(lines):
+        if in_fence[i]:
+            continue
+        s = line.strip()
+        if s[:1] in {"-", "*", "+", "•"} and s[1:2] == " ":
+            out.add(s)
+    return out
 
 
 def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
@@ -670,6 +749,42 @@ def _check_append_only(prior_text: str, new_text: str) -> list[Issue]:
                         "— append-only",
                     )
                 )
+
+    # Research Tracker rows: every Q-/T- row id in prior must remain (the seed
+    # T-000 placeholder is exempt — it's removed once real rows land). Tracker
+    # rows have no @ marker, so anchor-preservation doesn't cover them.
+    prior_tracker = _extract_section(prior_text, "tracker") or ""
+    new_tracker = _extract_section(new_text, "tracker") or ""
+    prior_rows = {
+        c
+        for c in _extract_table_first_column(prior_tracker)
+        if re.match(r"^[QT]-\w+$", c) and c != "T-000"
+    }
+    new_rows = {c for c in _extract_table_first_column(new_tracker) if re.match(r"^[QT]-\w+$", c)}
+    for row_id in sorted(prior_rows - new_rows):
+        issues.append(
+            Issue(
+                "error",
+                "tracker-row-removed",
+                f"tracker row {row_id} from prior version is missing — "
+                "the Research Tracker is append-only",
+            )
+        )
+
+    # References at the individual-source level (the H3 check above only catches
+    # whole per-version subsections).
+    prior_refs = _extract_section(prior_text, "references") or ""
+    new_refs = _extract_section(new_text, "references") or ""
+    new_bullets = _reference_bullets(new_refs)
+    for bullet in sorted(_reference_bullets(prior_refs) - new_bullets):
+        shown = bullet if len(bullet) <= 60 else bullet[:57] + "…"
+        issues.append(
+            Issue(
+                "error",
+                "references-bullet-removed",
+                f"reference '{shown}' from prior version is missing — References are append-only",
+            )
+        )
 
     return issues
 
@@ -766,6 +881,7 @@ def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
     ):
         return issues
 
+    issues.extend(_check_unclosed_fence(lines))
     issues.extend(_check_anchor_pairing(lines))
     issues.extend(_check_entry_link_targets(lines))
     issues.extend(_check_cross_links(text, lines))
