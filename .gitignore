@@ -29,3 +29,6 @@ mutants/
 # Local
 .env
 tmp/
+
+# Claude Code agent worktrees
+.claude/worktrees/
