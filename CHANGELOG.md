@@ -126,7 +126,7 @@ surfaced by a comprehensive codebase audit, plus editorial framework improvement
   - Queue-ID synthesis was not collision-free (`Q-{i+1}` could duplicate a
     tracker ID or an inline ID). Now two-pass: collect all existing IDs first,
     then assign the lowest free `Q-NNN`.
-  - Verdict `<a id>` was `rid.lower()` — left spaces/punctuation in the id for
+  - Verdict `<a id>` was `rid.lower()` — left spaces/punctuation in the ID for
     labels without a clean `R-`/`DA-` prefix. New `_slug()` helper; idempotent
     for well-formed IDs.
   - A v1 tab label that slugs to a canonical framework anchor (e.g. "References")
@@ -134,8 +134,7 @@ surfaced by a comprehensive codebase audit, plus editorial framework improvement
     `CANONICAL_ANCHORS` set.
   - Changelog entries now render `### vX.Y — DATE`; the synthetic top entry
     carries `meta.date`.
-  - `build_frontmatter` now writes `project.source_tiers` (tier_1/tier_2/
-    discovery) and `project.domain_rules`, matching the v2 starter shape.
+  - `build_frontmatter` now writes `project.source_tiers` (tier_1/tier_2/discovery) and `project.domain_rules`, matching the v2 starter shape.
 - **`clean_md` fence-awareness** — `collect_framework_targets` now skips lines
   inside fenced code blocks. The starter's `### Templates` section carries
   fenced example blocks with placeholder `<a id>` values and headings; collecting
