@@ -216,9 +216,7 @@ class TestSessionSkeletonSyncWithStarterTemplate:
     structurally consistent with what bump.py's _session_skeleton() generates."""
 
     def _starter_session_template(self) -> str:
-        starter = (
-            resources.files(research_buddy).joinpath("starter.md").read_text(encoding="utf-8")
-        )
+        starter = resources.files(research_buddy).joinpath("starter.md").read_text(encoding="utf-8")
         m = re.search(
             r"When adding a new session note.*?````\n(.*?)````",
             starter,
