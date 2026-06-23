@@ -1,5 +1,61 @@
 # Next session
 
+## Session 2026-06-23 (session 33)
+
+### What was done
+
+Shipped **PR-2: append-only enforcement** — four validator hardening items in
+`validator_md.py`, each verified against the real code first (the scoping agent
+was wrong on two points, corrected below):
+
+- **P0-1(b) — extend `_check_append_only`.** Added **tracker-row preservation**
+  (every `Q-`/`T-` first-column id in prior must remain; the seed `T-000` is
+  exempt, matching `_section_has_entries`) and **individual reference-bullet
+  preservation** (the existing H3 check only caught whole per-version
+  subsections, not a single citation dropped from within one). **Session-id
+  preservation was already enforced** — `_collect_anchors` collects `@session`
+  markers, so a removed session already fires `anchor-removed`; adding a
+  dedicated `session-id-removed` check would just double-report, so it was
+  intentionally omitted (documented).
+- **P2-1 — `_check_unclosed_fence`.** New always-run check: a fence opened with
+  ``` / ~~~ and never closed before EOF is an error pointing at the opener.
+  Without it the unclosed fence silently swallows the rest of the doc (every
+  later marker/link/heading reads as code) and the other checks go quiet.
+- **P2-2 — broken-cross-link → error.** A `[text](#slug)` with no matching
+  target was a warning; now an error (a real dangling reference). The
+  starter-mode `info` downgrade for illustrative example targets
+  (`#r-xxx-1`, …) is preserved, so the bundled starter still validates
+  error-clean.
+- **P2-3 — `_collect_entry_ids` fence-aware.** It scanned the whole text with
+  `re.MULTILINE`, collecting `@da`/`@rule`/`@session` markers from inside fenced
+  template examples. Now skips fenced lines via `_line_in_fence`. (The agent
+  claimed `_collect_anchors` needed the same fix — it's *already* fence-aware,
+  so only `_collect_entry_ids` was touched.)
+
+7 new tests (`TestPriorMode` additions, `TestUnclosedFence`,
+`TestBrokenLinkStarterDowngrade`); updated `test_broken_link_warns` →
+`test_broken_link_errors`. Gates: `make lint` clean, `make test-cov`
+**577 passed**, **91.64%**.
+
+Note: promoting broken-cross-link to error makes `bump`/`build`'s error gating
+stricter for downstream docs with pre-existing dangling links — that's the
+intent (the link is a real defect), and the starter is clean.
+
+### Next steps
+
+1. **PR-8 (build safety + render bugs)** — P0-3 (gate HTML render on validator
+   errors; pairs naturally with PR-2 now that broken links are errors), plus
+   P2-14..17 render-escaping fixes and P3-V2-TRUST (warn on `<script>`/`on*=`/
+   `javascript:` in body).
+2. **PR-7b** (deferred): verdict-label dedup (needs renderer-wide `seen_ids`
+   threading) + dropped-content marker.
+3. **PR-1 (release safety + changelog)**, then the PR-3/4/5 starter.md
+   editorial batches (biggest editorial lift).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-22 (session 32)
 
 ### What was done

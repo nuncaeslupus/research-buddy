@@ -251,13 +251,13 @@ class TestCrossLinks:
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         assert "broken-cross-link" not in _codes(validate_md(path))
 
-    def test_broken_link_warns(self, tmp_path: Path) -> None:
+    def test_broken_link_errors(self, tmp_path: Path) -> None:
         body = "Some [broken](#nope).\n"
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         issues = validate_md(path)
         broken = [i for i in issues if i.code == "broken-cross-link"]
         assert len(broken) == 1
-        assert broken[0].severity == "warning"
+        assert broken[0].severity == "error"
 
     def test_link_inside_inline_code_ignored(self, tmp_path: Path) -> None:
         body = "Use `[label](#nope)` literal syntax.\n"
@@ -339,6 +339,89 @@ class TestPriorMode:
         )
         new, prior = self._make_pair(tmp_path, prior_body, new_body)
         assert "changelog-entry-removed" in _codes(validate_md(new, prior))
+
+    def test_tracker_row_removed_errors(self, tmp_path: Path) -> None:
+        prior_body = (
+            "<!-- @anchor: tracker -->\n## Research Tracker\n\n"
+            "| ID | Topic |\n|----|-------|\n| Q-001 | a |\n| Q-002 | b |\n\n"
+            "<!-- @end: tracker -->\n"
+        )
+        new_body = (
+            "<!-- @anchor: tracker -->\n## Research Tracker\n\n"
+            "| ID | Topic |\n|----|-------|\n| Q-001 | a |\n\n"
+            "<!-- @end: tracker -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        issues = validate_md(new, prior)
+        assert "tracker-row-removed" in _codes(issues)
+        assert any("Q-002" in i.message for i in issues if i.code == "tracker-row-removed")
+
+    def test_tracker_seed_t000_may_be_removed(self, tmp_path: Path) -> None:
+        prior_body = (
+            "<!-- @anchor: tracker -->\n## Research Tracker\n\n"
+            "| ID | Topic |\n|----|-------|\n| T-000 | seed |\n\n"
+            "<!-- @end: tracker -->\n"
+        )
+        new_body = (
+            "<!-- @anchor: tracker -->\n## Research Tracker\n\n"
+            "| ID | Topic |\n|----|-------|\n| Q-001 | real |\n\n"
+            "<!-- @end: tracker -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        assert "tracker-row-removed" not in _codes(validate_md(new, prior))
+
+    def test_reference_bullet_removed_errors(self, tmp_path: Path) -> None:
+        prior_body = (
+            "<!-- @anchor: references -->\n## References\n\n### v1.0\n"
+            "- [Paper A](#a)\n- [Paper B](#b)\n\n"
+            "<!-- @end: references -->\n"
+        )
+        new_body = (
+            "<!-- @anchor: references -->\n## References\n\n### v1.0\n"
+            "- [Paper A](#a)\n\n"
+            "<!-- @end: references -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        assert "references-bullet-removed" in _codes(validate_md(new, prior))
+
+    def test_da_in_fenced_template_not_required_to_persist(self, tmp_path: Path) -> None:
+        # A @da marker living only inside a fenced template example is not a live
+        # entry, so dropping it across versions is not an append-only violation.
+        prior_body = (
+            "<!-- @anchor: discarded -->\n"
+            "```\n<!-- @da: DA-TEMPLATE -->\n```\n"
+            "<!-- @end: discarded -->\n"
+        )
+        new_body = "<!-- @anchor: discarded -->\nx\n<!-- @end: discarded -->\n"
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        assert "da-removed" not in _codes(validate_md(new, prior))
+
+
+class TestUnclosedFence:
+    def test_unclosed_fence_errors(self, tmp_path: Path) -> None:
+        body = "```\ncode with no closer\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        issues = validate_md(path)
+        unclosed = [i for i in issues if i.code == "unclosed-fence"]
+        assert len(unclosed) == 1
+        assert unclosed[0].severity == "error"
+
+    def test_closed_fence_no_error(self, tmp_path: Path) -> None:
+        body = "```\ncode\n```\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unclosed-fence" not in _codes(validate_md(path))
+
+
+class TestBrokenLinkStarterDowngrade:
+    def test_illustrative_broken_link_in_starter_is_info(self) -> None:
+        # The bundled starter's framework examples link to illustrative targets
+        # (e.g. #r-xxx-1) that don't resolve; these stay info, not error.
+        from importlib import resources
+
+        starter_path = Path(str(resources.files("research_buddy") / "starter.md"))
+        issues = validate_md(starter_path)
+        broken = [i for i in issues if i.code == "broken-cross-link"]
+        assert all(i.severity == "info" for i in broken)
 
 
 class TestStarterFile:
