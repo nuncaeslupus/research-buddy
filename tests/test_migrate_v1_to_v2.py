@@ -11,8 +11,12 @@ import yaml
 
 from research_buddy import __version__
 from research_buddy.migrate_v1_to_v2 import (
+    _render_verdict_as_da,
+    _render_verdict_as_rule,
     _strip_done_rows_from_queue,
     _tracker_ids,
+    build_changelog,
+    build_domain_tab,
     build_frontmatter,
     build_overview_tab,
     derive_output_path,
@@ -738,3 +742,112 @@ class TestSessionNotesCatchAll:
         assert "Findings for beta." in sessions
         assert "Topic Alpha" in sessions
         assert "Topic Beta" in sessions
+
+
+class TestMigrateHardening:
+    """PR-7: ID/version collision + frontmatter/changelog correctness fixes."""
+
+    def test_changelog_sort_is_patch_aware(self) -> None:
+        # The old (major, minor)-only sort key collapsed 1.1.0 and 1.1.4, so
+        # they sorted unstably. Now patch precision keeps 1.1.4 above 1.1.0.
+        doc = {
+            "meta": {"version": "1.1.4", "date": "2026-02-01"},
+            "changelog": {
+                "entries": [
+                    {"version": "1.1.0", "date": "2026-01-01", "blocks": []},
+                    {"version": "1.1.4", "date": "2026-02-01", "blocks": []},
+                ]
+            },
+        }
+        cl = build_changelog(doc)
+        assert cl.index("v1.1.4") < cl.index("v1.1.0")
+
+    def test_changelog_renders_entry_date(self) -> None:
+        doc = {
+            "meta": {"version": "1.2", "date": "2026-06-22"},
+            "changelog": {
+                "entries": [
+                    {"version": "1.2", "date": "2026-06-22", "blocks": []},
+                ]
+            },
+        }
+        cl = build_changelog(doc)
+        assert "### v1.2 — 2026-06-22" in cl
+
+    def test_synthetic_changelog_entry_carries_meta_date(self) -> None:
+        # meta.version with no matching changelog entry → synthetic entry, which
+        # should still carry a date (from meta) rather than render dateless.
+        doc = {
+            "meta": {"version": "2.0", "date": "2026-06-22"},
+            "changelog": {"entries": [{"version": "1.0", "date": "2026-01-01", "blocks": []}]},
+        }
+        cl = build_changelog(doc)
+        assert "### v2.0 — 2026-06-22" in cl
+
+    def test_queue_id_synthesis_avoids_collisions(self) -> None:
+        # First row unlabeled (so the synthesis path runs); a later row carries
+        # an inline Q-003; the tracker already owns Q-001. Synthesized IDs must
+        # avoid both — the old row-index scheme produced Q-001 (tracker dup) and
+        # a second Q-003 (inline dup).
+        tb = {
+            "headers": ["Topic", "Status"],
+            "rows": [["New A", "OPEN"], ["Q-003 B", "OPEN"], ["New C", "OPEN"]],
+        }
+        headers, rows = _strip_done_rows_from_queue(tb, {}, {"Q-001"})
+        ids = [r[0] for r in rows]
+        assert headers[0] == "ID"
+        assert len(set(ids)) == len(ids)  # all unique
+        assert "Q-001" not in ids  # no tracker collision
+        assert ids.count("Q-003") == 1  # inline ID preserved, not duplicated
+
+    def test_queue_id_synthesis_handles_empty_row(self) -> None:
+        # A row that becomes empty after dropping the Priority/Status columns
+        # must not raise IndexError during ID synthesis (regression: the two-pass
+        # rewrite briefly indexed row[0] unconditionally).
+        tb = {
+            "headers": ["Topic", "Priority"],
+            "rows": [["A", "hi"], [], ["C", "lo"]],
+        }
+        headers, rows = _strip_done_rows_from_queue(tb, {}, set())
+        assert headers[0] == "ID"
+        ids = [r[0] for r in rows]
+        assert ids == ["Q-001", "Q-002", "Q-003"]
+        assert rows[1] == ["Q-002"]  # empty row → just the ID cell
+
+    def test_verdict_rule_anchor_id_is_slugified(self) -> None:
+        # A label without a clean R-/DA- prefix must still yield a valid HTML id
+        # (no spaces or punctuation in the <a id>).
+        out = _render_verdict_as_da(
+            {"type": "verdict", "badge": "reject", "label": "Why not X? (option)", "md": "no"}
+        )
+        assert '<a id="why-not-x-option"></a>' in out
+        assert " " not in out.split('id="')[1].split('"')[0]
+
+    def test_verdict_wellformed_rule_id_unchanged(self) -> None:
+        out = _render_verdict_as_rule(
+            {"type": "verdict", "badge": "adopt", "label": "R-FM-1 ADOPTED", "md": ""}
+        )
+        assert '<a id="r-fm-1"></a>' in out
+        assert "<!-- @rule: R-FM-1 -->" in out
+
+    def test_domain_tab_label_does_not_clobber_canonical_anchor(self) -> None:
+        dt = build_domain_tab({"id": "x", "label": "References", "sections": {}})
+        assert "<!-- @anchor: references-tab -->" in dt
+        assert "<!-- @anchor: references -->" not in dt
+
+    def test_frontmatter_carries_source_tiers_and_domain_rules(self) -> None:
+        doc = {
+            "meta": {"version": "1.0"},
+            "project_specific": {
+                "domain": "ML",
+                "source_tiers": {"tier_1": "arXiv", "tier_3": "blogs"},
+                "domain_rules": "Prefer RCTs",
+            },
+            "agent_guidelines": {"project_specific": {}},
+        }
+        fm = yaml.safe_load(build_frontmatter(doc).strip("-\n "))
+        project = fm["project"]
+        assert project["source_tiers"]["tier_1"] == "arXiv"
+        # tier_3 is aliased to `discovery` by the top-level normalizer.
+        assert project["source_tiers"]["discovery"] == "blogs"
+        assert project["domain_rules"] == "Prefer RCTs"

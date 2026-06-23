@@ -288,6 +288,16 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   `importlib.resources` after `pip install`. Without this glob,
   `migrate-v1-to-v2` would fail at runtime (it loads the v2 framework
   block from the bundled starter).
+- **`migrate_v1_to_v2` guards a few collision classes.** Queue-ID synthesis is
+  two-pass (collect existing inline + tracker `Q-NNN`, then assign the lowest
+  free one) so an auto-ID never dups a tracker or inline ID. Changelog sort is
+  patch-aware (`_key` → 3-tuple) and entries render `### vX.Y — DATE`. Verdict
+  `<a id>`s go through `_slug` (idempotent for well-formed `R-`/`DA-` ids).
+  `build_domain_tab` suffixes a label that slugs to a `CANONICAL_ANCHORS` member
+  with `-tab` so it can't clobber the framework's own anchor. `build_frontmatter`
+  carries `project.source_tiers` + `project.domain_rules`. Still open (PR-7b):
+  verdict-label dedup needs renderer-wide `seen_ids` threading; no marker is yet
+  emitted when content (e.g. `Research Methodology`) is intentionally dropped.
 - `build.py` has English-centric heuristics in `_table_col_widths` (hand-tuned
   column widths for specific header patterns) and `r_code` (Python auto-detect
   when `lang` is missing). Good enough for the starter, intentionally left as-is.

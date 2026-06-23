@@ -230,12 +230,27 @@ ships as its own PR against `main`.
       `test_malformed_no_closer_leaves_text_intact` had encoded the buggy
       drop-the-body behavior; corrected to assert the body survives. 561 passed,
       91.42%.*
-- [ ] **PR-7: migrate hardening.** P0-4 (three ID/version collision bugs:
-      `_normalize_version`, two-pass queue ID collision, slugify verdict labels),
-      P2-10 (deduplicate verdict labels), P2-11 (reserve canonical anchors for
-      domain-tab labels), P2-12 (references block: render version + date),
-      P2-13 (changelog date, source_tiers/domain_rules in frontmatter, dropped
-      content marker).
+- [x] **PR-7: migrate hardening (bulk).** Shipped this session: P0-4 all three
+      collision bugs — changelog sort is now patch-aware (`build_changelog._key`
+      returns a 3-tuple; the version-normalization collision surfaced there, not
+      in a literal `_normalize_version`); queue-ID synthesis is collision-free
+      (two-pass: collect existing + tracker IDs, then assign the lowest free
+      `Q-NNN` — the old `Q-{i+1}` row-index scheme could dup a tracker ID or an
+      inline ID); verdict `<a id>` is slugified via new `_slug` (was `rid.lower()`,
+      which left spaces/punctuation in the id for labels without a clean R-/DA-
+      prefix). P2-11 (`build_domain_tab` mangles a label that slugs to a
+      canonical anchor → `-tab` suffix; `CANONICAL_ANCHORS` set). P2-12 / P2-13a
+      (changelog renders `### vX.Y — DATE`; synthetic entry carries `meta.date`).
+      P2-13b (`build_frontmatter` writes `project.source_tiers` {tier_1/tier_2/
+      discovery} + `project.domain_rules`, matching the starter shape). 8 new
+      tests; 569 passed, 91.53%.
+  - [ ] **PR-7b: migrate dedup + drop marker (deferred).** P2-10 (deduplicate
+        verdict labels) needs a `seen_ids` set threaded through the whole
+        `render_block`/`render_blocks`/`render_subsections` pipeline — too
+        invasive to bundle with the collision fixes. P2-13c (HTML marker when
+        content is intentionally dropped, e.g. `Research Methodology`) is a
+        design choice (what to mark, where) needing a clearer spec. Both split
+        out to keep PR-7 reviewable and low-risk.
 - [ ] **PR-8: build safety + render bugs.** P0-3 (gate HTML render on validator
       errors), P2-14 (escape tab label double-quotes), P2-15 (fix
       `_md_render_inline` multi-paragraph `<li>` nesting), P2-16 (guard
