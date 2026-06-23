@@ -410,15 +410,16 @@ def _unique_aid(base_aid: str, seen_ids: set[str] | None) -> str:
     When `seen_ids` is None (the default for callers that don't thread dedup),
     returns `base_aid` unchanged for backward compatibility.
     """
+    base = base_aid or "anchor"
     if seen_ids is None:
-        return base_aid
-    if base_aid not in seen_ids:
-        seen_ids.add(base_aid)
-        return base_aid
+        return base
+    if base not in seen_ids:
+        seen_ids.add(base)
+        return base
     n = 2
-    while f"{base_aid}-{n}" in seen_ids:
+    while f"{base}-{n}" in seen_ids:
         n += 1
-    result = f"{base_aid}-{n}"
+    result = f"{base}-{n}"
     seen_ids.add(result)
     return result
 
@@ -1013,7 +1014,7 @@ def build_discarded_alternatives(research_tab: Doc, seen_ids: set[str] | None = 
     return "\n".join(parts)
 
 
-def build_session_notes(research_tab: Doc) -> str:
+def build_session_notes(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     parts = [
         "<!-- @anchor: sessions -->",
         "## Session Notes",
@@ -1052,11 +1053,11 @@ def build_session_notes(research_tab: Doc) -> str:
         parts.append("")
         parts.append(f"### {title}")
         parts.append("")
-        body = render_blocks(blocks, heading_offset=0)
+        body = render_blocks(blocks, heading_offset=0, seen_ids=seen_ids)
         if body:
             parts.append(body)
             parts.append("")
-        subs = render_subsections(sec, start_level=4)
+        subs = render_subsections(sec, start_level=4, seen_ids=seen_ids)
         if subs:
             parts.append(subs)
             parts.append("")
@@ -1071,8 +1072,8 @@ def build_session_notes(research_tab: Doc) -> str:
             continue
         if re.match(r"^Session Notes\s*[—-]\s*Q-\d+", sec_name):
             continue
-        body = render_blocks(sec.get("blocks") or [], heading_offset=1)
-        subs = render_subsections(sec, start_level=4)
+        body = render_blocks(sec.get("blocks") or [], heading_offset=1, seen_ids=seen_ids)
+        subs = render_subsections(sec, start_level=4, seen_ids=seen_ids)
         if not body and not subs:
             continue
         parts.append(f"### {sec_name}")
@@ -1088,10 +1089,10 @@ def build_session_notes(research_tab: Doc) -> str:
     return "\n".join(parts)
 
 
-def build_reasoning_journey(research_tab: Doc) -> str:
+def build_reasoning_journey(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     section = (research_tab.get("sections") or {}).get("Reasoning Journey") or {}
-    body = render_blocks(section.get("blocks", []), heading_offset=0)
-    subs = render_subsections(section, start_level=3)
+    body = render_blocks(section.get("blocks", []), heading_offset=0, seen_ids=seen_ids)
+    subs = render_subsections(section, start_level=3, seen_ids=seen_ids)
     body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
@@ -1107,10 +1108,10 @@ def build_reasoning_journey(research_tab: Doc) -> str:
     )
 
 
-def build_references(research_tab: Doc) -> str:
+def build_references(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     section = (research_tab.get("sections") or {}).get("References") or {}
-    body = render_blocks(section.get("blocks", []), heading_offset=0)
-    subs = render_subsections(section, start_level=3)
+    body = render_blocks(section.get("blocks", []), heading_offset=0, seen_ids=seen_ids)
+    subs = render_subsections(section, start_level=3, seen_ids=seen_ids)
     body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
@@ -1126,7 +1127,7 @@ def build_references(research_tab: Doc) -> str:
     )
 
 
-def build_changelog(doc: Doc) -> str:
+def build_changelog(doc: Doc, seen_ids: set[str] | None = None) -> str:
     entries = list((doc.get("changelog") or {}).get("entries", []))
 
     def _key(e: Doc) -> tuple[int, ...]:
@@ -1176,7 +1177,7 @@ def build_changelog(doc: Doc) -> str:
         ver = entry.get("version", "?")
         ver_clean = re.sub(r"^v", "", str(ver), flags=re.IGNORECASE)
         date = str(entry.get("date") or "").strip()
-        body = render_blocks(entry.get("blocks", []) or [], heading_offset=1)
+        body = render_blocks(entry.get("blocks", []) or [], heading_offset=1, seen_ids=seen_ids)
         heading = f"### v{ver_clean} — {date}" if date else f"### v{ver_clean}"
         parts.append(heading)
         parts.append("")
@@ -1285,19 +1286,19 @@ def migrate(doc: Doc) -> str:
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_session_notes(research_tab))
+    sections.append(build_session_notes(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_reasoning_journey(research_tab))
+    sections.append(build_reasoning_journey(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_references(research_tab))
+    sections.append(build_references(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_changelog(doc))
+    sections.append(build_changelog(doc, seen_ids=seen_ids))
 
     text = "\n".join(sections)
     text = re.sub(r"\n{3,}", "\n\n", text)
