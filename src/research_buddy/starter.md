@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.16.0"
+research_buddy_version: "1.17.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -167,7 +167,7 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 
 1. **Anchors are sacred.** Never rename, reorder, or delete an HTML-comment anchor (`<!-- @anchor: ... -->`, `<!-- @rule: ... -->`, `<!-- @da: ... -->`, `<!-- @session: ... -->`, `<!-- @end: ... -->`). Add new ones freely.
 2. **Every major section has both an `@anchor` opener and an `@end` closer.** Insert new entries immediately before the `@end` marker.
-3. **Append-only sections:** Discarded Alternatives, References, Changelog. Never delete entries; mark superseded items with status, not by deletion.
+3. **Append-only sections:** Discarded Alternatives, References, Changelog. Never delete entries; mark superseded items with status, not by deletion. **Exception — Deliverable Synthesis is a living section:** it is rewritten wholesale when the user picks empty-queue option (5). Every claim must be traceable to a Session Notes entry, Research Tracker finding, or Reference (cite-or-cut). The validator does not enforce preservation of its content between versions.
 4. **YAML frontmatter** between `---` delimiters at the very top is the structured metadata. Add fields if needed; do not reorder existing ones.
 5. **Structured data uses fenced code blocks** with language hints `yaml rule`, `yaml da`, `yaml ref`. The Markdown body for the entry follows the code block.
 6. **Tables** for tabular data. Append rows immediately before the section's `@end` marker. Never delete rows from append-only sections; mark superseded by changing the Status column. The Open Research Queue is the exception: completed rows are removed (their finding lives in the Research Tracker).
@@ -357,7 +357,7 @@ This protocol applies wherever the queue is touched. It is the agent's job to ke
 
 **Re-queuing.** If a researched topic needs to be revisited (new findings contradict it, requirements changed, inconsistencies surfaced), propose a new queue topic with a **new** `Q-NNN` ID referencing the original in the Objective — the original ID stays only in the tracker. Run the insertion protocol — it may merge into an existing pending row. Keep the original Tracker row as historical record.
 
-**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete.
+**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete; (5) synthesize deliverable — write or refresh the `## Deliverable Synthesis` section, compiling the tracker findings into the project's stated deliverable form (see [File editing](#file-editing) convention 3 for the cite-or-cut rule).
 
 <!-- @end: framework.reference.queue-rules -->
 
@@ -431,7 +431,7 @@ Validation runs at the end of Turn 2 (against the file the agent has just compos
 - All cross-links `[text](#anchor)` resolve to a real heading slug or `<a id>` tag in the document.
 - The first changelog entry's version equals the frontmatter `version`. The output filename equals `{file_name}_v{version}-source.md`.
 - Every anchor present in the prior version is still present in the new file (no renames, no deletes). New anchors are fine.
-- Append-only invariant holds for Discarded Alternatives, References, and Changelog (no entries removed since prior version).
+- Append-only invariant holds for Discarded Alternatives, References, and Changelog (no entries removed since prior version). Exception: `## Deliverable Synthesis` is a living section — content changes are not checked.
 - Every queue row has a unique `Q-NNN` ID; every tracker row has a unique `T-NNN` or `Q-NNN` ID; no ID appears in both queue and tracker simultaneously.
 - The Turn 1 second-opinion brief (when present) is wrapped in `<!-- @brief-start -->` / `<!-- @brief-end -->`. The Turn 2 change summary (when present) is wrapped in `<!-- @summary-start -->` / `<!-- @summary-end -->`. The end-of-turn marker is the final two lines.
 
@@ -698,3 +698,33 @@ Newest first. The first entry is implicitly the current version. Each entry: dec
 {{What was set up: domain, tiers, initial queue, section structure, domain rules.}}
 
 <!-- @end: changelog -->
+
+---
+
+<!-- @anchor: synthesis -->
+## Deliverable Synthesis
+
+<!--
+AGENT: This section synthesizes Research Tracker findings into the deliverable
+form stated in `project.deliverable_type`. Fill it when the user picks
+option (5) from the empty-queue choices.
+
+CITE-OR-CUT: Every claim here must be traceable to a Session Notes entry, a
+Research Tracker finding, or a Reference. Anything without a traceable source
+is cut. Link the supporting evidence inline (rule, DA, session, or reference
+ID with its anchor), not in a footnote.
+
+LIVING SECTION — NOT APPEND-ONLY: Unlike Adopted Rules, References, and
+Changelog, this section is rewritten wholesale each time option (5) is chosen.
+The validator does not enforce preservation of its content between versions
+(the `@anchor: synthesis` / `@end: synthesis` pair is excluded from the
+append-only check). When rewriting, start from the tracker findings, not
+from the prior synthesis — the prior text was correct for its version; the
+new synthesis should reflect all completed research to date.
+
+OPTIONAL: This section is empty in the starter template. Omit it from the
+clean view and HTML until it has been populated at least once. Once filled,
+include it; subsequent refreshes replace the prior content wholesale.
+-->
+
+<!-- @end: synthesis -->

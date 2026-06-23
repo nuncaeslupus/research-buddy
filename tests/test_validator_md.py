@@ -564,3 +564,85 @@ class TestBriefContextSlots:
         path = _write(tmp_path / "demo_v1.0-source.md", _project_doc(self._SECTIONS_WITH_LIVE_DA))
         codes = _codes(validate_md(path))
         assert "brief-slot-empty-but-section-non-empty" not in codes
+
+
+class TestSynthesisLivingSection:
+    """The Deliverable Synthesis section is a living section: its content is
+    rewritten wholesale each time option (5) is chosen, so the validator must
+    NOT fire anchor-removed when the synthesis anchor disappears from prior→new,
+    and must NOT fire append-only errors when the section's content changes."""
+
+    def _make_pair(self, tmp_path: Path, prior_body: str, new_body: str) -> tuple[Path, Path]:
+        prior = _write(tmp_path / "demo_v1.0.md", _project_doc(prior_body))
+        new = _write(tmp_path / "demo_v1.1.md", _project_doc(new_body))
+        return new, prior
+
+    # ------------------------------------------------------------------ #
+    # anchor-removed exemption
+    # ------------------------------------------------------------------ #
+
+    def test_synthesis_anchor_removed_does_not_fire(self, tmp_path: Path) -> None:
+        """Removing the synthesis anchor entirely (section dropped) is not an error."""
+        prior_body = (
+            "<!-- @anchor: synthesis -->\n"
+            "## Deliverable Synthesis\n\n"
+            "Some compiled findings.\n\n"
+            "<!-- @end: synthesis -->\n"
+        )
+        new_body = "No synthesis section here.\n"
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        codes = _codes(validate_md(new, prior))
+        assert "anchor-removed" not in codes
+
+    def test_non_synthesis_anchor_still_fires(self, tmp_path: Path) -> None:
+        """Removing a regular (non-living) anchor is still an error."""
+        prior_body = "<!-- @anchor: foo -->\nstuff\n<!-- @end: foo -->\n"
+        new_body = "no anchors\n"
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        codes = _codes(validate_md(new, prior))
+        assert "anchor-removed" in codes
+
+    def test_synthesis_anchor_present_in_both_no_error(self, tmp_path: Path) -> None:
+        """When synthesis is present in both versions, no anchor-removed error fires."""
+        body = (
+            "<!-- @anchor: synthesis -->\n"
+            "## Deliverable Synthesis\n\n"
+            "Findings here.\n\n"
+            "<!-- @end: synthesis -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, body, body)
+        codes = _codes(validate_md(new, prior))
+        assert "anchor-removed" not in codes
+
+    # ------------------------------------------------------------------ #
+    # content changes don't trigger append-only checks
+    # ------------------------------------------------------------------ #
+
+    def test_synthesis_content_change_no_append_only_error(self, tmp_path: Path) -> None:
+        """Rewriting the synthesis section's content is not an append-only violation."""
+        prior_body = (
+            "<!-- @anchor: synthesis -->\n"
+            "## Deliverable Synthesis\n\n"
+            "- Finding A from Q-001.\n"
+            "- Finding B from Q-002.\n\n"
+            "<!-- @end: synthesis -->\n"
+        )
+        new_body = (
+            "<!-- @anchor: synthesis -->\n"
+            "## Deliverable Synthesis\n\n"
+            "- Completely rewritten with new synthesis of all findings.\n\n"
+            "<!-- @end: synthesis -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        # No append-only errors — synthesis is a living section
+        issues = validate_md(new, prior)
+        append_only_codes = {
+            "anchor-removed",
+            "da-removed",
+            "references-entry-removed",
+            "changelog-entry-removed",
+            "tracker-row-removed",
+            "references-bullet-removed",
+        }
+        fired = {i.code for i in issues} & append_only_codes
+        assert fired == set(), f"Unexpected append-only errors: {fired}"

@@ -638,6 +638,12 @@ def _check_id_uniqueness(text: str, lines: list[str]) -> list[Issue]:
 # Diff-based checks (require --prior)
 # ---------------------------------------------------------------------------
 
+# Anchors that are intentionally exempt from the anchor-removed check.
+# These belong to "living sections" that are rewritten wholesale rather than
+# extended incrementally. Removing such an anchor (or the whole section) from
+# one version to the next is NOT a structural error.
+_LIVING_ANCHORS: frozenset[str] = frozenset({"synthesis"})
+
 
 def _collect_anchors(text: str) -> set[str]:
     """Collect every @anchor / @rule / @da / @session ID present in the text
@@ -667,6 +673,11 @@ def _check_anchor_preservation(prior_text: str, new_text: str, new_lines: list[s
     removed = prior - new
     issues: list[Issue] = []
     for name in sorted(removed):
+        if name in _LIVING_ANCHORS:
+            # Living sections (e.g. Deliverable Synthesis) are rewritten
+            # wholesale — their anchor disappearing across versions is expected,
+            # not a structural error.
+            continue
         issues.append(
             Issue(
                 "error",
