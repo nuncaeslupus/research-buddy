@@ -169,6 +169,16 @@ def perform_build_md(
             return 1
         print(f"Using theme: {theme_path.name}")
 
+    # Don't render a document the validator rejects — a broken anchor, dangling
+    # cross-link, or unclosed fence produces corrupt HTML. Warnings don't block.
+    if errors:
+        print(
+            f"Aborting: {len(errors)} validation error(s) — fix them (or build the "
+            "prior version) before rendering.",
+            file=sys.stderr,
+        )
+        return 1
+
     print("Building HTML…")
     html = build_md_html(text, theme_css=theme_css)
 

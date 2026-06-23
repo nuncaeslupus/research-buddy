@@ -33,6 +33,7 @@ from research_buddy.build import (
     _build_rb_footer_html,
     _get_env,
     _load_asset,
+    _neutralize_style_close,
     _resolve_lang_code,
 )
 from research_buddy.clean_md import (
@@ -242,8 +243,14 @@ def _md_render_inline(md: MarkdownIt, text: str) -> str:
     """
     if not text:
         return ""
-    rendered = md.render(text).strip()
-    m = re.fullmatch(r"<p>(.*?)</p>", rendered, re.DOTALL)
+    rendered: str = md.render(text).strip()
+    # markdown-it wraps each paragraph in <p>; inside an inline <li>/span slot
+    # that's invalid nesting. Merge adjacent paragraphs with <br><br> and strip
+    # the wrapper when the whole result is one (possibly merged) paragraph. If
+    # other block content is present (a list, <pre>, …) return it verbatim
+    # rather than dropping it.
+    normalized = re.sub(r"</p>\s*<p>", "<br><br>", rendered)
+    m = re.fullmatch(r"<p>(.*?)</p>", normalized, re.DOTALL)
     return m.group(1) if m else rendered
 
 
@@ -800,7 +807,8 @@ def build_md_html(
         nav_html_parts.append("".join(nav_html))
 
         tab_contents.append(
-            f'<div id="tab-{tid}" class="tab-content{active_cls}" data-tab-label="{label}">\n'
+            f'<div id="tab-{tid}" class="tab-content{active_cls}" '
+            f'data-tab-label="{html_lib.escape(label, quote=True)}">\n'
             f'<div class="content">\n{tab_body}</div></div>\n'
         )
 
@@ -838,7 +846,9 @@ def build_md_html(
         js,
     )
 
-    theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
+    theme_block = (
+        f"\n/* ── Theme overrides ── */\n{_neutralize_style_close(theme_css)}" if theme_css else ""
+    )
     theme_block += _RB_FOOTER_CSS
 
     return (

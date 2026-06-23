@@ -203,6 +203,17 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   only. `build_md_html` strips the framework block by default
   (matches the JSON pipeline's reader-facing semantics); pass
   `keep_framework=True` programmatically to keep it.
+- **v2 build safety (PR-8).** `perform_build_md` **gates the render on
+  validator errors** — error-severity issues abort the build (exit 1, no HTML
+  written); warnings don't block. Render hardening: tab labels are
+  `html.escape`d into `data-tab-label`; `_md_render_inline` flattens
+  multi-paragraph input to `<br><br>` (no `<p>` children inside an inline
+  `<li>`); `build._neutralize_style_close` backslash-escapes any `</style>` in
+  user theme CSS before it's inlined into the `<style>` block (both v1 + v2
+  paths, since Jinja runs `autoescape=False`). The validator also warns
+  (`unsafe-html-{script,event-handler,js-uri}`) on `<script>` / inline `on*=` /
+  `javascript:` in the body outside fenced/inline code — the LLM-authored-HTML
+  trust surface; warnings, not errors, so an illustrative example still builds.
 - **`bump` writes a NEW versioned file, never in place.** `research-buddy
   bump <file>_vX.Y-source.md Q-NNN --apply` emits
   `<file>_vX.(Y+1)-source.md` (MINOR bump) and validates it with the input

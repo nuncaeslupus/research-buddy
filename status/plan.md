@@ -258,11 +258,20 @@ ships as its own PR against `main`.
         content is intentionally dropped, e.g. `Research Methodology`) is a
         design choice (what to mark, where) needing a clearer spec. Both split
         out to keep PR-7 reviewable and low-risk.
-- [ ] **PR-8: build safety + render bugs.** P0-3 (gate HTML render on validator
-      errors), P2-14 (escape tab label double-quotes), P2-15 (fix
-      `_md_render_inline` multi-paragraph `<li>` nesting), P2-16 (guard
-      non-UTF-8 MD source), P2-17 (neutralize `</style>` in theme_css),
-      P3-V2-TRUST (validator warning for `<script>`, `on*=`, `javascript:` in body).
+- [x] **PR-8: build safety + render bugs.** Shipped this session. P0-3
+      (`perform_build_md` aborts with exit 1 and writes no HTML when the
+      validator finds error-severity issues; warnings don't block). P2-14
+      (tab labels `html.escape`d into `data-tab-label`). P2-15
+      (`_md_render_inline` flattens multi-paragraph input to `<br><br>` — fixed a
+      latent bug where the single-paragraph `fullmatch` *also* matched
+      multi-paragraph output and returned interior `</p><p>`). P2-17
+      (`_neutralize_style_close` backslash-escapes `</style>` in theme CSS, v1 +
+      v2). P3-V2-TRUST (`_check_dangerous_html` warns on `<script>`/`on*=`/
+      `javascript:` in the body, fence- and inline-code-aware). **P2-16 was
+      already done in PR-10** (the non-UTF-8 MD-source guard via
+      `read_text_or_error`). 8 new tests; 586 passed, 91.68%. Partially closes
+      the "v2 escaping / trust model" backlog item (warns + neutralizes the
+      `</style>` break-out; full `r_svg`/raw-HTML sanitization still open).
 - [x] **PR-9: Script/test hygiene.** P3-9 (delete broken `test-all` + unused
       markers), P3-10 (fix hard-coded `1.13.0` in test_turn1.py → `1.0.0`),
       P3-11 (add `starter.md` to pre-commit version-sync files trigger),
