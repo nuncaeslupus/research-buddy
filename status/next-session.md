@@ -1,5 +1,55 @@
 # Next session
 
+## Session 2026-06-23 (session 43)
+
+### What was done
+
+Shipped **PR-1 remainder** (PR #127) and **PR-12: README rewrite** (PR #128).
+The Opus review fix initiative is now fully complete — all 14 PR batches shipped.
+
+**PR-1 remainder — CHANGELOG backfill (PR #127):**
+- Added missing entries for 1.14.0, 1.15.0, 1.16.0, 1.17.0 (released during
+  the Opus review initiative but never documented in CHANGELOG.md).
+- 1.14.0 entry is the most substantial: covers the full Opus review batch
+  (fileio.py, validator hardening, migrate collision fixes, clean_md, build
+  safety, upgrade edge cases, framework truth-up, release workflow safety).
+- 1.15.0–1.17.0 entries cover PR-4/5/13 (brief-skeleton, methodology,
+  deliverable synthesis).
+- plan.md: PR-1 checkbox marked [x] (the P0-2 and P3-5 code changes shipped in
+  PR #117 session 35; P3-1 backfill now complete).
+
+**PR-12: README rewrite (PR #128):**
+- "Research protocol" rewritten to lead with v2: names the brief gate and
+  `turn1`, uses `*_vX.Y-source.md` naming, presents v1 as a parenthetical.
+- "File naming" split into v2 Markdown (recommended) and v1 JSON (legacy)
+  sub-tables; v2 table includes the clean-view `*_vX.Y.md` artifact.
+- "Batch Processing" heading → "(v1 JSON only)".
+- "Document format", "Block types", "Schema compatibility" headed with "(v1 JSON)"
+  and a note pointing at `starter.md` for v2.
+- "Version compatibility" split into "v1 JSON: active version check" (existing
+  table, now correctly scoped) and "v2 Markdown: agent-managed version" (new
+  paragraph; removes the incorrect "comparison behavior is identical for both
+  formats" claim).
+- Two Gemini review fixes: `[file_name]_v1.0.md` → `[file_name]_vX.Y.md` (file
+  naming table); "the v1 CLI" → "the CLI (for v1 documents)" (no separate binary).
+- plan.md: PR-12 checkbox marked [x].
+
+### Next steps
+
+1. **The Opus review fix initiative is complete.** All open plan.md items
+   are now [x] or [~]. The remaining "Future improvements" backlog:
+   - v2 escaping / trust model (`autoescape=False` + LLM-authored source)
+   - v1 sunset with a dated target (v2.0 removal of `init --v1`; v3.0 full removal)
+   - User-facing CHANGELOG (already done — #127 completes the backfill)
+   - Mobile-friendly tab bar
+   - Real PDF generator
+2. No immediate code work needed. Next session can pick up any "Future
+   improvements" item or address a real user-reported issue.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 42)
 
 ### What was done

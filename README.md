@@ -118,33 +118,45 @@ flow (versioned `.json` files, `--watch`/`--pdf` available on `build`).
 
 Every session follows a strict, high-integrity 2-turn workflow:
 
-1. **Turn 1: Research & External Prompt**
-   - Agent performs discovery research using domain-appropriate Tier 1 sources with inline citations.
-   - Agent prints findings, proposed decisions, and a **prompt for other researchers**.
-   - **CRITICAL**: The agent then STOPS and waits for the user to provide results from other researchers (other AI agents, human experts, etc.).
-2. **Turn 2: Review & Finalize**
+1. **Turn 1: Research & Brief**
+   - Agent reads the in-document framework, detects session state, and emits a second-opinion brief before touching any research tool. (`research-buddy turn1 <file>` pre-fills the brief from frontmatter + the top queue row.)
+   - Agent performs discovery research using domain-appropriate Tier 1 sources with inline citations, then **STOPS** and waits for the user to provide results from other researchers (other AI agents, human experts, etc.).
+2. **Turn 2: Vet & Write**
    - User submits findings from other researchers.
-   - Agent evaluates, labels (`Gemini-1`, `Human-1`, etc.), and compares them with its own research.
-   - Agent performs an **atomic write** to the JSON file, bumps the version, and generates the final HTML (e.g., `my-research_v2.3.html` and `my-research.html`).
-   - Any requests to add new research topics during these turns are integrated into the final JSON.
+   - Agent vets each finding, resolves pre-registered hypotheses, then performs an **atomic write** to the versioned source file — `*_vX.Y-source.md` for v2 Markdown (recommended), or `*_vX.Y.json` for v1 legacy — bumping the version.
+   - User runs `research-buddy build <source-file>` to generate HTML.
+   - New research topics are queued for the next session, not shoehorned into the current one.
 
-**Failure modes are explicit**: the document includes a failure_modes list that agents use to self-check before and after every action.
+**Failure modes are explicit**: the in-document framework lists failure modes that agents use to self-check before and after every action.
 
 ## File naming
 
-The script uses `meta.file_name` from your JSON to name the outputs.
+The tool uses the `file_name` field from your document to name outputs.
 
-| File                         | Purpose                                           |
-| ---------------------------- | ------------------------------------------------- |
-| `research-document.json`     | Unversioned template — never modified after init |
-| `[file_name]_v1.0.json`      | First project file, produced by session_zero      |
-| `[file_name]_v1.1.json`      | After first research session                      |
-| `[file_name]_vX.Y.html`      | Versioned HTML build                              |
-| `[file_name].html`           | Latest stable HTML build                          |
+### v2 Markdown (recommended)
 
-## Batch Processing
+| File                              | Purpose                                                        |
+| --------------------------------- | -------------------------------------------------------------- |
+| `source/research-document.md`     | Unversioned starter — uploaded to the agent for session zero  |
+| `[file_name]_v1.0-source.md`     | First versioned source, produced by session zero               |
+| `[file_name]_v1.1-source.md`     | After first research session                                   |
+| `[file_name]_vX.Y.md`            | Clean view (framework stripped) — shareable artifact           |
+| `[file_name]_vX.Y.html`          | Versioned HTML build                                           |
+| `[file_name].html`               | Latest stable HTML build                                       |
 
-You can process multiple JSON files in order. This is useful for projects with many versions:
+### v1 JSON (legacy)
+
+| File                             | Purpose                                                       |
+| -------------------------------- | ------------------------------------------------------------- |
+| `source/research-document.json`  | Unversioned template — never modified after init              |
+| `[file_name]_v1.0.json`          | First project file, produced by session zero                  |
+| `[file_name]_v1.1.json`          | After first research session                                  |
+| `[file_name]_vX.Y.html`          | Versioned HTML build                                          |
+| `[file_name].html`               | Latest stable HTML build                                      |
+
+## Batch Processing (v1 JSON only)
+
+You can process multiple v1 JSON files in order. This is useful for replaying the full version history of a legacy project:
 
 ```bash
 # Processes files in the given order. The final [file_name].html 
@@ -288,14 +300,18 @@ The document language is set in session_zero based on the user's preference and 
 
 Research *content* (findings, decisions, status text) is authored in the document language by the agent. The legacy v1 `meta.ui_strings` field is carried forward on migration but is **not** rendered in v2 — there is no fixed status column, so the agent writes status text (and `rb-ok`/`rb-flag` chips) directly in the document language.
 
-## Document format
+## Document format (v1 JSON)
 
-The JSON schema is bundled with the package. For reference, see
+This section applies to the legacy **v1 JSON** format. v2 Markdown documents
+use standard Markdown + YAML frontmatter; see `src/research_buddy/starter.md`
+for the canonical v2 structure.
+
+The v1 JSON schema is bundled with the package. For reference, see
 [`src/research_buddy/schema.json`](./src/research_buddy/schema.json) in the
 repository, or the matching path inside the installed wheel
 (`research_buddy/schema.json`).
 
-### Block types
+### Block types (v1 JSON)
 
 | Type             | Key fields                                                       |
 | ---------------- | ---------------------------------------------------------------- |
@@ -312,40 +328,51 @@ repository, or the matching path inside the installed wheel
 | `references`   | `items[{version, date, text}]`                                 |
 | `svg`          | `html` (raw SVG string)                                        |
 
-### Schema compatibility
+### Schema compatibility (v1 JSON)
 
-`meta.research_buddy_version` is required in all documents. The validator warns if it is missing. When this version changes, schema or build script behaviour may change — always use the template that matches your installed version.
+`meta.research_buddy_version` is required in all v1 documents. The validator
+warns if it is missing. When this version changes, schema or build script
+behaviour may change — always use the template that matches your installed
+version.
 
 ## Version compatibility (tool ↔ document)
 
-Research Buddy uses **MAJOR.MINOR.PATCH** semver. Every `research-buddy build`
-and `research-buddy validate` compares the installed CLI version against the
-version recorded in the document:
+Research Buddy uses **MAJOR.MINOR.PATCH** semver. Both formats record the tool
+version that produced them:
 
-- **v2 Markdown**: the `research_buddy_version` field in YAML frontmatter.
-- **v1 JSON** (legacy): the equivalent `meta.research_buddy_version` field.
+- **v2 Markdown**: `research_buddy_version` in YAML frontmatter.
+- **v1 JSON** (legacy): `meta.research_buddy_version`.
 
-The comparison behavior is identical for both formats:
+### v1 JSON: active version check
 
-| Comparison                                  | Severity | What happens                                                                                                                                                                                                                    |
-| ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Exact match                                 | silent   | Nothing to worry about.                                                                                                                                                                                                         |
-| Only PATCH differs (e.g. 1.0.3 vs 1.0)      | silent   | Patches are strictly backwards-compatible. Treated as equivalent.                                                                                                                                                               |
-| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `research_buddy_version` (v2) or `meta.research_buddy_version` (v1) on the next write. Nothing is printed; exit code stays 0.                              |
-| Tool MINOR **older** than doc (same MAJOR)  | warning  | Doc may use features your tool does not render correctly. Run `pip install --upgrade research-buddy`.                                                                                                                           |
+Every `research-buddy build` and `research-buddy validate` on a v1 JSON document
+actively compares the installed CLI version against the version in the document:
+
+| Comparison                                  | Severity | What happens                                                                                                                                                                                  |
+| ------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Exact match                                 | silent   | Nothing to worry about.                                                                                                                                                                       |
+| Only PATCH differs (e.g. 1.0.3 vs 1.0)      | silent   | Patches are strictly backwards-compatible. Treated as equivalent.                                                                                                                             |
+| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent bumps `meta.research_buddy_version` on the next write.                                                                             |
+| Tool MINOR **older** than doc (same MAJOR)  | warning  | Doc may use features your tool does not render correctly. Run `pip install --upgrade research-buddy`.                                                                                         |
 | MAJOR differs                               | error    | Schema is not guaranteed to match. Either install the matching major (`pip install 'research-buddy==1.*'`) or start an AI session and say *"Migrate to research-buddy vX.Y"* so the agent updates the document structure. |
 
-**Algorithmic rule:** for compatibility, the validator compares `MAJOR.MINOR`
-only. Patch-level differences are ignored — `1.0.3` and `1.0` behave the same.
+**Algorithmic rule:** the validator compares `MAJOR.MINOR` only. Patch-level
+differences are ignored — `1.0.3` and `1.0` behave the same.
+
+### v2 Markdown: agent-managed version
+
+In v2 Markdown, `research_buddy_version` is checked only for *presence* (the
+field is required). No active MAJOR/MINOR comparison gate exists. The agent
+updates the field to the current tool version on each Turn 2 atomic write, so
+it stays in sync automatically. Run `research-buddy upgrade <file>.md --apply`
+to refresh the framework block and frontmatter when you upgrade the CLI.
 
 ### What if my document is on an older version?
 
 If you're upgrading the CLI to a newer minor (e.g. tool `1.1.0`, doc `1.0.3`)
-there is nothing to do: your build continues to produce HTML as before. The
-agent bumps `research_buddy_version` (v2) or `meta.research_buddy_version` (v1)
-the next time it writes to the document.
+there is nothing to do: your build continues to produce HTML as before.
 
-If you're moving across a major boundary, the CLI will tell you, point at
+If you're moving across a major boundary, the CLI (for v1 documents) will tell you, point at
 CHANGELOG.md, and give you a copy-pasteable command to pin the matching major
 (if you want to keep your current doc as-is) or an instruction to hand to the
 agent (if you want to migrate).

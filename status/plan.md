@@ -199,9 +199,11 @@ Comprehensive codebase audit by Claude Opus. Full findings in
 `tmp/review-fix-list.md`. 13 PR batches, ordered by impact. Each batch
 ships as its own PR against `main`.
 
-- [ ] **PR-1: Release safety + changelog.** P0-2 (release.yml: move tag after
-      publish), P3-1 (backfill CHANGELOG.md gaps since v1.2.0), P3-5 (release.yml:
-      extract current-version section for release notes).
+- [x] **PR-1: Release safety + changelog.** P0-2 (release.yml: move tag after
+      publish) + P3-5 (per-version release notes extraction) shipped in PR #117
+      (session 35). P3-1 (CHANGELOG backfill) done in two passes: #117 covered
+      v1.2.0–v1.13.0; PR #127 (session 43) added 1.14.0–1.17.0 (the four
+      versions released during the Opus review initiative).
 - [x] **PR-2: Append-only enforcement.** Shipped this session. P0-1(b):
       `_check_append_only` now preserves Research Tracker rows (`Q-`/`T-` ids,
       `T-000` seed exempt) and individual reference bullets (the H3 check only
@@ -311,8 +313,13 @@ ships as its own PR against `main`.
       guard matching v2), P2-22 (skip only version bump when doc is ahead of tool,
       still refresh framework), P2-23 (sniff YAML indent; make preamble/blockquote
       replacement fence-aware). *Shipped: PR #118. +15 tests; 593 passed.*
-- [ ] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
-      lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+- [x] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI
+      Agents: lead with starter.md — already done), P3-4 (scope version-compat
+      claim to v1 only). *Shipped: PR #128 (session 43). "Research protocol"
+      rewritten for v2-first; file naming split into v2/v1 sub-tables; Batch
+      Processing, Document format, Block types, Schema compatibility all labelled
+      v1-only; version-compat section split into "v1 JSON: active version check"
+      (existing table) and "v2 Markdown: agent-managed version" (new paragraph).*
 - [x] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
       Synthesis` section in starter.md with `@anchor: synthesis` / `@end: synthesis`,
       triggered by 5th Empty-queue option; cite-or-cut guardrails; living section
