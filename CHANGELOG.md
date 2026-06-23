@@ -299,7 +299,7 @@ Framework hardening release — substantial new rules and a renamed frontmatter 
   key (still accepted with a `deprecated-format-version-key` warning).
   `research-buddy upgrade <file>.md --apply` renames the key.
 - **`project.source_tiers` and `project.domain_rules`** frontmatter blocks —
-  fix previously-dangling `{{project.source_tiers.tier1}}` placeholder
+  fix previously-dangling `{{project.source_tiers.tier_1}}` placeholder
   references.
 - **Rules status lifecycle and force-keyword guidance** (`Status: Active /
   Superseded / Retired`, RFC 2119/8174 keyword norms).
@@ -361,7 +361,7 @@ complete v2 surface ships production-ready.
 
 - **Light theme by default** — generated HTML now opens with a light palette;
   the ☀/☾ toggle in the tab bar switches to dark and persists the preference in
-  `localStorage('rb-theme')`. An inline `<head>` script reads the stored
+  `localStorage.setItem('rb-theme', …)`. An inline `<head>` script reads the stored
   preference before first paint to avoid FOUC.
 
 ## [1.3.3] — 2026-04-25
@@ -417,9 +417,8 @@ Maintenance patch. No user-visible changes.
 ### Added
 
 - **Turn markers** — every defined turn ends with a human-readable banner +
-  machine-readable `<!-- rb:turn_... -->` HTML comment. Four states:
-  `turn_1_end`, `turn_2_awaiting_confirmation`, `turn_2_complete`,
-  `session_zero_end`. A `detection_regex` is exposed in `starter.json` for
+  machine-readable `<!-- research-buddy:turn=...:status=... -->` HTML comment.
+  A `detection_regex` is exposed in `starter.json` / `starter.md` for
   external automation.
 
 ### Changed
