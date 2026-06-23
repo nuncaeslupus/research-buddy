@@ -309,12 +309,17 @@ ships as its own PR against `main`.
       guard matching v2), P2-22 (skip only version bump when doc is ahead of tool,
       still refresh framework), P2-23 (sniff YAML indent; make preamble/blockquote
       replacement fence-aware). *Shipped: PR #118. +15 tests; 593 passed.*
-- [ ] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
+- [x] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
       lead with starter.md), P3-4 (scope version-compat claim to v1 only).
-- [ ] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
+      *In review: PR #122. Gemini follow-up: corrected two `build my-project/` examples
+      to explicit `.md` paths (directory resolution is JSON-only); clarified version-compat
+      table field names for both v1 and v2.*
+- [x] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
       Synthesis` section in starter.md with `@anchor: synthesis` / `@end: synthesis`,
       triggered by 5th Empty-queue option; cite-or-cut guardrails; living section
       excluded from append-only invariant.
+      *In review: PR #123. Versioned as 1.17.0. `_LIVING_ANCHORS` constant in
+      `validator_md.py`; 5 new tests in `TestSynthesisLivingSection`. 602 passed.*
 - [ ] **PR-14: Design spikes** (decisions needed): P1-8 framework token overhead,
       v1 sunset with a dated target, P1-7 empty-queue UX.
 

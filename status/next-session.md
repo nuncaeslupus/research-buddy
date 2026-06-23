@@ -1,5 +1,38 @@
 # Next session
 
+## Session 2026-06-23 (session 40)
+
+### What was done
+
+Shipped **PR-12** and **PR-13** in parallel (two isolated agents):
+
+- **PR-12: README rewrite** — PR #122, `pr/12-readme-rewrite`. Three targeted edits to `README.md` only, no version bump:
+  - **P3-2** — "How it works" now leads with the v2 Markdown flow (`init` → upload `.md` → agent produces `*_v1.0-source.md` → `build`); legacy v1 JSON flow noted at the end.
+  - **P3-3** — "For AI Agents or AI users" now leads with `starter.md` (recommended v2 template) with direct-download, package-path, and source-path links; `starter.json` kept as legacy v1 label.
+  - **P3-4** — "Version compatibility" section now clarifies v2 uses `research_buddy_version` (YAML frontmatter) and v1 uses `meta.research_buddy_version`; table and "What if my document is on an older version?" section updated accordingly.
+  - Post-push: Gemini review flagged two `research-buddy build my-project/` examples that don't work for Markdown (directory resolution is JSON-only); fixed in a follow-up commit (explicit `.md` paths). Also fixed the version-compat table row to name both field forms.
+  - Also committed `.claude/worktrees/` to `.gitignore` on `claude/awesome-darwin-j3qnbc` (agent isolation directories).
+
+- **PR-13: Deliverable Synthesis capstone** — PR #123, `pr/13-deliverable-synthesis`, versioned as **1.17.0**:
+  - **starter.md Edit A** — Added option (5) to `**Empty queue.**` rule: "synthesize deliverable — write or refresh the `## Deliverable Synthesis` section, compiling the tracker findings into the project's stated deliverable form."
+  - **starter.md Edit B** — New `## Deliverable Synthesis` scaffold section after `<!-- @end: changelog -->`, with `<!-- @anchor: synthesis -->` / `<!-- @end: synthesis -->` markers and an instructional HTML comment covering: cite-or-cut rule (every claim must trace to a Session Notes entry, Tracker finding, or Reference), living-section semantics (rewrite wholesale, not append-to), and validator exemption.
+  - **starter.md Edit C** — Living-section exception documented in File editing convention 3 (append-only sections list) and in the Self-validation mechanical checks. Framework prose avoids cross-linking to `#deliverable-synthesis` since the section is optional (absent in migrated docs would produce broken-cross-link errors).
+  - **`validator_md.py`** — Added `_LIVING_ANCHORS: frozenset[str] = frozenset({"synthesis"})` constant; `_check_anchor_preservation` now skips living anchors so removing the synthesis section does not fire `anchor-removed`.
+  - **Tests** — New `TestSynthesisLivingSection` (5 tests): anchor-removed exemption, non-synthesis anchors still fire, synthesis present in both versions passes, content rewrite has no append-only errors.
+  - Gates: lint clean, **602 passed** (↑4), **91.69%** coverage, examples in sync, starter validates error-clean.
+
+Both PRs open and CI running as of end of session.
+
+### Next steps
+
+1. **Merge PR-12** (#122) and **PR-13** (#123) once CI green and reviewed.
+2. **PR-14: Design spikes** (decisions needed): P1-8 framework token overhead, v1 sunset with dated target, P1-7 empty-queue UX. These require a decision before execution.
+3. **PR-7b: migrate dedup + drop marker** (deferred): verdict-label dedup (`seen_ids` threading) + dropped-content marker — needs a clearer spec.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 39)
 
 ### What was done
