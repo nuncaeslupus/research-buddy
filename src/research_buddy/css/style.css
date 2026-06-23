@@ -48,9 +48,37 @@ body {
   display: flex; align-items: center; padding: 0 14px;
   border-bottom: 1px solid var(--border); z-index: 100;
   gap: 8px;
+}
+
+/* Scroll wrapper: fills remaining width; ::before/::after are the fade edges. */
+#tab-scroll-wrap {
+  flex: 1 1 0; min-width: 0;
+  position: relative; height: 100%;
+}
+#tab-scroll-wrap::before,
+#tab-scroll-wrap::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 28px;
+  pointer-events: none; z-index: 1;
+  opacity: 0; transition: opacity .15s;
+}
+#tab-scroll-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg2), transparent);
+}
+#tab-scroll-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg2), transparent);
+}
+#tab-scroll-wrap.fade-left::before  { opacity: 1; }
+#tab-scroll-wrap.fade-right::after  { opacity: 1; }
+
+/* Scrollable tab strip — hides scrollbar; JS scrolls active tab into view. */
+#tab-scroll {
+  display: flex; align-items: center; height: 100%;
+  gap: 8px; padding: 0 4px;
   overflow-x: auto; scrollbar-width: none;
 }
-#tab-bar::-webkit-scrollbar { display: none; }
+#tab-scroll::-webkit-scrollbar { display: none; }
 
 #menu-toggle {
   display: none; background: var(--bg2); border: 1px solid var(--border);
@@ -69,7 +97,7 @@ body {
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
 
 #theme-toggle {
-  margin-left: auto; flex-shrink: 0;
+  flex-shrink: 0;
   background: none; border: 1px solid var(--border);
   color: var(--text2); padding: 4px 10px; border-radius: 4px;
   cursor: pointer; font-size: 14px; line-height: 1;
@@ -302,7 +330,6 @@ code { font-family: var(--mono); }
 @media (max-width: 768px), (max-height: 500px) {
   #menu-toggle {
     display: block;
-    position: sticky; left: 0; z-index: 1;
     height: 100%; border-radius: 0;
     border-top: none; border-bottom: none; border-left: none;
   }
