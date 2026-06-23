@@ -155,6 +155,12 @@ def build_brief_skeleton(text: str) -> tuple[str, list[str]]:
             "first; there is no queue topic to brief on yet"
         )
 
+    if fm.get("agent_state") == "complete":
+        raise Turn1Error(
+            "project is marked complete (agent_state: complete) — no research sessions "
+            "are expected. To continue, add a queue item and set agent_state: ready"
+        )
+
     notes: list[str] = []
     row = first_queue_row(text)
     if row is None:

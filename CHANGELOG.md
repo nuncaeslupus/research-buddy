@@ -4,6 +4,25 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.18.0] — 2026-06-23
+
+Three design decisions from the Opus review initiative (PR-14):
+
+### Added
+
+- **`agent_state: complete`** — new recognized frontmatter state for when a project's research is declared done (empty-queue option 4). Framework documents the state, validator warns on unknown `agent_state` values, and `research-buddy turn1` surfaces a clear "project is complete" error instead of producing a blank brief.
+- **v1 JSON deprecation warnings** — all v1 entry points (`build`, `validate`, `upgrade`, `init --v1`) now print a deprecation notice to stderr when processing a `.json` file. v1 is feature-frozen; planned removal in v2.0.
+
+### Framework changes
+
+- **`agent_state: complete` arm** added to the session state detection table in Framework (Core): agents that receive a complete-marked file offer three options (add topics, refresh Deliverable Synthesis, or leave as-is) instead of automatically starting a session.
+- **Empty-queue option (4)** now explicitly directs agents to set `agent_state: complete` on the Turn 2 atomic write when the user declares research complete.
+
+### Decisions recorded (no code change)
+
+- **Framework token overhead (P1-8):** closed without implementation. The ~730-line framework is load-bearing for agent compliance (empirically demonstrated in sessions 16/17); context windows handle it comfortably; the agent-efficiency tooling (`turn1`, `bump`, `locate`, `diff-summary`) already covers mechanical overhead. Any framework split risks fragmenting the compliance mechanism without proportional benefit.
+- **v1 sunset targets:** v1 feature-frozen as of this release. Planned: v2.0 — v1 `init --v1` removed (no new v1 doc creation); v3.0 — v1 build/validate/upgrade paths fully removed.
+
 ## [1.13.0] — 2026-06-08
 
 Brief-gate hardening and localization release. Root cause traced to a real

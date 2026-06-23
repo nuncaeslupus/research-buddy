@@ -59,6 +59,8 @@ REQUIRED_FRONTMATTER_FIELDS: list[str | tuple[str, ...]] = [
     ("project", "domain"),
 ]
 
+_VALID_AGENT_STATES: frozenset[str] = frozenset({"needs_session_zero", "ready", "complete"})
+
 
 @dataclass
 class Issue:
@@ -265,6 +267,18 @@ def _check_frontmatter(text: str, path: Path) -> list[Issue]:
                     end_line,
                 )
             )
+
+    agent_state = fm.get("agent_state")
+    if agent_state is not None and agent_state not in _VALID_AGENT_STATES:
+        issues.append(
+            Issue(
+                "warning",
+                "unknown-agent-state",
+                f"agent_state value {agent_state!r} is not recognized; "
+                f"expected one of: {', '.join(sorted(_VALID_AGENT_STATES))}",
+                end_line,
+            )
+        )
     return issues
 
 

@@ -646,3 +646,43 @@ class TestSynthesisLivingSection:
         }
         fired = {i.code for i in issues} & append_only_codes
         assert fired == set(), f"Unexpected append-only errors: {fired}"
+
+
+class TestAgentStateValidation:
+    """agent_state frontmatter value is validated when present."""
+
+    def _doc_with_state(self, tmp_path: Path, state: str) -> Path:
+        fm = _PROJECT_FM.replace(
+            'version: "1.0"',
+            f'agent_state: {state}\nversion: "1.0"',
+        )
+        return _write(tmp_path / "demo_v1.0.md", fm + "\n")
+
+    def test_unknown_agent_state_warns(self, tmp_path: Path) -> None:
+        path = self._doc_with_state(tmp_path, "in_progress")
+        issues = validate_md(path)
+        codes = _codes(issues)
+        assert "unknown-agent-state" in codes
+        msg = next(i.message for i in issues if i.code == "unknown-agent-state")
+        assert "in_progress" in msg
+
+    def test_ready_state_no_warning(self, tmp_path: Path) -> None:
+        path = self._doc_with_state(tmp_path, "ready")
+        codes = _codes(validate_md(path))
+        assert "unknown-agent-state" not in codes
+
+    def test_complete_state_no_warning(self, tmp_path: Path) -> None:
+        path = self._doc_with_state(tmp_path, "complete")
+        codes = _codes(validate_md(path))
+        assert "unknown-agent-state" not in codes
+
+    def test_needs_session_zero_state_no_warning(self, tmp_path: Path) -> None:
+        path = self._doc_with_state(tmp_path, "needs_session_zero")
+        codes = _codes(validate_md(path))
+        assert "unknown-agent-state" not in codes
+
+    def test_absent_agent_state_no_warning(self, tmp_path: Path) -> None:
+        """agent_state is optional — absence must not trigger the warning."""
+        path = _write(tmp_path / "demo_v1.0.md", _PROJECT_FM + "\n")
+        codes = _codes(validate_md(path))
+        assert "unknown-agent-state" not in codes

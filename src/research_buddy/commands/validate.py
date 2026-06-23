@@ -80,6 +80,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
             exit_code = 1
             continue
 
+        print(
+            "Warning: v1 JSON format is deprecated and will be removed in v2.0. "
+            "Migrate with: research-buddy migrate-v1-to-v2",
+            file=sys.stderr,
+        )
         issues = validate(doc)
         if issues:
             print(f"\n⚠  {len(issues)} issue(s) in {json_path.name}:")

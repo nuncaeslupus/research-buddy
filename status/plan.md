@@ -322,8 +322,18 @@ ships as its own PR against `main`.
       `_LIVING_ANCHORS = frozenset({"synthesis"})` + `_check_anchor_preservation`
       skips living anchors. 5 new tests (`TestSynthesisLivingSection`). 602 passed,
       91.69% coverage. PR #123.*
-- [ ] **PR-14: Design spikes** (decisions needed): P1-8 framework token overhead,
-      v1 sunset with a dated target, P1-7 empty-queue UX.
+- [x] **PR-14: Design spikes.** Three decisions shipped as v1.18.0:
+      **P1-8 framework token overhead** — closed/no-change: the framework is
+      load-bearing for agent compliance (empirically proven in sessions 16/17);
+      splitting it would risk regressing the no-tool-call gate. Removed from
+      "Future improvements". **v1 sunset** — deprecation warnings added to all
+      v1 entry points (`build`, `validate`, `upgrade`, `init --v1`) steering
+      users to migrate or use the v2 path. **P1-7 empty-queue UX** — new
+      `agent_state: complete` value: validator warns on unknown states, `turn1`
+      refuses complete-marked files with a remedy hint, and `starter.md`
+      instructs the agent to greet + offer three options (new topics/synthesis/
+      leave as-is) instead of running a session automatically.
+      *Shipped: 614 passed, 91.71% coverage. PR to follow.*
 
 Notes:
 - P3-6 (framework headings use em-dashes its own rule forbids) and P3-7
@@ -337,16 +347,12 @@ Surfaced 2026-06-01 in a project-review pass. These are higher-leverage
 than further test-suite polish but are design-heavy / outward-facing, so
 they need a decision before execution rather than being picked up blind.
 
-- **Framework token overhead (highest leverage).** The framework block
-  rides in *every* source file an agent uploads, *every* session
-  (`starter.md` is ~674 lines). This is a per-session tax on the core
-  2-turn workflow — the product's whole reason to exist. Flagged in
-  session 16 as the unaddressed survivor, then dropped. The idea worth a
-  real design pass: a short agent-edited source file + a separate
-  `framework-cheatsheet.md` the agent reads once, so the per-session
-  payload shrinks. Needs care: the framework is load-bearing for agent
-  compliance (see sessions 16/17), so any split must not regress the
-  no-tool-call gate or the session-state detection.
+- ~~**Framework token overhead.**~~ **Closed (PR-14, 2026-06-23).** The
+  framework is load-bearing for agent compliance — sessions 16/17 proved
+  that agents without the full framework text skip the no-tool-call gate.
+  Any split risks that regression with no reliable fix path. Decision:
+  keep the full framework in the source file; do not pursue a cheatsheet
+  split.
 
 - **v2 escaping / trust model.** `build.py` runs Jinja with
   `autoescape=False`; the PR #53 review pushback ("agents are instructed

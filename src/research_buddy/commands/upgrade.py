@@ -114,6 +114,11 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         json_path, _root = res
 
         print(f"── {json_path.name} ──")
+        print(
+            "Warning: v1 JSON format is deprecated and will be removed in v2.0. "
+            "Migrate with: research-buddy migrate-v1-to-v2",
+            file=sys.stderr,
+        )
         try:
             with json_path.open(encoding="utf-8") as f:
                 doc = json.load(f)
