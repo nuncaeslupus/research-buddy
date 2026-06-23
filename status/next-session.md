@@ -1,5 +1,32 @@
 # Next session
 
+## Session 2026-06-23 (session 38)
+
+### What was done
+
+Shipped **PR-4: Brief-skeleton unification** — one editorial fix + two sync tests, versioned as **1.15.0**:
+
+- **P1-2 — Unify preamble skeleton + `turn1.py` placeholder names.** The preamble's compact brief skeleton (inside the HTML comment operating manual) used 4 shorter placeholder names that differed from the canonical `Second-opinion brief template` in `framework.reference.brief`. An agent hand-writing from the preamble would produce different placeholder names than `research-buddy turn1` output. Fixed by updating to canonical names and adding the missing article "a":
+  - `{{PROJECT_AND_CHARACTERISTICS}}` → `{{PROJECT_AND_BASIC_CHARACTERISTICS}}`
+  - `{{LIST_OF_QUESTIONS}}` → `{{LIST_OF_QUESTIONS_TO_BE_RESEARCHED_AND_ANSWERED}}`
+  - `{{RESEARCH_EXCELLENCE_LEVEL}}` → `{{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED}}`
+  - `{{TIER_1_AND_TIER_2}}` → `{{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}`
+- **Sync guard tests** (`TestBriefSkeletonSyncWithCanonicalTemplate` in `test_turn1.py`, 2 tests):
+  - `test_static_prose_lines_appear_in_brief_output` — every non-placeholder prose line from the canonical template must appear in `turn1` output.
+  - `test_placeholder_names_in_turn1_source_match_canonical` — every canonical placeholder name (except `TIER_REJECT_RULES`, pre-filled by `turn1`) must appear in `turn1.py`'s source code.
+- **Version bump 1.14.0 → 1.15.0.** `make version-sync` + `make regen-examples`. 596 passed, lint clean, examples in sync.
+
+PR: #120.
+
+### Next steps
+
+1. **PR-5: Methodology completeness** — P1-3 (Turn-2 hypothesis resolution step + session-note template matches `bump.py`), P1-5 (excellence bar guidance, queue prioritization rubric, rule supersession mechanics, queue/tracker dual-membership rule).
+2. **PR-12: README rewrite**, **PR-13: Deliverable Synthesis**, **PR-14: Design spikes**.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 37)
 
 ### What was done

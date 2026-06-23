@@ -225,8 +225,13 @@ ships as its own PR against `main`.
       validator (adds research_buddy_version). Plain-text-refs bullet removed from
       mechanical checks (validate doesn't check this); failure-mode tag corrected
       mechanical→semantic.*
-- [ ] **PR-4: Brief-skeleton unification.** P1-2 (single canonical template;
+- [x] **PR-4: Brief-skeleton unification.** P1-2 (single canonical template;
       unify preamble skeleton + turn1.py wording; sync test).
+      *Shipped: 1.15.0. Preamble's 4 short placeholder names aligned to canonical
+      template names (PROJECT_AND_BASIC_CHARACTERISTICS, LIST_OF_QUESTIONS_TO_BE_RESEARCHED_AND_ANSWERED,
+      RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED, TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN).
+      Added missing article "a". Sync guard: TestBriefSkeletonSyncWithCanonicalTemplate (2 tests)
+      catches future name drift. 596 passed, lint clean, examples in sync. PR #120.*
 - [ ] **PR-5: Methodology completeness.** P1-3 (Turn-2 hypothesis resolution
       step + session-note template matches bump.py), P1-5 (excellence bar
       guidance, queue prioritization rubric, rule supersession mechanics,
