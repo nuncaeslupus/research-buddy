@@ -404,11 +404,31 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def _render_verdict_as_rule(blk: Block) -> str:
+def _unique_aid(base_aid: str, seen_ids: set[str] | None) -> str:
+    """Return a unique HTML anchor id, suffixing -2, -3, … on collision.
+
+    When `seen_ids` is None (the default for callers that don't thread dedup),
+    returns `base_aid` unchanged for backward compatibility.
+    """
+    base = base_aid or "anchor"
+    if seen_ids is None:
+        return base
+    if base not in seen_ids:
+        seen_ids.add(base)
+        return base
+    n = 2
+    while f"{base}-{n}" in seen_ids:
+        n += 1
+    result = f"{base}-{n}"
+    seen_ids.add(result)
+    return result
+
+
+def _render_verdict_as_rule(blk: Block, seen_ids: set[str] | None = None) -> str:
     label = blk.get("label", "")
     parsed = parse_rule_label(label)
     rid = parsed["id"]
-    aid = _slug(rid)
+    aid = _unique_aid(_slug(rid), seen_ids)
     tags_md = " ".join(f"[{t}]" for t in parsed["tags"])
     status = parsed["status"]
     extras = parsed["extras"]
@@ -435,11 +455,11 @@ def _render_verdict_as_rule(blk: Block) -> str:
     return "\n".join(parts)
 
 
-def _render_verdict_as_da(blk: Block) -> str:
+def _render_verdict_as_da(blk: Block, seen_ids: set[str] | None = None) -> str:
     label = blk.get("label", "")
     parsed = parse_rule_label(label)
     rid = parsed["id"] or label.strip()
-    aid = _slug(rid)
+    aid = _unique_aid(_slug(rid), seen_ids)
     md = (blk.get("md") or "").strip()
     parts = [
         f"<!-- @da: {rid} -->",
@@ -450,7 +470,7 @@ def _render_verdict_as_da(blk: Block) -> str:
     return "\n".join(parts)
 
 
-def render_block(blk: Block, heading_offset: int = 0) -> str:
+def render_block(blk: Block, heading_offset: int = 0, seen_ids: set[str] | None = None) -> str:
     t = blk.get("type")
     if t in {"p", "paragraph"}:
         return (blk.get("md") or "").strip()
@@ -485,9 +505,9 @@ def render_block(blk: Block, heading_offset: int = 0) -> str:
     if t == "verdict":
         badge = blk.get("badge", "")
         if badge in {"adopt", "rule"}:
-            return _render_verdict_as_rule(blk)
+            return _render_verdict_as_rule(blk, seen_ids)
         if badge == "reject":
-            return _render_verdict_as_da(blk)
+            return _render_verdict_as_da(blk, seen_ids)
         label = blk.get("label", "")
         md = (blk.get("md") or "").strip()
         return (
@@ -504,13 +524,15 @@ def render_block(blk: Block, heading_offset: int = 0) -> str:
     return f"<!-- unknown block type: {t} -->"
 
 
-def render_blocks(blocks: list[Block], heading_offset: int = 0) -> str:
-    rendered = [render_block(b, heading_offset) for b in blocks if b]
+def render_blocks(
+    blocks: list[Block], heading_offset: int = 0, seen_ids: set[str] | None = None
+) -> str:
+    rendered = [render_block(b, heading_offset, seen_ids) for b in blocks if b]
     rendered = [r for r in rendered if r]
     return "\n\n".join(rendered)
 
 
-def render_subsections(sec: Block, start_level: int) -> str:
+def render_subsections(sec: Block, start_level: int, seen_ids: set[str] | None = None) -> str:
     """Render a v1 section's `subsections` recursively as nested Markdown
     headings.
 
@@ -536,11 +558,13 @@ def render_subsections(sec: Block, start_level: int) -> str:
         clean = re.sub(r"^#+\s*", "", str(name)).strip()
         out.append(f"{_heading_prefix(level)} {clean}")
         out.append("")
-        body = render_blocks(sub.get("blocks") or [], heading_offset=max(0, level - 2))
+        body = render_blocks(
+            sub.get("blocks") or [], heading_offset=max(0, level - 2), seen_ids=seen_ids
+        )
         if body:
             out.append(body)
             out.append("")
-        nested = render_subsections(sub, start_level + 1)
+        nested = render_subsections(sub, start_level + 1, seen_ids=seen_ids)
         if nested:
             out.append(nested)
             out.append("")
@@ -685,7 +709,11 @@ CANONICAL_ANCHORS = {
 }
 
 
-def build_domain_tab(tab: Doc, skip_sections: set[str] | None = None) -> str:
+def build_domain_tab(
+    tab: Doc,
+    skip_sections: set[str] | None = None,
+    seen_ids: set[str] | None = None,
+) -> str:
     """Render a domain-specific tab as an H2 section.
 
     `skip_sections` (matched case-insensitively) is dropped — used for the
@@ -712,11 +740,11 @@ def build_domain_tab(tab: Doc, skip_sections: set[str] | None = None) -> str:
             continue
         parts.append(f"### {sec_name}")
         parts.append("")
-        body = render_blocks(sec.get("blocks", []), heading_offset=1)
+        body = render_blocks(sec.get("blocks", []), heading_offset=1, seen_ids=seen_ids)
         if body:
             parts.append(body)
             parts.append("")
-        subs = render_subsections(sec, start_level=4)
+        subs = render_subsections(sec, start_level=4, seen_ids=seen_ids)
         if subs:
             parts.append(subs)
             parts.append("")
@@ -745,7 +773,7 @@ def _section_has_content(sec: Doc) -> bool:
     )
 
 
-def build_overview_tab(tab: Doc) -> str:
+def build_overview_tab(tab: Doc, seen_ids: set[str] | None = None) -> str:
     """Render the v1 `overview` tab, dropping only navigation sections.
 
     Returns "" when nothing substantive survives (a pure Quick-Links / How-to-
@@ -768,6 +796,7 @@ def build_overview_tab(tab: Doc) -> str:
             "sections": substantive,
         },
         skip_sections=OVERVIEW_NAV_SECTIONS,
+        seen_ids=seen_ids,
     )
 
 
@@ -957,7 +986,7 @@ def build_adopted_rules_index(domain_tab_labels: list[str]) -> str:
     )
 
 
-def build_discarded_alternatives(research_tab: Doc) -> str:
+def build_discarded_alternatives(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     section = (research_tab.get("sections") or {}).get("Discarded Alternatives") or {}
     parts = [
         "<!-- @anchor: discarded -->",
@@ -971,12 +1000,12 @@ def build_discarded_alternatives(research_tab: Doc) -> str:
     for blk in section.get("blocks", []):
         t = blk.get("type")
         if t == "verdict" and blk.get("badge") == "reject":
-            body_blocks.append(_render_verdict_as_da(blk))
+            body_blocks.append(_render_verdict_as_da(blk, seen_ids))
         elif t == "p":
             md = (blk.get("md") or "").strip()
             if md:
                 body_blocks.append(md)
-    subs = render_subsections(section, start_level=3)
+    subs = render_subsections(section, start_level=3, seen_ids=seen_ids)
     if subs:
         body_blocks.append(subs)
     parts.append("\n\n".join(body_blocks) if body_blocks else "*(none recorded)*")
@@ -985,7 +1014,7 @@ def build_discarded_alternatives(research_tab: Doc) -> str:
     return "\n".join(parts)
 
 
-def build_session_notes(research_tab: Doc) -> str:
+def build_session_notes(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     parts = [
         "<!-- @anchor: sessions -->",
         "## Session Notes",
@@ -1024,11 +1053,11 @@ def build_session_notes(research_tab: Doc) -> str:
         parts.append("")
         parts.append(f"### {title}")
         parts.append("")
-        body = render_blocks(blocks, heading_offset=0)
+        body = render_blocks(blocks, heading_offset=0, seen_ids=seen_ids)
         if body:
             parts.append(body)
             parts.append("")
-        subs = render_subsections(sec, start_level=4)
+        subs = render_subsections(sec, start_level=4, seen_ids=seen_ids)
         if subs:
             parts.append(subs)
             parts.append("")
@@ -1043,8 +1072,8 @@ def build_session_notes(research_tab: Doc) -> str:
             continue
         if re.match(r"^Session Notes\s*[—-]\s*Q-\d+", sec_name):
             continue
-        body = render_blocks(sec.get("blocks") or [], heading_offset=1)
-        subs = render_subsections(sec, start_level=4)
+        body = render_blocks(sec.get("blocks") or [], heading_offset=1, seen_ids=seen_ids)
+        subs = render_subsections(sec, start_level=4, seen_ids=seen_ids)
         if not body and not subs:
             continue
         parts.append(f"### {sec_name}")
@@ -1060,10 +1089,10 @@ def build_session_notes(research_tab: Doc) -> str:
     return "\n".join(parts)
 
 
-def build_reasoning_journey(research_tab: Doc) -> str:
+def build_reasoning_journey(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     section = (research_tab.get("sections") or {}).get("Reasoning Journey") or {}
-    body = render_blocks(section.get("blocks", []), heading_offset=0)
-    subs = render_subsections(section, start_level=3)
+    body = render_blocks(section.get("blocks", []), heading_offset=0, seen_ids=seen_ids)
+    subs = render_subsections(section, start_level=3, seen_ids=seen_ids)
     body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
@@ -1079,10 +1108,10 @@ def build_reasoning_journey(research_tab: Doc) -> str:
     )
 
 
-def build_references(research_tab: Doc) -> str:
+def build_references(research_tab: Doc, seen_ids: set[str] | None = None) -> str:
     section = (research_tab.get("sections") or {}).get("References") or {}
-    body = render_blocks(section.get("blocks", []), heading_offset=0)
-    subs = render_subsections(section, start_level=3)
+    body = render_blocks(section.get("blocks", []), heading_offset=0, seen_ids=seen_ids)
+    subs = render_subsections(section, start_level=3, seen_ids=seen_ids)
     body = "\n\n".join(p for p in (body, subs) if p)
     return "\n".join(
         [
@@ -1098,7 +1127,7 @@ def build_references(research_tab: Doc) -> str:
     )
 
 
-def build_changelog(doc: Doc) -> str:
+def build_changelog(doc: Doc, seen_ids: set[str] | None = None) -> str:
     entries = list((doc.get("changelog") or {}).get("entries", []))
 
     def _key(e: Doc) -> tuple[int, ...]:
@@ -1148,7 +1177,7 @@ def build_changelog(doc: Doc) -> str:
         ver = entry.get("version", "?")
         ver_clean = re.sub(r"^v", "", str(ver), flags=re.IGNORECASE)
         date = str(entry.get("date") or "").strip()
-        body = render_blocks(entry.get("blocks", []) or [], heading_offset=1)
+        body = render_blocks(entry.get("blocks", []) or [], heading_offset=1, seen_ids=seen_ids)
         heading = f"### v{ver_clean} — {date}" if date else f"### v{ver_clean}"
         parts.append(heading)
         parts.append("")
@@ -1181,6 +1210,16 @@ RESERVED_RESEARCH_SECTIONS = {
     "Research Methodology",
 }
 
+# Subset of RESERVED_RESEARCH_SECTIONS that have no dedicated builder and are
+# intentionally omitted from the v2 output (replaced by the v2 framework block).
+INTENTIONALLY_DROPPED_RESEARCH_SECTIONS: frozenset[str] = frozenset({"Research Methodology"})
+
+
+def _dropped_research_sections(research_tab: Doc) -> list[str]:
+    """Names of research-tab sections present in the source but intentionally dropped."""
+    present = set((research_tab.get("sections") or {}).keys())
+    return sorted(present & INTENTIONALLY_DROPPED_RESEARCH_SECTIONS)
+
 
 def migrate(doc: Doc) -> str:
     meta = doc.get("meta", {}) or {}
@@ -1190,6 +1229,9 @@ def migrate(doc: Doc) -> str:
     domain_tabs = [t for t in doc.get("tabs", []) if t.get("id") not in SPECIAL_TABS]
     overview_tab: Doc = next((t for t in doc.get("tabs", []) if t.get("id") == "overview"), {})
     research_tab: Doc = next((t for t in doc.get("tabs", []) if t.get("id") == "research"), {})
+
+    seen_ids: set[str] = set()
+    dropped = _dropped_research_sections(research_tab)
 
     sections: list[str] = []
     sections.append(build_frontmatter(doc))
@@ -1202,12 +1244,18 @@ def migrate(doc: Doc) -> str:
     sections.append("")
     sections.append("---")
     sections.append("")
+    if dropped:
+        sections.append(
+            "<!-- MIGRATION NOTE: The following v1 section(s) were intentionally omitted"
+            f" (replaced by the v2 framework block): {', '.join(dropped)} -->"
+        )
+        sections.append("")
     sections.append(build_project_specification(ps))
     sections.append("")
     sections.append("---")
     sections.append("")
 
-    overview_md = build_overview_tab(overview_tab) if overview_tab else ""
+    overview_md = build_overview_tab(overview_tab, seen_ids=seen_ids) if overview_tab else ""
     if overview_md:
         sections.append(overview_md)
         sections.append("")
@@ -1216,7 +1264,7 @@ def migrate(doc: Doc) -> str:
 
     domain_tab_labels: list[str] = []
     for tab in domain_tabs:
-        sections.append(build_domain_tab(tab))
+        sections.append(build_domain_tab(tab, seen_ids=seen_ids))
         sections.append("")
         sections.append("---")
         sections.append("")
@@ -1234,23 +1282,23 @@ def migrate(doc: Doc) -> str:
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_discarded_alternatives(research_tab))
+    sections.append(build_discarded_alternatives(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_session_notes(research_tab))
+    sections.append(build_session_notes(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_reasoning_journey(research_tab))
+    sections.append(build_reasoning_journey(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_references(research_tab))
+    sections.append(build_references(research_tab, seen_ids=seen_ids))
     sections.append("")
     sections.append("---")
     sections.append("")
-    sections.append(build_changelog(doc))
+    sections.append(build_changelog(doc, seen_ids=seen_ids))
 
     text = "\n".join(sections)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -1315,6 +1363,15 @@ def main(argv: list[str] | None = None) -> int:
 
     text = migrate(doc)
     atomic_write(out, text)
+
+    dropped_warn = _dropped_research_sections(
+        next((t for t in doc.get("tabs", []) if t.get("id") == "research"), {})
+    )
+    if dropped_warn:
+        print(
+            f"Note: omitted from migration (replaced by v2 framework): {', '.join(dropped_warn)}",
+            file=sys.stderr,
+        )
 
     in_size = args.input.stat().st_size
     out_size = out.stat().st_size
