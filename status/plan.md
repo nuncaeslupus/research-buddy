@@ -311,10 +311,17 @@ ships as its own PR against `main`.
       replacement fence-aware). *Shipped: PR #118. +15 tests; 593 passed.*
 - [ ] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
       lead with starter.md), P3-4 (scope version-compat claim to v1 only).
-- [ ] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
+- [x] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
       Synthesis` section in starter.md with `@anchor: synthesis` / `@end: synthesis`,
       triggered by 5th Empty-queue option; cite-or-cut guardrails; living section
       excluded from append-only invariant.
+      *Shipped: 1.17.0. Edit A: option (5) added to empty-queue rule. Edit B:
+      section scaffold after Changelog with instructional HTML comment (cite-or-cut,
+      living-section semantics, validator exemption). Edit C: documented in File
+      editing convention 3 and Self-validation mechanical checks. validator_md.py:
+      `_LIVING_ANCHORS = frozenset({"synthesis"})` + `_check_anchor_preservation`
+      skips living anchors. 5 new tests (`TestSynthesisLivingSection`). 602 passed,
+      91.69% coverage. PR #123.*
 - [ ] **PR-14: Design spikes** (decisions needed): P1-8 framework token overhead,
       v1 sunset with a dated target, P1-7 empty-queue UX.
 

@@ -1,5 +1,45 @@
 # Next session
 
+## Session 2026-06-23 (session 40)
+
+### What was done
+
+Shipped **PR-13: Deliverable Synthesis capstone** — versioned as **1.17.0**:
+
+- **Edit A — Empty-queue option (5).** Added "(5) synthesize deliverable — write or
+  refresh the `## Deliverable Synthesis` section, compiling the tracker findings into
+  the project's stated deliverable form" to the empty-queue rule in Queue rules.
+- **Edit B — Section scaffold.** New `## Deliverable Synthesis` section after
+  `## Changelog`, with `<!-- @anchor: synthesis -->` / `<!-- @end: synthesis -->` pair
+  and an instructional HTML comment covering cite-or-cut rule, living-section
+  semantics (rewrite wholesale each refresh), and validator exemption.
+- **Edit C — Framework documentation.** Living-section exception added to File editing
+  convention 3 (append-only sections list) and to the Self-validation mechanical checks
+  bullet. Cross-links to `#deliverable-synthesis` were intentionally NOT used in
+  framework prose — the section is optional and its absence would produce
+  broken-cross-link errors in migrated docs; backtick notation used instead.
+- **validator_md.py.** New `_LIVING_ANCHORS = frozenset({"synthesis"})` constant near
+  the diff-based checks section. `_check_anchor_preservation` skips anchors in this
+  set — removing the synthesis section from one version to the next does not fire
+  `anchor-removed`.
+- **Tests.** `TestSynthesisLivingSection` (5 tests): anchor-removed does not fire when
+  synthesis disappears; non-synthesis anchors still fire; synthesis in both versions
+  passes; content rewrite generates no append-only errors.
+
+Gates: `make lint` clean, `make test-cov` **602 passed** (↑4), **91.69%** coverage,
+examples in sync, starter validates error-clean. PR: #123.
+
+### Next steps
+
+1. **PR-12: README rewrite** — P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
+   lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+2. **PR-14: Design spikes** — P1-8 framework token overhead, v1 sunset, P1-7
+   empty-queue UX.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 39)
 
 ### What was done
