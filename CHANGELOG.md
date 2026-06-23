@@ -23,6 +23,157 @@ Three design decisions from the Opus review initiative (PR-14):
 - **Framework token overhead (P1-8):** closed without implementation. The ~730-line framework is load-bearing for agent compliance (empirically demonstrated in sessions 16/17); context windows handle it comfortably; the agent-efficiency tooling (`turn1`, `bump`, `locate`, `diff-summary`) already covers mechanical overhead. Any framework split risks fragmenting the compliance mechanism without proportional benefit.
 - **v1 sunset targets:** v1 feature-frozen as of this release. Planned: v2.0 — v1 `init --v1` removed (no new v1 doc creation); v3.0 — v1 build/validate/upgrade paths fully removed.
 
+## [1.17.0] — 2026-06-23
+
+Deliverable Synthesis capstone — adds an optional closing section for
+synthesizing project findings into the stated deliverable form.
+
+### Added
+
+- **`## Deliverable Synthesis` section** — optional closing section in the
+  v2 starter with `<!-- @anchor: synthesis -->` / `<!-- @end: synthesis -->`.
+  Activated by a new empty-queue option (5): "synthesize deliverable — write or
+  refresh the Deliverable Synthesis section." Carries cite-or-cut guardrails
+  (every claim must be anchored to a tracker finding or named uncertain) and
+  living-section semantics (safe to rewrite wholesale each refresh).
+- **`_LIVING_ANCHORS`** in `validator_md.py` — a named set of anchor IDs exempt
+  from the append-only invariant. Currently contains only `"synthesis"`: removing
+  the Deliverable Synthesis section between versions does not fire `anchor-removed`.
+- **Empty-queue option (5)** added to Queue rules in the framework; agents that
+  encounter an empty queue now have five choices, including refreshing the
+  Deliverable Synthesis.
+
+## [1.16.0] — 2026-06-23
+
+Methodology completeness release — six editorial additions to `starter.md`
+aligning the framework text with actual tool behavior and established research
+best practices.
+
+### Added
+
+- **Turn-2 hypothesis resolution step** — explicit Turn 2 step 3: "Resolve
+  pre-registered hypotheses." Agents compare findings + vetted second opinions
+  against pre-registered PASS/FAIL metrics and assign `VALIDATED` / `PROPOSED` /
+  `REJECTED` to each. Prior versions pre-registered hypotheses in Turn 1 step 4
+  but had no explicit Turn 2 step to close the loop. Steps 3–8 renumbered 4–9.
+- **Session-note template now matches `bump.py` output exactly.** Added a
+  hypothesis-resolution table, `**Cross-section impact.**`, and
+  `**Compliance validation.**` fields. Two sync-guard tests
+  (`TestSessionSkeletonSyncWithStarterTemplate`) enforce the template stays in
+  lockstep with `_session_skeleton()` output.
+- **Excellence bar guidance.** Note in the Second-opinion brief template
+  explaining that the excellence-level placeholder must specify minimum source
+  count, domain rigor standard, and specificity requirement.
+- **Queue prioritization rubric.** Four-point rubric in Queue rules:
+  dependency, risk-to-deliverable, yield-per-turn, evidence freshness.
+- **Rule supersession mechanics.** Step-by-step instructions in Adopted Rules
+  for marking old rules `SUPERSEDED` + `superseded_by`, new rules `supersedes`,
+  and writing the Changelog note.
+- **Queue/tracker dual-membership rule.** Explicit prohibition in Queue rules:
+  a topic ID must not appear in both the Open Research Queue and the Research
+  Tracker simultaneously.
+
+## [1.15.0] — 2026-06-23
+
+Brief-skeleton unification — aligns the preamble's compact brief skeleton with
+the canonical Second-opinion brief template so agents hand-writing from the
+preamble produce the same placeholder names as `research-buddy turn1` output.
+
+### Changed
+
+- **Preamble brief skeleton placeholder names unified** with the canonical
+  template: `{{PROJECT_AND_BASIC_CHARACTERISTICS}}`,
+  `{{LIST_OF_QUESTIONS_TO_BE_RESEARCHED_AND_ANSWERED}}`,
+  `{{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED}}`,
+  `{{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}`. Previously used shorter
+  names that diverged from `turn1` output, causing agents to produce mismatched
+  placeholders depending on which source they read.
+- **Sync guard tests** (`TestBriefSkeletonSyncWithCanonicalTemplate`, 2 tests):
+  every non-placeholder prose line from the canonical template must appear in
+  `turn1` output; every canonical placeholder name must appear in `turn1.py`'s
+  source. Catches future name drift automatically.
+
+## [1.14.0] — 2026-06-23
+
+Opus review initiative — first batch of code quality and correctness fixes
+surfaced by a comprehensive codebase audit, plus editorial framework improvements.
+
+### Added
+
+- **`src/research_buddy/fileio.py`** — two shared file-I/O helpers:
+  `read_text_or_error(path)` reads UTF-8 and raises `FileReadError` on invalid
+  bytes (uniform message + exit 1, matching the JSON read hardening from
+  v1.11.0); `atomic_write(path, text)` does a temp-sibling write → rename with
+  `try/finally` cleanup so a failed write leaves no `.tmp` behind. Adopted by
+  all atomic writers: `bump`, `upgrade`, `migrate`, and `init`.
+- **`research-buddy build` now gates the v2 HTML render on validator errors** —
+  if `validate` finds error-severity issues the build aborts (exit 1, no HTML
+  written). Warnings still build.
+
+### Fixed
+
+- **`validate` append-only enforcement extended** to Research Tracker rows
+  (`Q-`/`T-` first-column IDs; the seed `T-000` is exempt) and individual
+  reference bullets. Previously only whole per-version reference subsections and
+  anchor names were protected. An unclosed fenced code block is now an error
+  pointing at the opener (it used to silently swallow the rest of the document).
+  Broken cross-links promoted from warning to error (starter illustrative example
+  targets remain `info`). `_collect_entry_ids` made fence-aware so `@da`/`@rule`
+  markers inside template examples are not collected as live entries.
+- **`migrate-v1-to-v2` collision bugs** fixed:
+  - Changelog sort was not patch-aware (`1.1.0` and `1.1.4` sorted to the same
+    key, producing an unstable order). Now uses a 3-tuple `(major, minor, patch)`.
+  - Queue-ID synthesis was not collision-free (`Q-{i+1}` could duplicate a
+    tracker ID or an inline ID). Now two-pass: collect all existing IDs first,
+    then assign the lowest free `Q-NNN`.
+  - Verdict `<a id>` was `rid.lower()` — left spaces/punctuation in the ID for
+    labels without a clean `R-`/`DA-` prefix. New `_slug()` helper; idempotent
+    for well-formed IDs.
+  - A v1 tab label that slugs to a canonical framework anchor (e.g. "References")
+    would clobber the framework's own anchor. Now mangled to `…-tab` via a
+    `CANONICAL_ANCHORS` set.
+  - Changelog entries now render `### vX.Y — DATE`; the synthetic top entry
+    carries `meta.date`.
+  - `build_frontmatter` now writes `project.source_tiers` (tier_1/tier_2/discovery) and `project.domain_rules`, matching the v2 starter shape.
+- **`clean_md` fence-awareness** — `collect_framework_targets` now skips lines
+  inside fenced code blocks. The starter's `### Templates` section carries
+  fenced example blocks with placeholder `<a id>` values and headings; collecting
+  them caused `unwrap_framework_links` to incorrectly strip body links like
+  `[Q-001](#q-001)` (a promoted tracker row) to plain text.
+- **`clean_md` EOF content loss** — a malformed-opener path (a `framework.core`
+  anchor with no matching `@end`) did `break`, dropping everything from the opener
+  to EOF. Now preserves the opener and all remaining lines verbatim.
+- **HTML tab label escaping** — `data-tab-label` now uses `html.escape`, so a
+  label containing `"` no longer breaks the attribute.
+- **Multi-paragraph inline content** — `_md_render_inline` correctly flattens
+  multi-paragraph input to `<br><br>` instead of leaving `</p><p>` inside inline
+  HTML contexts.
+- **`</style>` in theme CSS neutralized** — backslash-escapes any `</style>`
+  before user theme CSS is inlined into the `<style>` block (both v1 and v2
+  paths), closing a Jinja `autoescape=False` injection point.
+- **`upgrade` edge cases** — v1 upgrade now refuses to overwrite the doc's
+  `research_buddy_version` with a lower tool version (forward-only guard,
+  matching v2). v2 upgrade now skips only the version-bump step when the doc is
+  ahead, still refreshing the preamble and framework block. YAML indent is
+  sniffed and matched when inserting new frontmatter keys.
+
+### Changed
+
+- **Framework truth-up** — `starter.md` updated to match actual tool behavior:
+  `bump`, `locate`, and `diff-summary` surfaced as the blessed Turn-2 path
+  in "Tools at hand" and Turn-2 steps 4 + 6; the version-compat pause
+  clarified as a pre-session gate; the mechanical self-checks list corrected
+  (plain-text `R-XXX-N` references are *not* flagged by `validate`);
+  `research_buddy_version` added to the required-fields checklist.
+- **Dangerous HTML warnings** — the v2 validator now warns on `<script>`,
+  inline `on*=`, or `javascript:` in the document body (outside fenced/inline
+  code). These are warnings, not errors, so illustrative examples still build.
+- **Release workflow** — the `vX.Y.Z` git tag is now created in the
+  `github-release` job (after PyPI publish succeeds), not in the `build` job.
+  A failed PyPI upload no longer leaves an orphaned tag that locks the release
+  guard. Release notes now extract only the matching `## [VERSION]` section from
+  `CHANGELOG.md` instead of dumping the entire history.
+
 ## [1.13.0] — 2026-06-08
 
 Brief-gate hardening and localization release. Root cause traced to a real
