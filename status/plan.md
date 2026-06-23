@@ -213,11 +213,18 @@ ships as its own PR against `main`.
       warning→error; starter illustrative targets stay `info`). P2-3
       (`_collect_entry_ids` made fence-aware; `_collect_anchors` already was).
       7 new tests; 577 passed, 91.64%. Starter still validates error-clean.
-- [ ] **PR-3: Framework ↔ tooling truth-up.** P0-1(a) (starter.md: teach `bump`,
+- [x] **PR-3: Framework ↔ tooling truth-up.** P0-1(a) (starter.md: teach `bump`,
       `locate`, `diff-summary` as the blessed Turn-2 path), P1-1 (same — surface
       the three helpers), P1-4 (fix version-compat pause contradiction), P1-6
       (fix "validate mechanically flags plain-text refs" claim), P3-8 (add
       `research_buddy_version` to required-fields list in starter.md).
+      *Shipped: 1.14.0. Preamble "Tools at hand" now lists bump/locate/diff-summary
+      with one-line descriptions. Turn-2 steps 4+6 surface the shell-access shortcuts.
+      "Both flows are exactly 2 turns" rewritten to name the MINOR version-compat
+      exchange as a pre-session gate. Required-fields list updated to match the
+      validator (adds research_buddy_version). Plain-text-refs bullet removed from
+      mechanical checks (validate doesn't check this); failure-mode tag corrected
+      mechanical→semantic.*
 - [ ] **PR-4: Brief-skeleton unification.** P1-2 (single canonical template;
       unify preamble skeleton + turn1.py wording; sync test).
 - [ ] **PR-5: Methodology completeness.** P1-3 (Turn-2 hypothesis resolution
