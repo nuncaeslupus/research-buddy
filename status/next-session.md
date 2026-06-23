@@ -1,5 +1,30 @@
 # Next session
 
+## Session 2026-06-23 (session 37)
+
+### What was done
+
+Shipped **PR-3: Framework ↔ tooling truth-up** — five editorial fixes to `starter.md`, versioned as **1.14.0**:
+
+- **P0-1(a) + P1-1 — Surface bump/locate/diff-summary as blessed Turn-2 path.** Three places updated:
+  - Preamble "Tools at hand" line now lists `bump <file> <Q-NNN> --apply` (all mechanical Turn-2 edits), `locate <file> <anchor>` (exact `@end` insertion-point line), and `diff-summary <prior.md> <new.md>` (mechanical `@summary` block) with one-line descriptions, placed before the existing `validate`/`turn1` entries.
+  - Turn-2 step 4 ("Write atomically") opens with the `bump --apply` shortcut and `locate` guidance; the manual per-section list follows as the no-shell-access path.
+  - Turn-2 step 6 (change summary) adds the `diff-summary` shortcut with its `{{placeholder}}` narrative note.
+- **P1-4 — Fix version-compat pause contradiction.** "Both flows are exactly 2 turns, with no confirmation gate between them" was contradicted by the MINOR version-compat check that says "Wait for the answer" before Turn 1. Rewritten: "Both session flows use exactly **2 turns** (Turn 1: brief + research; Turn 2: vet + validate + write) with no confirmation gate between them. The MINOR version-compat check above is a pre-session gate: if it fires, the user answers one question before Turn 1 begins; the session's 2-turn clock starts only once the user picks (a) or (b)."
+- **P1-6 — Fix "validate mechanically flags plain-text refs" claim.** The validator does NOT check for plain-text `R-XXX-N`/`DA-XXX`/`Q-NNN` references (only broken cross-links). Removed the false bullet from the mechanical-checks list; changed `[mechanical]` → `[semantic]` in the corresponding failure-mode entry.
+- **P3-8 — Add `research_buddy_version` to required-fields list.** The self-validation mechanical check listed `doc_format_version, version, date, file_name, title, language.code, project.domain` but omitted `research_buddy_version`, which has been required by the validator since early development. Fixed.
+- **Version bump 1.13.0 → 1.14.0.** `make version-sync` + `make regen-examples`. 594 passed, lint clean, examples in sync.
+
+### Next steps
+
+1. **PR-4: Brief-skeleton unification** — P1-2 (single canonical template; unify preamble skeleton + `turn1.py` wording; sync test).
+2. **PR-5: Methodology completeness** — P1-3 (Turn-2 hypothesis resolution step + session-note template matches `bump.py`), P1-5 (excellence bar guidance, queue prioritization rubric, rule supersession mechanics, queue/tracker dual-membership rule).
+3. **PR-12: README rewrite**, **PR-13: Deliverable Synthesis**, **PR-14: Design spikes**.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 36)
 
 ### What was done
