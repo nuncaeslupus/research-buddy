@@ -28,7 +28,7 @@ path; new features land on v2 first.
 
 The AI agent reads the framework embedded in your research document and behaves as a Research Buddy for the full lifetime of the project. Every session produces an updated, versioned source file — the source of truth — and a rendered HTML document for reading.
 
-**Session zero** (v2 Markdown flow — recommended): run `research-buddy init my-project/` to scaffold `source/research-document.md`. Upload that file to an AI assistant. The agent introduces itself, asks questions to understand the project, does discovery research, and proposes the initial structure — sections, source tiers, queue items, and methodology rules tailored to your domain. Output: `{file_name}_v1.0-source.md`. Run `research-buddy build my-project/` to generate HTML.
+**Session zero** (v2 Markdown flow — recommended): run `research-buddy init my-project/` to scaffold `source/research-document.md`. Upload that file to an AI assistant. The agent introduces itself, asks questions to understand the project, does discovery research, and proposes the initial structure — sections, source tiers, queue items, and methodology rules tailored to your domain. Output: `{file_name}_v1.0-source.md`. Run `research-buddy build my-project/source/{file_name}_v1.0-source.md` to generate HTML.
 
 **Subsequent sessions**: upload the latest `*-source.md`, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in exactly 2 turns.
 
@@ -79,7 +79,7 @@ After each research session, to give the user a readable HTML document:
 
 ```bash
 pip install research-buddy
-research-buddy build my-project/
+research-buddy build my-project/source/my-project_v1.0-source.md
 ```
 
 The output will be `[file_name].html` in the project directory.
@@ -331,7 +331,7 @@ The comparison behavior is identical for both formats:
 | ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Exact match                                 | silent   | Nothing to worry about.                                                                                                                                                                                                         |
 | Only PATCH differs (e.g. 1.0.3 vs 1.0)      | silent   | Patches are strictly backwards-compatible. Treated as equivalent.                                                                                                                                                               |
-| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `research_buddy_version` on the next write. Nothing is printed; exit code stays 0.                                                                         |
+| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `research_buddy_version` (v2) or `meta.research_buddy_version` (v1) on the next write. Nothing is printed; exit code stays 0.                              |
 | Tool MINOR **older** than doc (same MAJOR)  | warning  | Doc may use features your tool does not render correctly. Run `pip install --upgrade research-buddy`.                                                                                                                           |
 | MAJOR differs                               | error    | Schema is not guaranteed to match. Either install the matching major (`pip install 'research-buddy==1.*'`) or start an AI session and say *"Migrate to research-buddy vX.Y"* so the agent updates the document structure. |
 
