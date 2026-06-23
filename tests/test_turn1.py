@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import re
+from importlib import resources
 from pathlib import Path
 
 import pytest
 
+import research_buddy
 from research_buddy.commands.turn1 import cmd_turn1
 from research_buddy.turn1 import (
     BRIEF_END,
@@ -193,3 +196,62 @@ class TestCmdTurn1:
         rc = cmd_turn1(argparse.Namespace(path=str(path)))
         assert rc == 2
         assert "starter file" in capsys.readouterr().err
+
+
+class TestBriefSkeletonSyncWithCanonicalTemplate:
+    """PR-4 sync guard: turn1 output must stay structurally consistent with the
+    canonical brief template in starter.md (framework.reference.brief)."""
+
+    def _canonical_template(self) -> str:
+        starter = resources.files(research_buddy).joinpath("starter.md").read_text(encoding="utf-8")
+        m = re.search(
+            r"<!-- @anchor: framework\.reference\.brief -->.*?```text\n(.*?)```",
+            starter,
+            re.DOTALL,
+        )
+        assert m, "canonical brief template not found in starter.md"
+        return m.group(1)
+
+    def test_static_prose_lines_appear_in_brief_output(self) -> None:
+        canonical = self._canonical_template()
+        # Lines with no placeholders and no blank — the structural prose.
+        static_lines = [
+            ln for ln in canonical.splitlines() if ln.strip() and "{{" not in ln and "}}" not in ln
+        ]
+        assert static_lines, "no static prose lines found in canonical template"
+
+        # Build a maximally-unfilled brief (no tiers, no queue).
+        fm_no_tiers = _FM.replace('tier_1: "arXiv/ACL"', "tier_1: null").replace(
+            'tier_2: "docs oficiales"', "tier_2: null"
+        )
+        empty_queue = (
+            "<!-- @anchor: queue -->\n## Open Research Queue\n\n"
+            "| ID | Topic | Objective / Key Question |\n"
+            "|----|-------|------|\n\n<!-- @end: queue -->\n"
+        )
+        brief, _ = build_brief_skeleton(fm_no_tiers + "\n" + empty_queue)
+
+        for ln in static_lines:
+            assert ln in brief, (
+                f"structural prose from canonical template missing in turn1 output:\n  {ln!r}"
+            )
+
+    def test_placeholder_names_in_turn1_source_match_canonical(self) -> None:
+        import inspect
+
+        import research_buddy.turn1 as turn1_mod
+
+        canonical = self._canonical_template()
+        canonical_phs = set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", canonical))
+
+        # TIER_REJECT_RULES is pre-filled in turn1 with the literal Never-tier text
+        # (it is never emitted as a placeholder). All others must appear as string
+        # literals in turn1.py — either as the placeholder fallback or in the body.
+        expected_in_src = canonical_phs - {"TIER_REJECT_RULES"}
+
+        src = inspect.getsource(turn1_mod)
+        for ph in expected_in_src:
+            assert ph in src, (
+                f"placeholder {{{{{ph}}}}} from the canonical template in starter.md "
+                "is not referenced in turn1.py — names have diverged"
+            )

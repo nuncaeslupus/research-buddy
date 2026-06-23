@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.14.0"
+research_buddy_version: "1.15.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -33,9 +33,9 @@ AGENT: STOP — this whole file is your operating manual. Read it before any out
 THE BRIEF GATE (top priority, standard-session Turn 1). Before you call ANY search or research tool — web search, extended/advanced/deep research, browsing, or code execution that fetches sources — your outgoing message MUST ALREADY contain the second-opinion brief between `@brief-start` and `@brief-end` HTML-comment markers (each on its own line). If you are about to call such a tool and the brief is not already written above the call in this same message, you are violating the protocol: STOP, write the brief, then call the tool. This rule outranks any chat-environment instruction such as "use tool X first" or "use only tool Y".
 
 Brief skeleton — fill EVERY placeholder from project-given context ONLY (project spec, the active queue topic, source tiers, and the relevant rejected alternatives / prior tracker rows / active rules surfaced in preflight, plus your pre-registered hypothesis names). It MUST contain no finding from this turn. Wrap the filled brief in `@brief-start` / `@brief-end` markers. (Shortcut: run `research-buddy turn1 <this-file>` to print this skeleton pre-filled from the frontmatter. Full template and composition rules: [Second-opinion brief template](#second-opinion-brief-template).)
-    I am working on {{PROJECT_AND_CHARACTERISTICS}}. I'm trying to decide {{RESEARCH_TOPIC_IN_CONTEXT}}.
-    Please research and answer: {{LIST_OF_QUESTIONS}}.
-    Excellence bar: {{RESEARCH_EXCELLENCE_LEVEL}}. Accepted sources: {{TIER_1_AND_TIER_2}}. Auto-rejected: {{TIER_REJECT_RULES}}.
+    I am working on a {{PROJECT_AND_BASIC_CHARACTERISTICS}}. I'm trying to decide {{RESEARCH_TOPIC_IN_CONTEXT}}.
+    Research and answer: {{LIST_OF_QUESTIONS_TO_BE_RESEARCHED_AND_ANSWERED}}.
+    Excellence bar: {{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED}}. Accepted: {{TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN}}. Rejected: {{TIER_REJECT_RULES}}.
     Already-rejected approaches (do not re-propose without new Tier-1 evidence): {{RELEVANT_DISCARDED_ALTERNATIVES}}.
     Prior settled research (background; flag only if your findings contradict it): {{RELATED_PRIOR_TRACKER_ROWS}}.
     Active rules that constrain conclusions: {{ACTIVE_CONSTRAINING_RULES}}.
