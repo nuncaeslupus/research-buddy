@@ -242,7 +242,7 @@ class TestBriefSkeletonSyncWithCanonicalTemplate:
         import research_buddy.turn1 as turn1_mod
 
         canonical = self._canonical_template()
-        canonical_phs = set(re.findall(r"\{\{([A-Z_]+)\}\}", canonical))
+        canonical_phs = set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", canonical))
 
         # TIER_REJECT_RULES is pre-filled in turn1 with the literal Never-tier text
         # (it is never emitted as a placeholder). All others must appear as string
