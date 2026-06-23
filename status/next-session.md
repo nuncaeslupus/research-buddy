@@ -1,5 +1,30 @@
 # Next session
 
+## Session 2026-06-23 (session 39)
+
+### What was done
+
+Shipped **PR-5: Methodology completeness** — six editorial additions to `starter.md`, versioned as **1.16.0**:
+
+- **P1-3 — Turn-2 hypothesis resolution step.** Added new Turn 2 step 3: "Resolve pre-registered hypotheses" — compare findings + vetted second opinions against pre-registered PASS/FAIL metrics, assign `VALIDATED` / `PROPOSED` / `REJECTED` to each. The prior flow pre-registered hypotheses in Turn 1 step 4 but never had an explicit Turn 2 step to resolve them. Steps 3–8 renumbered to 4–9; "Turn 2 step 3 gates step 4" in Common failure modes updated to "step 4 gates step 5."
+- **P1-3 — Session-note template synced with `bump.py`.** Added hypothesis-resolution table (`| Hypothesis | Pre-registered metric | Outcome | Evidence |`), `**Cross-section impact.**`, and `**Compliance validation.**` fields to the `### Templates` session-note block; aligned placeholder style (`{{…}}`) and link format. Template now matches `_session_skeleton()` output exactly.
+- **Sync guard: `TestSessionSkeletonSyncWithStarterTemplate` (2 tests)** in `test_bump.py` — section-heading and table-header rows from `_session_skeleton` must appear in the starter.md template.
+- **P1-5 — Excellence bar guidance.** Note in §Second-opinion brief template explaining that `{{RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED}}` must specify minimum source count, domain rigor standard, and specificity requirement.
+- **P1-5 — Queue prioritization rubric.** 4-point rubric (dependency, risk-to-deliverable, yield-per-turn, evidence freshness) in §Queue rules.
+- **P1-5 — Rule supersession mechanics.** Step-by-step in §Adopted Rules for updating old rule to `SUPERSEDED` + `superseded_by`, new rule to `supersedes`, Changelog note.
+- **P1-5 — Queue/tracker dual-membership rule.** Explicit MUST NOT in §Queue rules (Done items + Re-queuing paragraphs); new `[mechanical]` Common failure mode entry.
+
+Gates: `make lint` clean, `make test-cov` **598 passed** (↑2), **91.68%** coverage, examples in sync, starter validates error-clean. PR: #121.
+
+### Next steps
+
+1. **PR-12: README rewrite** — P3-2 (lead with v2 MD flow), P3-3 (For AI Agents: lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+2. **PR-13: Deliverable Synthesis capstone**, **PR-14: Design spikes**.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 38)
 
 ### What was done

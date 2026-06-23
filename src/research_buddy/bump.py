@@ -199,7 +199,7 @@ def _session_skeleton(queue_id: str, topic: str, date: str) -> str:
             "",
             "| Hypothesis | Pre-registered metric | Outcome | Evidence |",
             "|---|---|---|---|",
-            "| {{H1}} | {{PASS / FAIL metric}} | {{VALIDATED / PROPOSED / REJECTED}} "
+            "| {{H1}} | {{PASS and FAIL/REJECT metrics}} | {{VALIDATED / PROPOSED / REJECTED}} "
             "| {{Tier-1 citation}} |",
             "",
             "**Sources consulted.**",
