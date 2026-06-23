@@ -453,8 +453,20 @@ class TestDangerousHtml:
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         assert "unsafe-html-event-handler" in _codes(validate_md(path))
 
+    def test_event_handler_slash_separator_warns(self, tmp_path: Path) -> None:
+        # `<img/onerror=…>` uses a slash, not whitespace, before the handler.
+        body = "Intro.\n\n<img/onerror=alert(1)>\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-event-handler" in _codes(validate_md(path))
+
     def test_javascript_uri_warns(self, tmp_path: Path) -> None:
         body = 'Intro.\n\n<a href="javascript:alert(1)">x</a>\n'
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-js-uri" in _codes(validate_md(path))
+
+    def test_markdown_javascript_uri_warns(self, tmp_path: Path) -> None:
+        # A Markdown link to a javascript: target renders to an executable <a>.
+        body = "Intro.\n\n[click](javascript:alert(1))\n"
         path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
         assert "unsafe-html-js-uri" in _codes(validate_md(path))
 

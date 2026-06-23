@@ -244,19 +244,14 @@ def _md_render_inline(md: MarkdownIt, text: str) -> str:
     if not text:
         return ""
     rendered: str = md.render(text).strip()
-    m = re.fullmatch(r"<p>(.*?)</p>", rendered, re.DOTALL)
-    # `.*?` + DOTALL also "matches" multi-paragraph output (the trailing </p>
-    # anchors to EOF), so only treat it as a single paragraph when the captured
-    # body has no interior </p>.
-    if m and "</p>" not in m.group(1):
-        return m.group(1)
-    # Multi-paragraph input: markdown-it emits several <p> blocks, which are
-    # invalid as direct children of an inline <li>/span slot. Drop the <p>
-    # wrappers and join with <br><br> so the result stays well-formed.
-    paras = re.findall(r"<p>(.*?)</p>", rendered, re.DOTALL)
-    if paras:
-        return "<br><br>".join(p.strip() for p in paras)
-    return rendered
+    # markdown-it wraps each paragraph in <p>; inside an inline <li>/span slot
+    # that's invalid nesting. Merge adjacent paragraphs with <br><br> and strip
+    # the wrapper when the whole result is one (possibly merged) paragraph. If
+    # other block content is present (a list, <pre>, …) return it verbatim
+    # rather than dropping it.
+    normalized = re.sub(r"</p>\s*<p>", "<br><br>", rendered)
+    m = re.fullmatch(r"<p>(.*?)</p>", normalized, re.DOTALL)
+    return m.group(1) if m else rendered
 
 
 def _md_render_body(md: MarkdownIt, text: str) -> str:

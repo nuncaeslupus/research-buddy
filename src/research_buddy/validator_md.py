@@ -408,8 +408,14 @@ _INLINE_CODE_RE = re.compile(r"`[^`\n]+`")
 
 # Executable-HTML patterns flagged in the body (warnings — see _check_dangerous_html).
 _SCRIPT_RE = re.compile(r"<\s*script\b", re.IGNORECASE)
-_EVENT_HANDLER_RE = re.compile(r"<[^>]*?\son\w+\s*=", re.IGNORECASE)
-_JS_URI_RE = re.compile(r"(?:href|src)\s*=\s*[\"']?\s*javascript:", re.IGNORECASE)
+# A slash also separates a tag name from attributes (`<img/onerror=…>`), so the
+# on*= handler can follow whitespace OR a slash.
+_EVENT_HANDLER_RE = re.compile(r"<[^>]*?[\s/]on\w+\s*=", re.IGNORECASE)
+# `javascript:` in an href/src/action attribute OR a Markdown link/image target
+# `](javascript:…)` (markdown-it can render the latter to an executable <a>).
+_JS_URI_RE = re.compile(
+    r"(?:href|src|action)\s*=\s*[\"']?\s*javascript:|\(\s*javascript:", re.IGNORECASE
+)
 
 
 def _slugify(text: str) -> str:
