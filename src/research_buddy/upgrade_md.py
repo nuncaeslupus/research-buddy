@@ -517,9 +517,9 @@ def _sniff_project_indent(fm_lines: list[str], project_idx: int, end_idx: int) -
     """Return the indent string used by direct children of the `project:` block."""
     for j in range(project_idx + 1, end_idx):
         line = fm_lines[j]
-        if not line.strip():
-            continue
         stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            continue
         raw = line[: len(line) - len(stripped)]
         if raw:
             return raw

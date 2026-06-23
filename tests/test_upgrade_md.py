@@ -319,6 +319,38 @@ class TestFrontmatterMigration:
         assert "    source_tiers:" in fm_after
         assert "      tier_1:" in fm_after or "        tier_1:" in fm_after
 
+    def test_insert_skips_comment_lines_when_sniffing_indent(self) -> None:
+        """YAML comments in the project: block must not confuse the indent sniffer.
+
+        If the first non-blank line in the project: block is a comment with a
+        different indentation than the actual keys, sniffing would return the
+        wrong unit. The sniffer must skip lines starting with '#'.
+        """
+        starter = _starter_text()
+        # Build a source missing source_tiers but with a bare '#' comment
+        # immediately after 'project:' (no leading spaces — would give "" as
+        # indent unit if comments are not skipped).
+        stale_lines = []
+        skip = False
+        for line in starter.splitlines():
+            if line.startswith("  source_tiers:"):
+                skip = True
+                continue
+            if skip and line.startswith("    "):
+                continue
+            skip = False
+            stale_lines.append(line)
+        stale = "\n".join(stale_lines) + "\n"
+        # Inject a bare '#' comment right after 'project:'
+        stale = stale.replace("project:\n", "project:\n# top-level comment\n", 1)
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert any("source_tiers added" in c for c in changes)
+        fm_after = upgraded.split("\n---\n", 2)[0]
+        # Must use 2-space indent (the actual key indent), not "" from the comment
+        assert "  source_tiers:" in fm_after
+        assert "    tier_1:" in fm_after
+
 
 class TestPreambleReplacement:
     """The operating-manual HTML comment between frontmatter and the first
