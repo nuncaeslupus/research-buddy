@@ -1,5 +1,53 @@
 # Next session
 
+## Session 2026-06-23 (session 36)
+
+### What was done
+
+Shipped **PR-11: upgrade edge cases** — three items across `upgrade.py`,
+`upgrade_md.py`, and `commands/upgrade.py`:
+
+- **P2-21 — v1 forward-only version guard.** `upgrade_doc` in `upgrade.py` now
+  checks `meta.research_buddy_version` before overwriting: if the doc is ahead of
+  the installed tool, it appends a `"not bumped"` note to changes and skips the
+  overwrite rather than silently downgrading. Uses `_parse_semver` from
+  `validator.py` (same guard v2 already had).
+- **P2-22 — v2 skip only version bump when doc is ahead.** `_bump_research_buddy_version`
+  in `upgrade_md.py` no longer raises `UpgradeError` when the doc is ahead; it
+  returns an informational note so the rest of the upgrade (preamble, framework
+  block, agent-reminder blockquote) still runs. `_upgrade_md_file` gains a
+  `upgraded == source_text` guard so an informational-only run doesn't write the
+  file needlessly. Updated `test_doc_ahead_of_tool_raises` →
+  `test_doc_ahead_of_tool_skips_version_bump`.
+- **P2-23 — YAML indent sniff + fence-aware preamble/blockquote search.** Three
+  sub-fixes in `upgrade_md.py`:
+  - New `_sniff_project_indent` / `_reindent_insertion` helpers: `_insert_in_project_block`
+    now detects the actual indent of existing `project:` children and reindents
+    inserted lines to match (fixes 2-space insertions into 4-space YAML docs).
+  - `_find_preamble_bounds` skips fenced lines when searching for the first
+    `<!-- @anchor: -->` (fence-aware).
+  - `_find_agent_reminder_start` skips fenced lines so a `> **Agent:` inside a
+    fenced example is ignored.
+  - `_line_in_fence` import promoted to module level (was a local import in one
+    function; now needed by three).
+
++15 tests. 593 passed, lint clean. PR: #118.
+
+### Next steps
+
+1. **PR-7b** (deferred): verdict-label dedup (renderer-wide `seen_ids`) +
+   dropped-content marker. Complex; defer unless there's a clear spec.
+2. **PR-3: Framework ↔ tooling truth-up** — teach `bump`/`locate`/`diff-summary`
+   as the blessed Turn-2 path in starter.md; fix version-compat pause contradiction;
+   fix "validate mechanically flags plain-text refs" claim.
+3. **PR-4: Brief-skeleton unification**, **PR-5: Methodology completeness** — the
+   big editorial batches.
+4. **PR-12: README rewrite**, **PR-13: Deliverable Synthesis**, **PR-14: Design spikes**.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 35)
 
 ### What was done

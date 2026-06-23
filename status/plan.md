@@ -289,10 +289,10 @@ ships as its own PR against `main`.
       (md + json). `tests/test_fileio.py` (10) + 2 build-path integration tests;
       558 passed, 91.40%. Bundled-starter `Traversable` loads left unguarded
       (our own ASCII, not user input).*
-- [ ] **PR-11: upgrade edge cases.** P2-21 (v1 upgrade: add forward-only version
+- [x] **PR-11: upgrade edge cases.** P2-21 (v1 upgrade: add forward-only version
       guard matching v2), P2-22 (skip only version bump when doc is ahead of tool,
       still refresh framework), P2-23 (sniff YAML indent; make preamble/blockquote
-      replacement fence-aware).
+      replacement fence-aware). *Shipped: PR #118. +15 tests; 593 passed.*
 - [ ] **PR-12: README rewrite.** P3-2 (lead with v2 MD flow), P3-3 (For AI Agents:
       lead with starter.md), P3-4 (scope version-compat claim to v1 only).
 - [ ] **PR-13: Deliverable Synthesis capstone.** New optional `## Deliverable
