@@ -132,8 +132,11 @@ def _check_unclosed_fence(lines: list[str]) -> list[Issue]:
                 current = m.group(1)
                 opening_line = i + 1
         else:
-            m = re.match(rf"^({re.escape(current[0])}){{{len(current)},}}\s*$", stripped)
-            if m and stripped.startswith(current):
+            # A closer is a line of the same fence char, at least as long as the
+            # opener, with only trailing whitespace — matching `_line_in_fence`'s
+            # semantics without recompiling a regex each iteration.
+            body = stripped.rstrip()
+            if body and len(body) >= len(current) and body == current[0] * len(body):
                 current = None
     if current is not None:
         return [
@@ -685,12 +688,17 @@ def _collect_entry_ids(text: str, kind: str) -> set[str]:
 
 
 def _reference_bullets(section: str) -> set[str]:
-    """List items (`-`/`*`/`•` … ) in a section, outside fenced blocks.
+    """Unordered list items (`-`/`*`/`+`/`•` + space) in a section, outside
+    fenced blocks.
 
     Used to compare References at the individual-source level: the H3 check
     only catches whole per-version subsections, not a single citation dropped
     from within one. A `---` thematic break (`-` not followed by a space) is
     not a bullet, so it's excluded.
+
+    Ordered list items (`1.` …) are intentionally NOT matched: their marker
+    renumbers when a sibling is added or removed, so exact-text membership
+    would report a spurious removal. References are bullet lists by convention.
     """
     lines = section.splitlines()
     in_fence = _line_in_fence(lines)
@@ -699,7 +707,7 @@ def _reference_bullets(section: str) -> set[str]:
         if in_fence[i]:
             continue
         s = line.strip()
-        if s[:1] in {"-", "*", "•"} and s[1:2] == " ":
+        if s[:1] in {"-", "*", "+", "•"} and s[1:2] == " ":
             out.add(s)
     return out
 

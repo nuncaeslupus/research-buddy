@@ -384,6 +384,21 @@ class TestPriorMode:
         new, prior = self._make_pair(tmp_path, prior_body, new_body)
         assert "references-bullet-removed" in _codes(validate_md(new, prior))
 
+    def test_reference_plus_bullet_removed_errors(self, tmp_path: Path) -> None:
+        # `+` is a valid Markdown bullet marker and must be tracked too.
+        prior_body = (
+            "<!-- @anchor: references -->\n## References\n\n### v1.0\n"
+            "+ [Paper A](#a)\n+ [Paper B](#b)\n\n"
+            "<!-- @end: references -->\n"
+        )
+        new_body = (
+            "<!-- @anchor: references -->\n## References\n\n### v1.0\n"
+            "+ [Paper A](#a)\n\n"
+            "<!-- @end: references -->\n"
+        )
+        new, prior = self._make_pair(tmp_path, prior_body, new_body)
+        assert "references-bullet-removed" in _codes(validate_md(new, prior))
+
     def test_da_in_fenced_template_not_required_to_persist(self, tmp_path: Path) -> None:
         # A @da marker living only inside a fenced template example is not a live
         # entry, so dropping it across versions is not an append-only violation.
