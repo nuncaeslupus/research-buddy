@@ -140,7 +140,7 @@ The tool uses the `file_name` field from your document to name outputs.
 | `source/research-document.md`     | Unversioned starter — uploaded to the agent for session zero  |
 | `[file_name]_v1.0-source.md`     | First versioned source, produced by session zero               |
 | `[file_name]_v1.1-source.md`     | After first research session                                   |
-| `[file_name]_v1.0.md`            | Clean view (framework stripped) — shareable artifact           |
+| `[file_name]_vX.Y.md`            | Clean view (framework stripped) — shareable artifact           |
 | `[file_name]_vX.Y.html`          | Versioned HTML build                                           |
 | `[file_name].html`               | Latest stable HTML build                                       |
 
@@ -372,7 +372,7 @@ to refresh the framework block and frontmatter when you upgrade the CLI.
 If you're upgrading the CLI to a newer minor (e.g. tool `1.1.0`, doc `1.0.3`)
 there is nothing to do: your build continues to produce HTML as before.
 
-If you're moving across a major boundary, the v1 CLI will tell you, point at
+If you're moving across a major boundary, the CLI (for v1 documents) will tell you, point at
 CHANGELOG.md, and give you a copy-pasteable command to pin the matching major
 (if you want to keep your current doc as-is) or an instruction to hand to the
 agent (if you want to migrate).
