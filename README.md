@@ -26,11 +26,13 @@ path; new features land on v2 first.
 
 ## How it works
 
-The AI agent reads `agent_guidelines` embedded in the JSON and behaves as a Research Buddy for the full lifetime of the project. Every session produces an updated, versioned JSON file — the source of truth — and optionally a rendered HTML document for reading.
+The AI agent reads the framework embedded in your research document and behaves as a Research Buddy for the full lifetime of the project. Every session produces an updated, versioned source file — the source of truth — and a rendered HTML document for reading.
 
-**Session zero** (first session with a new document): the agent introduces itself, asks 5 questions to understand the project, does discovery research, and proposes the initial structure — tabs, source tiers, queue items, and methodology rules tailored to your domain. Output: `[file_name]_v1.0.json`.
+**Session zero** (v2 Markdown flow — recommended): run `research-buddy init my-project/` to scaffold `source/research-document.md`. Upload that file to an AI assistant. The agent introduces itself, asks questions to understand the project, does discovery research, and proposes the initial structure — sections, source tiers, queue items, and methodology rules tailored to your domain. Output: `{file_name}_v1.0-source.md`. Run `research-buddy build my-project/source/{file_name}_v1.0-source.md` to generate HTML.
 
-**Subsequent sessions**: upload the latest JSON, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in exactly 2 turns.
+**Subsequent sessions**: upload the latest `*-source.md`, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in exactly 2 turns.
+
+The two-turn protocol (research turn + vet/write turn) applies to both formats. **Legacy v1 JSON flow**: use `research-buddy init my-project/ --v1`; the agent produces versioned `.json` files instead of `.md` sources.
 
 ## Install
 
@@ -57,13 +59,19 @@ pip install -e ".[dev]"
 
 ## For AI Agents or AI users
 
-If you are an AI agent or a user of a chatbot looking for the initial research template:
+If you are an AI agent or a user of a chatbot looking for the initial research template (v2 Markdown, recommended):
+
+- **Direct download**: [starter.md](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.md)
+- **Package path**: `research_buddy.starter.md` (when installed via pip)
+- **Source path**: `src/research_buddy/starter.md` (in this repository)
+
+Download this file and attach it into an AI chatbot session to start researching. The AI agent will know what to do.
+
+For the legacy v1 JSON template:
 
 - **Direct download**: [starter.json](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.json)
 - **Package path**: `research_buddy.starter.json` (when installed via pip)
 - **Source path**: `src/research_buddy/starter.json` (in this repository)
-
-Download this file and attach it into an AI chatbot session to start researching. The AI agent will know what to do.
 
 ### Generating HTML
 
@@ -71,18 +79,18 @@ After each research session, to give the user a readable HTML document:
 
 ```bash
 pip install research-buddy
-research-buddy build your-project.json
+research-buddy build my-project/source/my-project_v1.0-source.md
 ```
 
-The output will be `your-project.html` in the same directory.
+The output will be `[file_name].html` in the project directory.
 
 ### Workflow
 
-1. **Session start**: User uploads their JSON file. If new, ask them to run `research-buddy init <project-name>` first to get the starter template.
-2. **Session end**: After making changes, run `research-buddy build <json-file>` to generate HTML. Tell the user the HTML is ready and they can download it.
-3. **Next session**: Ask the user to upload the latest JSON file and say "Continue research".
+1. **Session start**: User uploads their `*-source.md` file (v2) or `.json` file (v1 legacy). If new, ask them to run `research-buddy init <project-name>` first to get the starter template.
+2. **Session end**: After making changes, run `research-buddy build <source-file>` to generate HTML. Tell the user the HTML is ready and they can download it.
+3. **Next session**: Ask the user to upload the latest `*-source.md` (v2) or `.json` (v1) file and say "Continue research".
 
-The JSON file is always the source of truth — never the HTML.
+The source file is always the source of truth — never the HTML.
 
 ## Quick start
 
@@ -311,14 +319,19 @@ repository, or the matching path inside the installed wheel
 ## Version compatibility (tool ↔ document)
 
 Research Buddy uses **MAJOR.MINOR.PATCH** semver. Every `research-buddy build`
-and `research-buddy validate` compares the installed CLI version against
-`meta.research_buddy_version` and reacts like this:
+and `research-buddy validate` compares the installed CLI version against the
+version recorded in the document:
+
+- **v2 Markdown**: the `research_buddy_version` field in YAML frontmatter.
+- **v1 JSON** (legacy): the equivalent `meta.research_buddy_version` field.
+
+The comparison behavior is identical for both formats:
 
 | Comparison                                  | Severity | What happens                                                                                                                                                                                                                    |
 | ------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Exact match                                 | silent   | Nothing to worry about.                                                                                                                                                                                                         |
 | Only PATCH differs (e.g. 1.0.3 vs 1.0)      | silent   | Patches are strictly backwards-compatible. Treated as equivalent.                                                                                                                                                               |
-| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `meta.research_buddy_version` on the next write. Nothing is printed; exit code stays 0.                                                                    |
+| Tool MINOR **newer** than doc (same MAJOR)  | silent   | **No action required.** Doc is fully compatible. The agent will bump `research_buddy_version` (v2) or `meta.research_buddy_version` (v1) on the next write. Nothing is printed; exit code stays 0.                              |
 | Tool MINOR **older** than doc (same MAJOR)  | warning  | Doc may use features your tool does not render correctly. Run `pip install --upgrade research-buddy`.                                                                                                                           |
 | MAJOR differs                               | error    | Schema is not guaranteed to match. Either install the matching major (`pip install 'research-buddy==1.*'`) or start an AI session and say *"Migrate to research-buddy vX.Y"* so the agent updates the document structure. |
 
@@ -329,8 +342,8 @@ only. Patch-level differences are ignored — `1.0.3` and `1.0` behave the same.
 
 If you're upgrading the CLI to a newer minor (e.g. tool `1.1.0`, doc `1.0.3`)
 there is nothing to do: your build continues to produce HTML as before. The
-agent bumps `meta.research_buddy_version` the next time it writes to the
-document.
+agent bumps `research_buddy_version` (v2) or `meta.research_buddy_version` (v1)
+the next time it writes to the document.
 
 If you're moving across a major boundary, the CLI will tell you, point at
 CHANGELOG.md, and give you a copy-pasteable command to pin the matching major
