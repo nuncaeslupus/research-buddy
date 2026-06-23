@@ -51,6 +51,8 @@ from typing import Any
 
 import yaml
 
+from research_buddy.validator_md import _line_in_fence
+
 FRAMEWORK_START = "<!-- @anchor: framework.core -->"
 FRAMEWORK_END = "<!-- @end: framework.reference -->"
 
@@ -140,9 +142,10 @@ def _find_preamble_bounds(lines: list[str], fm_end: int, label: str) -> tuple[in
     while start < len(lines) and lines[start].strip() == "":
         start += 1
 
+    in_fence = _line_in_fence(lines)
     anchor_idx = -1
     for i in range(start, len(lines)):
-        if lines[i].lstrip().startswith("<!-- @anchor:"):
+        if not in_fence[i] and lines[i].lstrip().startswith("<!-- @anchor:"):
             anchor_idx = i
             break
     if anchor_idx < 0:
@@ -209,9 +212,11 @@ def _refresh_agent_reminder(source: str, starter: str) -> tuple[str, list[str]]:
 
 def _find_agent_reminder_start(lines: list[str]) -> int:
     """Return the index of the first line whose lstripped content starts with
-    `_AGENT_REMINDER_PREFIX`, or -1 if none exists."""
+    `_AGENT_REMINDER_PREFIX`, or -1 if none exists. Lines inside fenced code
+    blocks are skipped so example blockquotes do not falsely match."""
+    in_fence = _line_in_fence(lines)
     for i, line in enumerate(lines):
-        if line.lstrip().startswith(_AGENT_REMINDER_PREFIX):
+        if not in_fence[i] and line.lstrip().startswith(_AGENT_REMINDER_PREFIX):
             return i
     return -1
 
@@ -265,8 +270,6 @@ def _find_framework_bounds(text: str, label: str) -> tuple[int, int]:
     can tell which file is malformed. Lines inside fenced code blocks are
     skipped so example code documenting the markers does not get matched.
     """
-    from research_buddy.validator_md import _line_in_fence
-
     lines = text.splitlines()
     in_fence = _line_in_fence(lines)
     start = end = -1
@@ -405,14 +408,10 @@ def _bump_research_buddy_version(
         old_semver = _parse_semver(old_value)
         new_semver = _parse_semver(tool_version)
         if old_semver and new_semver and old_semver > new_semver:
-            raise UpgradeError(
-                f"frontmatter: research_buddy_version is {old_value!r} but the "
-                f"installed tool is {tool_version!r} — the document is AHEAD of "
-                f"the tool. Refusing to downgrade. Either upgrade the installed "
-                f"tool (`pip install --upgrade research-buddy`) or manually edit "
-                f"the doc's research_buddy_version to {tool_version!r} before "
-                f"re-running."
-            )
+            return out, [
+                f"research_buddy_version: {old_value!r} is AHEAD of installed "
+                f"{tool_version!r} — version stamp not updated"
+            ]
 
         out[i] = _replace_scalar_value(line, old_value, tool_version)
         return out, [f"research_buddy_version: {old_value!r} → {tool_version!r}"]
@@ -514,6 +513,31 @@ def _ensure_project_domain_rules(
     return new_lines, ["frontmatter: project.domain_rules added (null)"]
 
 
+def _sniff_project_indent(fm_lines: list[str], project_idx: int, end_idx: int) -> str:
+    """Return the indent string used by direct children of the `project:` block."""
+    for j in range(project_idx + 1, end_idx):
+        line = fm_lines[j]
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        raw = line[: len(line) - len(stripped)]
+        if raw:
+            return raw
+    return "  "  # default 2-space
+
+
+def _reindent_insertion(lines: list[str], unit: str) -> list[str]:
+    """Re-indent `lines` from 2-space baseline to `unit` per level."""
+    if unit == "  ":
+        return lines
+    out = []
+    for line in lines:
+        stripped = line.lstrip(" ")
+        levels = (len(line) - len(stripped)) // 2
+        out.append(unit * levels + stripped)
+    return out
+
+
 def _insert_in_project_block(fm_lines: list[str], insertion: list[str]) -> list[str]:
     """Append `insertion` lines at the end of the `project:` block.
 
@@ -539,4 +563,6 @@ def _insert_in_project_block(fm_lines: list[str], insertion: list[str]) -> list[
             end_idx = j
             break
 
+    indent_unit = _sniff_project_indent(fm_lines, project_idx, end_idx)
+    insertion = _reindent_insertion(insertion, indent_unit)
     return fm_lines[:end_idx] + insertion + fm_lines[end_idx:]
