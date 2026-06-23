@@ -1,5 +1,43 @@
 # Next session
 
+## Session 2026-06-23 (session 44)
+
+### What was done
+
+Reviewed user priorities; updated **plan.md** to record decisions and new steps:
+- v1 removal target set: **v2.0.0** (no active projects use v1; deprecation warnings
+  already ship since 1.18.0). Full removal PR is a dedicated cleanup once the
+  feature queue empties.
+- CHANGELOG / encoding / temp-file "future improvements" items marked done
+  (all shipped in earlier PRs — PR-10 and PR-1/#127).
+- Two new actionable steps added: **Mobile-friendly tab bar (1.19.0)** and
+  **Print/browser-PDF CSS (1.20.0)**.
+
+Shipped **mobile-friendly tab bar** — v1.19.0 — as PR #129:
+- `build_md.py`: wrapped tab buttons in `#tab-scroll-wrap > #tab-scroll`.
+- `css/style.css`: `#tab-scroll-wrap` (flex: 1, position: relative) holds
+  JS-controlled `.fade-left`/`.fade-right` `::before`/`::after` fade overlays;
+  `#tab-scroll` is the `overflow-x: auto` strip; `#menu-toggle` drops `position:
+  sticky` (no longer in a scrolling container); `#theme-toggle` drops
+  `margin-left: auto` (handled by `flex: 1` on the wrapper).
+- `js/script.js`: `_updateTabFade()` maintains overlay classes on scroll and
+  resize; `_scrollTabIntoView()` called by `switchTab()` to scroll the active
+  button into view; initial `_updateTabFade()` fires on load.
+- 631 passed, 91.79% coverage, lint clean, examples regenerated.
+
+### Next steps
+
+1. **Merge PR #129** (mobile tab bar, v1.19.0) once CI green.
+2. **Print / browser-PDF CSS (v1.20.0)** — enhance `@media print` in `style.css`:
+   force light theme in print, `page-break-inside: avoid` on cards/tables/code,
+   remove interactive chrome. CSS-only; `make regen-examples` required.
+3. **v2.0.0 v1 removal** — dedicated cleanup PR removing all dual code paths.
+   Best done after the feature queue above is empty.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 43)
 
 ### What was done
