@@ -232,10 +232,14 @@ ships as its own PR against `main`.
       RESEARCH_EXCELLENCE_LEVEL_AND_STYLE_QUANTIFIED_AND_PROVED, TIER_1_AND_TIER_2_DEFINITIONS_FOR_THIS_DOMAIN).
       Added missing article "a". Sync guard: TestBriefSkeletonSyncWithCanonicalTemplate (2 tests)
       catches future name drift. 596 passed, lint clean, examples in sync. PR #120.*
-- [ ] **PR-5: Methodology completeness.** P1-3 (Turn-2 hypothesis resolution
+- [x] **PR-5: Methodology completeness.** P1-3 (Turn-2 hypothesis resolution
       step + session-note template matches bump.py), P1-5 (excellence bar
       guidance, queue prioritization rubric, rule supersession mechanics,
       queue/tracker dual-membership rule).
+      *Shipped: 1.16.0. New Turn 2 step 3 (hypothesis resolution); session-note
+      template in §Templates synced to `_session_skeleton` output; 2 sync-guard
+      tests. Excellence bar guidance, 4-point priority rubric, supersession
+      mechanics, dual-membership rule added. 598 passed, PR #121.*
 - [x] **PR-6: clean_md correctness.** P2-8 (make `collect_framework_targets`
       fence-aware), P2-9 (fix `strip_framework_block` EOF content loss).
       *Shipped this session. Both verified as REAL bugs first: (P2-8) the
