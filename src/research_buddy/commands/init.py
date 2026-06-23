@@ -51,6 +51,11 @@ def _rel_to_cwd(p: Path) -> str:
 
 def _init_v1(args: argparse.Namespace) -> int:
     """Legacy JSON scaffolding (`--v1`)."""
+    print(
+        "Warning: v1 JSON format is deprecated and will be removed in v2.0. "
+        "Use `research-buddy init` (without --v1) to create v2 Markdown projects.",
+        file=sys.stderr,
+    )
     dirs = _prepare_init_dirs(args)
     if dirs is None:
         return 1

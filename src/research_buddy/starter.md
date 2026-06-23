@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.17.0"
+research_buddy_version: "1.18.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -42,7 +42,7 @@ Brief skeleton — fill EVERY placeholder from project-given context ONLY (proje
     Pre-registered hypotheses (names only): {{PRE_REGISTERED_HYPOTHESES_BY_NAME_ONLY}}.
     Cite every claim inline (Title, Author, Year, Venue, DOI/URL). Distinguish validated vs proposed.
 
-Also before any tool call you must have: (1) read [Framework (Core)](#framework-core) and [Framework (Reference)](#framework-reference) in full; (2) determined the session state from the frontmatter `agent_state` field above (`needs_session_zero` → [Session zero](#session-zero); `ready` → standard 2-turn research session; absent → see [Framework (Core)](#framework-core) fallback). Session zero has no brief — follow [Session zero](#session-zero) directly.
+Also before any tool call you must have: (1) read [Framework (Core)](#framework-core) and [Framework (Reference)](#framework-reference) in full; (2) determined the session state from the frontmatter `agent_state` field above (`needs_session_zero` → [Session zero](#session-zero); `ready` → standard 2-turn research session; `complete` → project declared complete, do not run a session automatically — see [Detect session state](#detect-session-state); absent → see [Framework (Core)](#framework-core) fallback). Session zero has no brief — follow [Session zero](#session-zero) directly.
 
 Tools at hand — if you have shell or code-execution access and `research-buddy --version` fails, install it: `pip install research-buddy` (alternates: `pip install --user`, `uv pip install`, `pipx install`). The CLI gives you: `bump <file> <Q-NNN> --apply` (all mechanical Turn-2 edits: queue→tracker move, frontmatter version/date bump, session/changelog/references stubs with `{{placeholders}}`), `locate <file> <anchor>` (exact line of any `@end` insertion point, fence-aware), `diff-summary <prior.md> <new.md>` (mechanical `@summary` block after the write), `validate` (deterministic compliance check — replaces mental simulation in Turn 2), `turn1` (brief skeleton pre-filled from frontmatter), `build`, `clean`, `upgrade`. Skip only if shell is unavailable or install fails. Full rule at [Self-validation](#self-validation).
 
@@ -81,6 +81,7 @@ Read the YAML frontmatter at the top. The authoritative signal is the top-level 
 
 - `agent_state: needs_session_zero` → run **session zero** (project initialization). See [Session zero](#session-zero) for the full flow. Turn 2 of session zero overwrites this field to `ready`.
 - `agent_state: ready` → run **standard session** (research one queue topic at a time).
+- `agent_state: complete` → research is declared complete. **Do not run a new session automatically.** Greet the user, confirm the project is done, and offer: (1) add new queue topics and resume research (reset `agent_state: ready` on the Turn 2 atomic write); (2) write or refresh the `## Deliverable Synthesis` section; (3) leave as-is with no changes. Do not emit a second-opinion brief or call any research tool unless the user picks option 1 and you are starting a new session.
 - Field absent (pre-1.9 documents only) → fall back to the legacy signal: `project.domain` null ⇒ session zero, non-null ⇒ standard session. Set `agent_state` explicitly on the next atomic write.
 
 **Version compatibility check (run before any work).** Compare the document's `research_buddy_version` against the framework version you have loaded (the one shown in the [research-buddy](https://github.com/nuncaeslupus/research-buddy) project at the time of the session). Branch on the difference:
@@ -357,7 +358,7 @@ This protocol applies wherever the queue is touched. It is the agent's job to ke
 
 **Re-queuing.** If a researched topic needs to be revisited (new findings contradict it, requirements changed, inconsistencies surfaced), propose a new queue topic with a **new** `Q-NNN` ID referencing the original in the Objective — the original ID stays only in the tracker. Run the insertion protocol — it may merge into an existing pending row. Keep the original Tracker row as historical record.
 
-**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete; (5) synthesize deliverable — write or refresh the `## Deliverable Synthesis` section, compiling the tracker findings into the project's stated deliverable form (see [File editing](#file-editing) convention 3 for the cite-or-cut rule).
+**Empty queue.** When all rows are done, ask the user to choose: (1) add new topics; (2) fresh-eyes review (scan the whole project, propose gaps); (3) reopen a specific topic; (4) declare research complete — set `agent_state: complete` in the YAML frontmatter on the Turn 2 atomic write; (5) synthesize deliverable — write or refresh the `## Deliverable Synthesis` section, compiling the tracker findings into the project's stated deliverable form (see [File editing](#file-editing) convention 3 for the cite-or-cut rule).
 
 <!-- @end: framework.reference.queue-rules -->
 

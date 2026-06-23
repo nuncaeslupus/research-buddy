@@ -764,3 +764,64 @@ class TestBuildAllVersionDiscovery:
         assert "proj_v1.0.3.json" in out
         # And ordered after the two-component one (1.0 < 1.0.3).
         assert out.index("proj_v1.0.json") < out.index("proj_v1.0.3.json")
+
+
+# ---------------------------------------------------------------------------
+# v1 JSON deprecation warnings
+# ---------------------------------------------------------------------------
+
+
+class TestV1DeprecationWarning:
+    """Every v1 JSON entry point (build, validate, upgrade, init --v1) must print
+    a deprecation warning to stderr on successful JSON processing."""
+
+    def test_perform_build_warns_v1_deprecated(
+        self, tmp_project: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from research_buddy.main import perform_build
+
+        json_path = next((tmp_project / "source").glob("*_v*.json"))
+        rc = perform_build(json_path, tmp_project)
+        assert rc == 0
+        assert "deprecated" in capsys.readouterr().err
+
+    def test_cmd_validate_json_warns_v1_deprecated(
+        self, tmp_project: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_validate
+
+        json_path = next((tmp_project / "source").glob("*_v*.json"))
+        rc = cmd_validate(Namespace(paths=[str(json_path)], prior=None))
+        assert rc == 0
+        assert "deprecated" in capsys.readouterr().err
+
+    def test_cmd_upgrade_json_warns_v1_deprecated(
+        self, tmp_project: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_upgrade
+
+        rc = cmd_upgrade(Namespace(paths=[str(tmp_project)], apply=False, no_validate=False))
+        assert rc == 0
+        assert "deprecated" in capsys.readouterr().err
+
+    def test_init_v1_warns_v1_deprecated(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_init
+
+        args = Namespace(
+            path=str(tmp_path / "new-proj"),
+            v1=True,
+            title=None,
+            subtitle=None,
+            ver=None,
+        )
+        rc = cmd_init(args)
+        assert rc == 0
+        assert "deprecated" in capsys.readouterr().err

@@ -1,5 +1,63 @@
 # Next session
 
+## Session 2026-06-23 (session 41)
+
+### What was done
+
+Shipped **PR-14: Design spikes** — three design decisions + implementations,
+versioned as **1.18.0**:
+
+**Decision 1 — P1-8 framework token overhead: closed/no-change.**
+The framework is empirically load-bearing for agent compliance (sessions 16/17
+showed agents without the full text skip the no-tool-call gate). Any "separate
+cheatsheet" split would risk that regression. Decision recorded in plan.md
+"Future improvements" as closed; no code change.
+
+**Decision 2 — v1 sunset: deprecation warnings on all v1 entry points.**
+Added `"Warning: v1 JSON format is deprecated and will be removed in v2.0. …"`
+to stderr in every v1 code path:
+- `commands/build.py` `perform_build` (after JSON load): steer to `migrate-v1-to-v2`
+- `commands/validate.py` `cmd_validate` (after JSON load): same
+- `commands/upgrade.py` `cmd_upgrade` (before json.load try-except): same
+- `commands/init.py` `_init_v1` (already existed, not added): steer to
+  `research-buddy init` without `--v1`
+
+Tests: `TestV1DeprecationWarning` (4 tests) in `test_main_coverage.py`.
+
+**Decision 3 — P1-7 empty-queue UX: add `agent_state: complete`.**
+Three-part implementation:
+- `validator_md.py`: `_VALID_AGENT_STATES = frozenset({"needs_session_zero",
+  "ready", "complete"})` + unknown-state warning in `_check_frontmatter`.
+- `turn1.py`: guard in `build_brief_skeleton` — raises `Turn1Error` if
+  `agent_state == "complete"` with a remedy hint (`set agent_state: ready`).
+- `starter.md`: preamble `agent_state` description updated; new bullet in
+  `detect-session-state` for the `complete` case (greet + offer three options:
+  add queue / write synthesis / leave as-is); queue rule empty-queue option (4)
+  now says "set `agent_state: complete` in the YAML frontmatter on the Turn 2
+  atomic write".
+
+Tests: `TestAgentStateValidation` (5) in `test_validator_md.py`;
+`TestCompleteState` (3) in `test_turn1.py`.
+
+Gates: `make lint` clean, `make test-cov` **614 passed** (↑12), **91.71%**
+coverage, examples in sync (after `make regen-examples`), starter validates
+error-clean, version-sync 1.18.0 in all five files.
+
+### Next steps
+
+1. **PR-7b: migrate dedup + drop marker (deferred)** — P2-10 (verdict-label
+   dedup, needs renderer-wide `seen_ids`) + P2-13c (dropped-content marker,
+   needs clearer spec). Only open item in the Opus review fix initiative
+   besides PR-12. Still deferred.
+2. **PR-12: README rewrite** — P3-2 (lead with v2 MD flow), P3-3 (For AI
+   Agents: lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+3. **PR-1: Release safety** still has an outstanding open item (verify the
+   per-version release notes extraction works end-to-end on the next release).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 40)
 
 ### What was done

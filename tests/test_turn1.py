@@ -255,3 +255,28 @@ class TestBriefSkeletonSyncWithCanonicalTemplate:
                 f"placeholder {{{{{ph}}}}} from the canonical template in starter.md "
                 "is not referenced in turn1.py — names have diverged"
             )
+
+
+class TestCompleteState:
+    """agent_state: complete raises Turn1Error before attempting to build a brief."""
+
+    def _complete_fm(self) -> str:
+        return _FM.replace("agent_state: ready", "agent_state: complete")
+
+    def test_complete_state_raises_turn1_error(self) -> None:
+        text = self._complete_fm() + "\n" + _QUEUE
+        with pytest.raises(Turn1Error) as exc_info:
+            build_brief_skeleton(text)
+        assert "complete" in str(exc_info.value).lower()
+
+    def test_complete_state_error_message_mentions_remedy(self) -> None:
+        text = self._complete_fm() + "\n" + _QUEUE
+        with pytest.raises(Turn1Error) as exc_info:
+            build_brief_skeleton(text)
+        assert "agent_state: ready" in str(exc_info.value)
+
+    def test_complete_state_cmd_returns_nonzero(self, tmp_path: Path) -> None:
+        md = tmp_path / "demo_v1.2-source.md"
+        md.write_text(self._complete_fm() + "\n" + _QUEUE, encoding="utf-8")
+        args = argparse.Namespace(path=str(md))
+        assert cmd_turn1(args) == 2
