@@ -1889,6 +1889,7 @@ function _updateTabFade() {
 }
 
 function _scrollTabIntoView(tab) {
+  if (TABS.indexOf(tab) === -1) return;
   var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
   if (!btn || !_tabScroll) return;
   var tsRect  = _tabScroll.getBoundingClientRect();
