@@ -406,6 +406,11 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _LINK_RE = re.compile(r"\[([^\]]+)\]\(#([^)]+)\)")
 _INLINE_CODE_RE = re.compile(r"`[^`\n]+`")
 
+# Executable-HTML patterns flagged in the body (warnings — see _check_dangerous_html).
+_SCRIPT_RE = re.compile(r"<\s*script\b", re.IGNORECASE)
+_EVENT_HANDLER_RE = re.compile(r"<[^>]*?\son\w+\s*=", re.IGNORECASE)
+_JS_URI_RE = re.compile(r"(?:href|src)\s*=\s*[\"']?\s*javascript:", re.IGNORECASE)
+
 
 def _slugify(text: str) -> str:
     """GitHub-flavored Markdown slug (approximate)."""
@@ -867,6 +872,55 @@ def _check_brief_context_slots(text: str, lines: list[str]) -> list[Issue]:
 # ---------------------------------------------------------------------------
 
 
+def _check_dangerous_html(lines: list[str]) -> list[Issue]:
+    """Warn on executable-HTML in the body (outside fenced/inline code).
+
+    v2 is LLM-authored Markdown rendered to single-file HTML that a human opens
+    in a browser (the renderer runs Jinja with autoescape off and passes raw
+    HTML through), so a `<script>`, an inline `on*=` event handler, or a
+    `javascript:` URI is a prompt-injection / trust concern. These are warnings,
+    not errors — a document may legitimately discuss such an example — but the
+    author should see them.
+    """
+    in_fence = _line_in_fence(lines)
+    issues: list[Issue] = []
+    for i, line in enumerate(lines):
+        if in_fence[i]:
+            continue
+        clean = _INLINE_CODE_RE.sub("", line)
+        if _SCRIPT_RE.search(clean):
+            issues.append(
+                Issue(
+                    "warning",
+                    "unsafe-html-script",
+                    "<script> in the document body — it executes when the HTML is opened; "
+                    "remove it or move it inside a fenced code block",
+                    i + 1,
+                )
+            )
+        if _EVENT_HANDLER_RE.search(clean):
+            issues.append(
+                Issue(
+                    "warning",
+                    "unsafe-html-event-handler",
+                    "inline HTML event handler (on…=) in the document body — "
+                    "remove it or move it inside a fenced code block",
+                    i + 1,
+                )
+            )
+        if _JS_URI_RE.search(clean):
+            issues.append(
+                Issue(
+                    "warning",
+                    "unsafe-html-js-uri",
+                    "javascript: URI in the document body — "
+                    "remove it or move it inside a fenced code block",
+                    i + 1,
+                )
+            )
+    return issues
+
+
 def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -888,6 +942,7 @@ def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
     issues.extend(_check_filename_version(path, text))
     issues.extend(_check_id_uniqueness(text, lines))
     issues.extend(_check_brief_context_slots(text, lines))
+    issues.extend(_check_dangerous_html(lines))
 
     if prior is not None:
         prior_text = prior.read_text(encoding="utf-8")

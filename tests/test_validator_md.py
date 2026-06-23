@@ -439,6 +439,36 @@ class TestBrokenLinkStarterDowngrade:
         assert all(i.severity == "info" for i in broken)
 
 
+class TestDangerousHtml:
+    def test_script_tag_warns(self, tmp_path: Path) -> None:
+        body = "Intro.\n\n<script>alert(1)</script>\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        issues = validate_md(path)
+        hit = [i for i in issues if i.code == "unsafe-html-script"]
+        assert len(hit) == 1
+        assert hit[0].severity == "warning"
+
+    def test_event_handler_warns(self, tmp_path: Path) -> None:
+        body = "Intro.\n\n<img src=x onerror=alert(1)>\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-event-handler" in _codes(validate_md(path))
+
+    def test_javascript_uri_warns(self, tmp_path: Path) -> None:
+        body = 'Intro.\n\n<a href="javascript:alert(1)">x</a>\n'
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-js-uri" in _codes(validate_md(path))
+
+    def test_script_in_fenced_code_not_flagged(self, tmp_path: Path) -> None:
+        body = "Example:\n\n```\n<script>alert(1)</script>\n```\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-script" not in _codes(validate_md(path))
+
+    def test_script_in_inline_code_not_flagged(self, tmp_path: Path) -> None:
+        body = "Never write `<script>` tags.\n"
+        path = _write(tmp_path / "demo_v1.0.md", _project_doc(body))
+        assert "unsafe-html-script" not in _codes(validate_md(path))
+
+
 class TestStarterFile:
     def test_bundled_starter_md_validates_clean(self) -> None:
         from importlib import resources

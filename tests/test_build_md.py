@@ -238,6 +238,30 @@ class TestThemeOverride:
         assert "/* CUSTOM */" in html
         assert "body{color:red}" in html
 
+    def test_theme_css_style_close_neutralized(self) -> None:
+        # A literal </style> in theme CSS must not break out of the <style> block.
+        html = build_md_html(
+            _doc("## A\n\nx\n"),
+            theme_css="body{}</style><script>alert(1)</script>",
+        )
+        assert "</style><script>" not in html
+        assert r"<\/style>" in html
+
+
+class TestBuildSafety:
+    def test_tab_label_double_quote_escaped(self) -> None:
+        html = build_md_html(_doc('## Tab With "Quotes"\n\nbody\n'))
+        # The raw double-quote must be escaped inside the data-tab-label attribute.
+        assert 'data-tab-label="Tab With "Quotes""' not in html
+        assert 'data-tab-label="Tab With &quot;Quotes&quot;"' in html
+
+    def test_multiparagraph_usage_item_has_no_nested_p(self) -> None:
+        body = '## A\n\n```rb-banner usage\ntitle: Use\nitems:\n  - "One.\\n\\nTwo."\n```\n'
+        html = build_md_html(_doc(body))
+        # The <li> must not contain <p> children (invalid nesting).
+        assert "<li><p>" not in html
+        assert "<br><br>" in html
+
 
 class TestBuildMdCli:
     """Integration: `research-buddy build foo.md` dispatches through cmd_build."""
@@ -276,6 +300,8 @@ class TestBuildMdCli:
         src.write_text(project_null_ver + "\n## A\n", encoding="utf-8")
         rc = perform_build_md(src, tmp_path, no_versioning=True)
         assert rc == 1
+        # P0-3: the render is gated — no HTML is written when there are errors.
+        assert not (tmp_path / "demo.html").exists()
 
     def test_frontmatter_theme_css_loaded(self, tmp_path: Path) -> None:
         from research_buddy.main import perform_build_md

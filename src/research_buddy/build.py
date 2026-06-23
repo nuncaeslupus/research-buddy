@@ -103,6 +103,18 @@ class BuildState:
 # ── Assets ──────────────────────────────────────────────────────────────────
 
 
+def _neutralize_style_close(css: str) -> str:
+    """Defang any ``</style>`` inside user theme CSS before it's inlined.
+
+    The theme block is interpolated raw into the page's ``<style>`` element
+    (Jinja ``autoescape=False``), so a literal ``</style>`` — accidental or
+    malicious — would close the element early and let following text render as
+    HTML. Backslash-escaping the slash is a no-op for the CSS parser (``<\\/style>``
+    is the same token in a string) but no longer matches the HTML end-tag.
+    """
+    return re.sub(r"</(\s*style)", r"<\\/\1", css, flags=re.IGNORECASE)
+
+
 def _load_asset(name: str, subdir: str = "") -> str:
     """Load a bundled asset file from the package."""
     if subdir:
@@ -717,7 +729,9 @@ def build_html(doc: Doc, *, theme_css: str | None = None) -> str:
     )
 
     # theme override + mandatory footer CSS
-    theme_block = f"\n/* ── Theme overrides ── */\n{theme_css}" if theme_css else ""
+    theme_block = (
+        f"\n/* ── Theme overrides ── */\n{_neutralize_style_close(theme_css)}" if theme_css else ""
+    )
     theme_block += _RB_FOOTER_CSS
 
     return (

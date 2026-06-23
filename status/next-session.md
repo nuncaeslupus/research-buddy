@@ -1,5 +1,58 @@
 # Next session
 
+## Session 2026-06-23 (session 34)
+
+### What was done
+
+Shipped **PR-8: build safety + render bugs** — five items across
+`commands/build.py`, `build_md.py`, `build.py`, and `validator_md.py`:
+
+- **P0-3 — gate the render on validator errors.** `perform_build_md` now
+  aborts (exit 1, no HTML written) when `validate_md` returns error-severity
+  issues; warnings still build. Pairs with PR-2 (broken cross-links are now
+  errors). The existing error test was strengthened to assert no HTML is
+  written. The v2 starter and all valid fixtures build clean, so no test broke.
+- **P2-14 — escape tab labels.** `data-tab-label="{label}"` used the raw H2
+  text; a `"` broke the attribute. Now `html.escape(label, quote=True)`.
+- **P2-15 — multi-paragraph inline.** `_md_render_inline` dropped multi-`<p>`
+  output verbatim into `<li>`. Found a deeper bug while fixing: the
+  single-paragraph `re.fullmatch(r"<p>(.*?)</p>", …, DOTALL)` *also* matches
+  multi-paragraph output (the trailing `</p>` anchors to EOF), returning a
+  body that still contained `</p><p>`. Fixed by rejecting that branch when the
+  capture has an interior `</p>`, then joining real paragraphs with `<br><br>`.
+- **P2-17 — neutralize `</style>`.** New shared `build._neutralize_style_close`
+  backslash-escapes any `</style>` in user theme CSS before it's inlined into
+  the `<style>` block (Jinja is `autoescape=False`). Applied on both the v1
+  (`build.py`) and v2 (`build_md.py`) theme paths.
+- **P3-V2-TRUST — dangerous-HTML warnings.** New `_check_dangerous_html` warns
+  (`unsafe-html-script` / `-event-handler` / `-js-uri`) on `<script>`, inline
+  `on*=`, or `javascript:` in the body, skipping fenced and inline code. The
+  bundled starter is clean of these.
+- **P2-16 was already shipped in PR-10** (non-UTF-8 MD-source guard) — verified,
+  not re-done.
+
+8 new tests (`TestBuildSafety`, `TestThemeOverride` addition, `TestDangerousHtml`,
+strengthened CLI gate test). Gates: `make lint` clean, `make test-cov`
+**586 passed**, **91.68%**.
+
+This partially closes the "v2 escaping / trust model" backlog item (the
+`</style>` break-out is neutralized and dangerous patterns are flagged); full
+`r_svg`/raw-HTML sanitization on the v2 path remains open.
+
+### Next steps
+
+1. **PR-1 (release safety + changelog)** — P0-2 (`release.yml`: move tag after
+   publish), P3-1 (backfill `CHANGELOG.md` since v1.2.0), P3-5 (extract
+   current-version section for release notes).
+2. **PR-7b** (deferred): verdict-label dedup (renderer-wide `seen_ids`) +
+   dropped-content marker.
+3. **PR-11 (upgrade edge cases)**, then the PR-3/4/5 starter.md editorial
+   batches (the biggest editorial lift), and PR-12/13/14.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 33)
 
 ### What was done
