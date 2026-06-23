@@ -1,5 +1,59 @@
 # Next session
 
+## Session 2026-06-23 (session 42)
+
+### What was done
+
+Shipped **PR-7b: migrate dedup + drop marker** — the last deferred item in the
+Opus review fix initiative. Two items in one PR (#125):
+
+**P2-10 — verdict `<a id>` deduplication.**
+- New `_unique_aid(base_aid, seen_ids)` helper after `_slug`. Returns `base_aid`
+  unchanged when `seen_ids is None` (backward compat). On collision, appends
+  `-2`, `-3`, … suffixes. Guards against empty `base_aid` (from a label
+  containing only punctuation) by falling back to `"anchor"`.
+- `seen_ids: set[str] = set()` created in `migrate()` and passed to every
+  verdict-capable builder: `build_overview_tab`, `build_domain_tab`,
+  `build_discarded_alternatives`, `build_session_notes`, `build_reasoning_journey`,
+  `build_references`, `build_changelog`. The `<!-- @rule: R-FM-1 -->` marker
+  keeps the original id (so validators can detect real data errors); only the
+  HTML `<a id>` is deduplicated.
+
+**P2-13c — dropped-content marker.**
+- `INTENTIONALLY_DROPPED_RESEARCH_SECTIONS = frozenset({"Research Methodology"})`
+  (the v2 in-file framework replaces it).
+- `_dropped_research_sections(research_tab)` returns sorted names of dropped
+  sections present in the source.
+- `migrate()` inserts an HTML comment before `## Project Specification` when any
+  sections are dropped.
+- `main()` prints a stderr warning listing dropped sections after migration.
+
+Tests: `TestVerdictLabelDedup` (9 tests) + `TestDroppedContentMarker` (8 tests).
+
+Follow-up fixes after Gemini code review on the PR (also in #125):
+- Empty `base_aid` guard in `_unique_aid` (guarded `<a id="">` risk).
+- `seen_ids` threading extended to all remaining render-calling builders
+  (`build_session_notes`, `build_reasoning_journey`, `build_references`,
+  `build_changelog`) — the initial implementation only covered domain tabs,
+  overview, and discarded alternatives.
+
+Gates: `make lint` clean, **631 passed**, **91.79%** coverage. PR #125 merged.
+
+### Next steps
+
+1. **PR-12: README rewrite** — P3-2 (lead with v2 MD flow), P3-3 (For AI
+   Agents: lead with starter.md), P3-4 (scope version-compat claim to v1 only).
+   The Opus review fix initiative is now **complete** (PR-7b was the last open
+   item; PR-12 README and PR-1 release safety remain).
+2. **PR-1: Release safety** — P0-2 (move tag after publish in release.yml),
+   P3-1 (backfill CHANGELOG.md), P3-5 (per-version release notes extraction).
+   One open follow-up: verify the per-version release notes extraction works
+   end-to-end on the next real release.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 41)
 
 ### What was done
