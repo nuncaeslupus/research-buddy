@@ -219,21 +219,105 @@ class TestFrontmatterMigration:
         with pytest.raises(UpgradeError, match="doc_format_version"):
             upgrade_md(stale, starter, __version__)
 
-    def test_doc_ahead_of_tool_raises(self) -> None:
-        """A doc stamped with a future research_buddy_version refuses downgrade.
-
-        The field is sometimes used as 'framework version this doc was authored
-        against' — silently rolling it back would lose user intent. Force the
-        user to choose between upgrading the tool and manually editing the doc.
-        """
+    def test_doc_ahead_of_tool_skips_version_bump(self) -> None:
+        """A doc stamped with a future research_buddy_version must not be
+        downgraded. Instead, upgrade_md succeeds, leaves the version stamp
+        untouched, and records an informational note in changes."""
         starter = _starter_text()
         ahead = starter.replace(
             f'research_buddy_version: "{__version__}"',
             'research_buddy_version: "99.0.0"',
             1,
         )
-        with pytest.raises(UpgradeError, match="AHEAD of the tool"):
-            upgrade_md(ahead, starter, __version__)
+        # Must NOT raise.
+        upgraded, changes = upgrade_md(ahead, starter, __version__)
+        # The version stamp must be preserved.
+        assert 'research_buddy_version: "99.0.0"' in upgraded
+        # An informational note about being AHEAD must appear in changes.
+        assert any("AHEAD" in c for c in changes)
+        # Text is unchanged (the version was the only potential diff here).
+        assert upgraded == ahead
+
+    def test_doc_ahead_skips_version_but_refreshes_framework(self) -> None:
+        """When the doc is ahead of the tool but the framework is stale,
+        the framework block is still refreshed while the version stamp is left
+        alone."""
+        starter = _starter_text()
+        # Make the framework stale AND stamp a future version.
+        stale = _replace_framework(starter, "## Stale old framework block.")
+        ahead = stale.replace(
+            f'research_buddy_version: "{__version__}"',
+            'research_buddy_version: "99.0.0"',
+            1,
+        )
+        upgraded, changes = upgrade_md(ahead, starter, __version__)
+        # Framework must have been refreshed.
+        assert "framework block ← starter.md" in changes
+        assert "Stale old framework block" not in upgraded
+        # Version stamp must be untouched.
+        assert 'research_buddy_version: "99.0.0"' in upgraded
+        # AHEAD note in changes.
+        assert any("AHEAD" in c for c in changes)
+
+    def test_insert_respects_4space_indent(self) -> None:
+        """_insert_in_project_block must match the doc's existing indent style.
+
+        If the project: block children are indented with 4 spaces, inserted
+        lines (e.g. source_tiers) must also use 4-space indent, not 2-space.
+        """
+        starter = _starter_text()
+        # Build a version of the starter whose project: block uses 4-space indent.
+        lines = starter.splitlines()
+        new_lines = []
+        in_project = False
+        for line in lines:
+            if line.startswith("project:"):
+                in_project = True
+                new_lines.append(line)
+                continue
+            if in_project:
+                # End of project block: a non-indented, non-blank line
+                if line and not line.startswith(" ") and not line.startswith("\t"):
+                    in_project = False
+                    new_lines.append(line)
+                    continue
+                # Convert 2-space children to 4-space, skip source_tiers block.
+                if line.startswith("  source_tiers:"):
+                    # skip source_tiers and its children
+                    new_lines.append("SKIP_MARKER_SOURCE_TIERS")
+                    continue
+                skip_marker = "SKIP_MARKER_SOURCE_TIERS"
+                if line.startswith("    ") and new_lines and new_lines[-1] == skip_marker:
+                    continue  # skip source_tiers children
+                if line.startswith("  ") and not line.startswith("    "):
+                    # top-level project child: double the indent
+                    new_lines.append("  " + line)
+                    continue
+                elif line.startswith("    ") and not line.startswith("      "):
+                    # second-level project child: double the indent
+                    new_lines.append("    " + line)
+                    continue
+            new_lines.append(line)
+        # Remove the skip marker if it ended up in there
+        four_space_lines = [ln for ln in new_lines if ln != "SKIP_MARKER_SOURCE_TIERS"]
+        four_space_source = "\n".join(four_space_lines) + "\n"
+        # The source should now be missing source_tiers.
+        fm_block = four_space_source.split("\n---\n", 2)[0]
+        assert "source_tiers" not in fm_block, (
+            "source_tiers should be absent in the 4-space test source"
+        )
+
+        # Verify the project block children use 4-space indent.
+        assert "    domain:" in fm_block or "    file_name:" in fm_block, (
+            "expected 4-space indented project children"
+        )
+
+        upgraded, changes = upgrade_md(four_space_source, starter, __version__)
+        assert any("source_tiers added" in c for c in changes)
+        fm_after = upgraded.split("\n---\n", 2)[0]
+        # The inserted source_tiers lines must use 4-space indent.
+        assert "    source_tiers:" in fm_after
+        assert "      tier_1:" in fm_after or "        tier_1:" in fm_after
 
 
 class TestPreambleReplacement:
@@ -280,6 +364,29 @@ class TestPreambleReplacement:
         with pytest.raises(UpgradeError, match=r"no `<!-- @anchor:"):
             upgrade_md(broken, starter, __version__)
 
+    def test_preamble_ignores_anchor_in_fenced_block(self) -> None:
+        """A fenced code block in the preamble region that contains a fake
+        `<!-- @anchor: ... -->` line must not terminate preamble detection early.
+        The real first @anchor line (outside any fence) is the true boundary."""
+        starter = _starter_text()
+        # Build a stale preamble that contains a fenced block with a fake anchor.
+        fake_anchor_fence = (
+            "<!-- STALE PREAMBLE START -->\n"
+            "```\n"
+            "<!-- @anchor: fake.anchor -->\n"
+            "```\n"
+            "<!-- STALE PREAMBLE END -->"
+        )
+        stale = self._replace_preamble(starter, fake_anchor_fence)
+        assert "STALE PREAMBLE START" in stale
+
+        # The upgrade must succeed: the fake anchor inside the fence must be
+        # ignored, so the real first @anchor is correctly identified as the
+        # preamble boundary.
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert "preamble ← starter.md" in changes
+        assert "STALE PREAMBLE START" not in upgraded
+
 
 class TestAgentReminderRefresh:
     """The visible `> **Agent: ...` blockquote inside the title block is
@@ -311,6 +418,26 @@ class TestAgentReminderRefresh:
         # No blockquote change applied; preamble/framework may still be in sync.
         assert "agent-reminder blockquote ← starter.md" not in changes
         assert star_line not in upgraded
+
+    def test_blockquote_ignores_match_in_fenced_block(self) -> None:
+        """A fenced code block in the body that contains `> **Agent:` must not
+        shadow the real agent-reminder blockquote. The real one should still be
+        found and refreshed."""
+        starter = _starter_text()
+        star_line = next(line for line in starter.splitlines() if line.startswith("> **Agent:"))
+        # Make the real blockquote stale.
+        stale = starter.replace(star_line, "> **Agent: old reminder text.**", 1)
+        # Inject a fenced block containing a fake `> **Agent:` line somewhere
+        # in the body (after the framework block).
+        fake_fence = "\n```\n> **Agent: this is inside a fence and must be ignored.**\n```\n"
+        stale = stale + fake_fence
+
+        upgraded, changes = upgrade_md(stale, starter, __version__)
+        assert "agent-reminder blockquote ← starter.md" in changes
+        assert "old reminder text" not in upgraded
+        assert star_line in upgraded
+        # The fence and its fake blockquote must survive untouched.
+        assert "this is inside a fence and must be ignored" in upgraded
 
     def test_replaces_multi_line_blockquote_without_orphans(self) -> None:
         """If a source doc has a wrapped/multi-line blockquote, the entire

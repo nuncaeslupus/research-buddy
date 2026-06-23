@@ -60,6 +60,11 @@ def _upgrade_md_file(path: Path, args: argparse.Namespace) -> int:
         print()
         return 1
 
+    if upgraded == source_text:
+        # changes were informational only; nothing to write
+        print()
+        return 0
+
     atomic_write(path, upgraded)
     print(f"  → wrote {path}")
 

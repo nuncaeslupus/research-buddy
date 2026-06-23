@@ -128,6 +128,20 @@ class TestUpgradeDoc:
         assert isinstance(upgraded["agent_guidelines"]["framework"], dict)
         assert diffs["framework_removed"] == []
 
+    def test_version_ahead_skips_not_downgrades(self, starter_doc: dict) -> None:
+        """When the doc's research_buddy_version is newer than the installed
+        tool, the version field must NOT be overwritten — a note is appended
+        to changes instead."""
+        doc = copy.deepcopy(starter_doc)
+        doc["meta"]["research_buddy_version"] = "99.0.0"
+
+        upgraded, changes, _ = upgrade_doc(doc, starter_doc, __version__)
+
+        # Version must NOT have been downgraded.
+        assert upgraded["meta"]["research_buddy_version"] == "99.0.0"
+        # A "not bumped" message must appear in changes.
+        assert any("not bumped" in c for c in changes)
+
 
 class TestUpgradeReorder:
     """Reorder-only changes must produce a write — `dict ==` ignores key order

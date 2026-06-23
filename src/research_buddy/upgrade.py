@@ -82,9 +82,19 @@ def upgrade_doc(
 
     meta = upgraded.setdefault("meta", {})
     old_rb = meta.get("research_buddy_version", "unknown")
-    meta["research_buddy_version"] = installed_version
     if old_rb != installed_version:
-        changes.append(f"meta.research_buddy_version: {old_rb} → {installed_version}")
+        from research_buddy.validator import _parse_semver
+
+        old_semver = _parse_semver(str(old_rb))
+        new_semver = _parse_semver(installed_version)
+        if old_semver and new_semver and old_semver > new_semver:
+            changes.append(
+                f"meta.research_buddy_version: {old_rb!r} is AHEAD of tool "
+                f"{installed_version!r} — not bumped"
+            )
+        else:
+            meta["research_buddy_version"] = installed_version
+            changes.append(f"meta.research_buddy_version: {old_rb} → {installed_version}")
 
     # Structural reordering — fix four levels of key order so an agent
     # reading the file top-to-bottom hits keys in the canonical order
