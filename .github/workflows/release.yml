@@ -56,12 +56,10 @@ jobs:
           fi
 
   build:
-    name: Build distributions and tag
+    name: Build distributions
     needs: guard
     if: needs.guard.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -76,15 +74,6 @@ jobs:
 
       - name: Twine metadata check
         run: uv run twine check dist/*
-
-      - name: Tag the release commit
-        env:
-          VER: ${{ needs.guard.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VER" -m "v$VER"
-          git push origin "v$VER"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -120,12 +109,33 @@ jobs:
         with:
           name: dist
           path: dist/
-      - name: Create release with CHANGELOG body and attached dist
+
+      - name: Tag the release commit
+        env:
+          VER: ${{ needs.guard.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VER" -m "v$VER"
+          git push origin "v$VER"
+
+      - name: Extract release notes and create release
         env:
           GH_TOKEN: ${{ github.token }}
           VER: ${{ needs.guard.outputs.version }}
         run: |
+          python3 << 'EOF'
+          import re, os, pathlib, sys
+          ver = os.environ["VER"]
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          pattern = r"(?m)^## \[" + re.escape(ver) + r"\].*?(?=^## \[|\Z)"
+          m = re.search(pattern, text, re.DOTALL)
+          if not m:
+              print(f"No CHANGELOG entry for {ver}", file=sys.stderr)
+              sys.exit(1)
+          pathlib.Path("/tmp/release-notes.md").write_text(m.group().strip())
+          EOF
           gh release create "v$VER" \
             --title "v$VER" \
-            --notes-file CHANGELOG.md \
+            --notes-file /tmp/release-notes.md \
             dist/*

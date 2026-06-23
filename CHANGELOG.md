@@ -4,6 +4,64 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] — 2026-06-08
+
+Brief-gate hardening and localization release. Root cause traced to a real
+session where an agent skipped the second-opinion brief: it had been uploaded a
+*clean view* (`*_v*.md`) instead of the source file, and the preamble that
+survived `clean` referenced framework sections `clean` had removed — dangling
+links that turned "fill a template" into "generate from scratch."
+
+### Added
+
+- **`research-buddy turn1 <file>`** — prints the Turn-1 second-opinion brief
+  skeleton pre-filled from frontmatter (project description, source tiers, fixed
+  Never-tier) plus the top Open Research Queue row (topic + objective). Judgement
+  slots are left as `{{placeholders}}`; guidance to stderr so stdout is clean to
+  paste. "Fill, don't remember."
+- **HTML section-heading localization** (`localize.py`): framework headings
+  ("Open Research Queue", "References", Project Specification subheadings)
+  display in the document's `language.code` while English slugs/IDs are preserved
+  so cross-links never break. Ships Spanish (`es`); `section_labels` frontmatter
+  overrides/extends.
+
+### Fixed
+
+- **`research-buddy clean` now strips the agent preamble.** The operating-manual
+  HTML comment between the frontmatter and the first `<!-- @anchor:` line is
+  replaced with a one-line self-identifying note pointing back at the
+  `*-source.md`. Previously the preamble survived `clean` with its framework
+  cross-links rewritten to dangling plain text — an operating manual pointing at
+  sections that no longer existed.
+- **Hardened starter preamble**: brief gate stated first *and* last (primacy +
+  recency), concrete tool families named, inline fill-in brief skeleton so agents
+  with a short read window still see the brief contract. Propagates to existing
+  docs via `research-buddy upgrade <file>.md --apply`.
+
+## [1.12.1] — 2026-06-05
+
+Bug-fix patch for `migrate-v1-to-v2`. Discovered when migrating a real mature
+v1.14 document (31 topics, mixed schema vintage).
+
+### Fixed
+
+- **Language coercion crash.** `meta.language` as a plain string (e.g.
+  `"English"`) crashed `migrate` in `build_frontmatter`. Now coerced to
+  `{"code": "en", "label": "English"}` via the BCP-47 mapping `build` uses.
+- **Project spec read from the wrong location.** In mature v1 docs the real spec
+  lives in top-level `doc["project_specific"]`, not in
+  `agent_guidelines.project_specific` (which stays at the `[FILL]` template
+  value). `migrate` now does a per-field merge: the filled `agent_guidelines`
+  value wins; missing fields fall back to the top-level field. Recovers
+  `deliverable_type`, `timing`, source tiers, and never-tier.
+- **Overview tab dropped unconditionally.** `migrate` now extracts substantive
+  sections from the `overview` tab into a top-level `## Overview` section,
+  dropping only navigation boilerplate (Quick Links / How to Navigate / …).
+- **Queue done-detection based only on the ✦ glyph.** A row marked "Researched
+  v1.3" (no glyph) remained in both the Open Research Queue *and* the Research
+  Tracker, violating the "no ID in both" invariant. Detection now also matches
+  `/researched/i` text and any row whose Q-NNN ID is already in the tracker.
+
 ## [1.12.0] — 2026-06-02
 
 Validation-hardening release motivated by a real recovery effort: when a v2
@@ -133,6 +191,256 @@ upgrade <file>.md --apply`.
   queue, tracker, rules, DAs, sessions, references, changelog) is still
   preserved exactly. Existing v1.9.1 projects will pick up the operating-
   manual hardening on `upgrade --apply`.
+
+## [1.9.1] — 2026-05-14
+
+### Fixed
+
+- Starter template: the `adopted_in` field in the Adopted Rules template now
+  uses `v1.X` as its placeholder (was `v1.0`, which misled agents into writing
+  the initial version number instead of the current session version).
+
+## [1.9.0] — 2026-05-12
+
+Session-zero hardening release. Driven by a postmortem where an agent mis-ran
+session zero, mistaking `[FILL]` placeholders for evidence the project was
+already configured.
+
+### Added
+
+- **`agent_state` frontmatter field** — explicit `needs_session_zero` / `ready`
+  state token the agent overwrites in session zero Turn 2. Replaces the implicit
+  "domain null → session zero" convention. `research-buddy upgrade <file>.md
+  --apply` backfills `agent_state: ready` for existing post-session-zero docs.
+- **Unmissable operating-manual preamble** — multi-line HTML comment immediately
+  after the YAML frontmatter: STOP, read the file first, deliverable is a
+  versioned `.md` file, NOT a chat response.
+- **Session-zero Turn 1 mode-switch**: three-case detection — (a) generic
+  kickoff → ask 5 setup questions; (b) all answers supplied/inferable → skip
+  questions, ship both turns in one message; (c) a research request → treat it
+  as implicit spec and seed it as Q-001.
+- **Forward-reference convention** — pending queue items (not yet promoted to
+  Tracker / Session Notes) have no `<a id>` target; reference them as plain
+  `Q-NNN`, not as a Markdown link. `research-buddy validate` enforces it.
+- **`### Templates` subsection** in Framework Reference — the three fenced
+  template examples (rule, DA, session) moved out of the user sections so
+  naïve `str_replace` inserts before `<!-- @end: ... -->` can't accidentally
+  clobber template scaffolding.
+- **Self-install instruction** — when the agent has shell access but
+  `research-buddy` is not installed, run `pip install research-buddy` first.
+
+### Changed
+
+- **Common failure modes** — "chat-output" anti-pattern added as the first
+  bullet: producing the session output as a chat response / artifact rather than
+  the versioned source file.
+
+## [1.8.0] — 2026-05-10
+
+v2 element catalog — standardized vocabulary and HTML renderers for structured
+content in v2 Markdown documents.
+
+### Added
+
+- **Element catalog** in Framework Reference: 18 supported elements + 7 callout
+  kinds + 2 algorithmic items. Closed list — anything not listed should be prose,
+  lists, or tables.
+- **Callout rendering** — GFM `> [!KIND]` admonitions render as styled callout
+  boxes: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, `LIMITATION`,
+  `HYPOTHESIS`.
+- **Fenced block renderers**: `rb-verdict` (evidence verdict with color + icon),
+  `rb-cards` (card grid), `rb-banner` (styled banner). YAML body syntax.
+- **`rb-ok` / `rb-bad` / `rb-flag` inline chips** — raw
+  `<span class="rb-ok">…</span>` pass through markdown-it's `html=True`.
+- **References section styling** — `<!-- @anchor: references -->` triggers a
+  compact `<ul class="references">` style (tighter spacing, hanging indent).
+- **Frontmatter `banners`** — list of banner blocks rendered above the first tab.
+- **Frontmatter `theme_css` cascade** — custom CSS applied in order: CLI
+  `--theme` flag → `theme_css` frontmatter field → conventional `theme.css` in
+  the project directory.
+- **Numbered H3/H4 subheadings** — `### 1.1` / `#### 1.1.1` render a
+  `<span class="num">` prefix matching v1 behavior.
+- **Content-based table column widths** — new `table_layout.py` module computes
+  language-independent column widths from per-column text profiles (p50/p90,
+  has-spaces, is-token). Similar tables share a column signature so widths stay
+  consistent across a document.
+
+## [1.7.0] — 2026-05-07
+
+### Added
+
+- **`research-buddy upgrade <file>.md`** — v2 dispatch path (dry-run default,
+  `--apply` to write). Replaces the framework block in an existing v2 source
+  file with the installed `starter.md` version, bumps `research_buddy_version`
+  forward only (refuses to downgrade), renames legacy `format_version` →
+  `doc_format_version`, and inserts missing `project.source_tiers` /
+  `project.domain_rules` frontmatter fields.
+- **`research-buddy init` defaults to v2 Markdown** — `research-buddy init
+  <dir>` now scaffolds `source/research-document.md`; `--v1` keeps the legacy
+  JSON scaffold.
+
+### Changed
+
+- v2 `upgrade` raises an error when the document's `research_buddy_version` is
+  *ahead* of the installed tool, directing the user to upgrade the CLI or
+  manually set the field. (v1 `upgrade` still silently downgrades — known
+  divergence.)
+
+## [1.6.0] — 2026-05-07
+
+Framework hardening release — substantial new rules and a renamed frontmatter key.
+
+### Added
+
+- **Validation MUST** — Turn 2 now requires agents to invoke `research-buddy
+  validate` (or paste a mental-simulation checklist when shell access is missing)
+  and include the validator output *before* the file artifact. Was a SHOULD.
+- **`doc_format_version` frontmatter key** — replaces the legacy `format_version`
+  key (still accepted with a `deprecated-format-version-key` warning).
+  `research-buddy upgrade <file>.md --apply` renames the key.
+- **`project.source_tiers` and `project.domain_rules`** frontmatter blocks —
+  fix previously-dangling `{{project.source_tiers.tier_1}}` placeholder
+  references.
+- **Rules status lifecycle and force-keyword guidance** (`Status: Active /
+  Superseded / Retired`, RFC 2119/8174 keyword norms).
+- **Queue Stable IDs and Re-queuing rules** — IDs never change once assigned;
+  resolved topics may be re-entered with a new ID.
+- **`brief-slot-empty-but-section-non-empty` validation warning** — fires when
+  the Turn 1 brief context slot says "None." but the corresponding section has
+  live entries.
+- **Session-start version-compatibility check** — advisory comparison of
+  `research_buddy_version` in the doc against the loaded framework version; MAJOR
+  mismatch surfaces as a one-line warning before work starts.
+
+## [1.5.0] — 2026-05-07
+
+v2 Markdown is now the **recommended format** for new research projects. The
+complete v2 surface ships production-ready.
+
+### Added
+
+- **`build_md.py`** — renders v2 Markdown source files to single-file HTML using
+  the same tab-bar / sidebar chrome as v1 JSON. Each `## H2` becomes a tab;
+  `### H3` / `#### H4` feed the sidebar navigation. `research-buddy build`
+  dispatches on file extension (`.md` → v2 pipeline, `.json` → v1 pipeline).
+- **`validator_md.py`** — validates v2 source files: frontmatter required fields,
+  `@anchor`/`@end` pairing, `@rule`/`@da`/`@session` IDs, cross-links,
+  `--prior` append-only invariants, version compatibility.
+- **`clean_md.py`** — strips the framework block and agent preamble to produce a
+  clean reader-facing Markdown view. Called by `research-buddy clean`.
+- **`migrate_v1_to_v2.py`** — converts a v1 JSON document to v2 Markdown source.
+  Invoked via `research-buddy migrate-v1-to-v2`.
+- **`starter.md`** — bundled v2 session-zero template (shipped in the wheel).
+- **`starter-example/starter-md.html`** — rendered v2 example alongside the
+  existing `starter.html`.
+- **New runtime dependencies**: `markdown-it-py>=3.0`, `mdit-py-plugins>=0.4`.
+
+### Changed
+
+- `research_buddy_version` in `starter.md` frontmatter is now tracked by
+  `scripts/sync_version.py` alongside the four existing version-sync targets
+  (five total).
+
+## [1.4.0] — 2026-04-26
+
+### Changed
+
+- **`build.py` migrated to Jinja2 templates.** All HTML markup moved from Python
+  f-strings into `base.html.j2`, `blocks.html.j2`, and `section.html.j2`.
+  Python functions are now 1–4 line wrappers around Jinja macros. Output is
+  byte-identical to 1.3.x (confirmed by `make regen-example`). Theme-aware
+  conditionals and future block types are now cheap template edits.
+
+### Added
+
+- New runtime dependency: `jinja2>=3.1` (+ transitive `markupsafe`).
+
+## [1.3.4] — 2026-04-25
+
+### Changed
+
+- **Light theme by default** — generated HTML now opens with a light palette;
+  the ☀/☾ toggle in the tab bar switches to dark and persists the preference in
+  `localStorage.setItem('rb-theme', …)`. An inline `<head>` script reads the stored
+  preference before first paint to avoid FOUC.
+
+## [1.3.3] — 2026-04-25
+
+### Fixed
+
+- **Sidebar overlay on landscape phones.** Media query expanded from
+  `(max-width: 768px)` to `(max-width: 768px), (max-height: 500px)`; the
+  JavaScript side uses `window.matchMedia` with the same query so CSS and JS
+  can't drift.
+
+## [1.3.2] — 2026-04-25
+
+### Fixed
+
+- **Tab bar mobile overflow** — on narrow screens the tab bar clipped with no
+  way to scroll. Added `overflow-x: auto`, hidden scrollbar, and `flex-shrink:
+  0; white-space: nowrap` on tab buttons. Sidebar burger menu is
+  `position: sticky; left: 0` so it stays pinned while tabs scroll.
+
+## [1.3.1] — 2026-04-25
+
+### Fixed
+
+- **Oversized logo** — bundled `research-buddy.png` resized from 1536×1536 px /
+  725 KB to 200×200 px / 27 KB (−96%). Generated HTML drops from ~944 KB to
+  ~190 KB per document.
+
+## [1.3.0] — 2026-04-25
+
+### Added
+
+- **`research-buddy upgrade <path>/*.json --apply`** — re-syncs an existing v1
+  JSON document's `agent_guidelines` with the installed `starter.json`. Preserves
+  `agent_guidelines.project_specific` and `session_zero.note`. Dry-run by default
+  (exits 1 on changes); `--apply` writes atomically and validates. Idempotent.
+
+### Changed
+
+- **`starter.json` reorganization** — `agent_guidelines.framework` keys reordered
+  for top-down readability. Brief template extracted from `turn_1_research` into a
+  single canonical `framework.second_opinion_review.brief_template`. Citation
+  format aligned to `Title, Author, Year, Venue, DOI/URL` everywhere.
+- **`upgrade` reorders existing files** at four key levels (top-level,
+  `agent_guidelines`, `meta`, `project_specific`); custom keys land at the end.
+
+## [1.2.2] — 2026-04-24
+
+Maintenance patch. No user-visible changes.
+
+## [1.2.1] — 2026-04-19
+
+### Added
+
+- **Turn markers** — every defined turn ends with a human-readable banner +
+  machine-readable `<!-- research-buddy:turn=...:status=... -->` HTML comment.
+  A `detection_regex` is exposed in `starter.json` / `starter.md` for
+  external automation.
+
+### Changed
+
+- **Implicit approval** — submitting second-opinion sources and a continue
+  signal in the same message, with clean vetting and no blocking contradictions,
+  counts as implicit approval; Turn 2 proceeds without a separate go-ahead.
+- **`html_generation.agent_action`** now distinguishes shell-access mode (run
+  the build command) from no-shell / web-chat mode (print the command verbatim,
+  ready to copy).
+
+## [1.2.0] — 2026-04-19
+
+### Added
+
+- **`synthesis_matrix` framework section** — Claim × Source evidence table with
+  a pre-registration rule (hypotheses registered before research, not after).
+- **`source_discovery` framework section** — multi-database principle, author
+  verification, preprint caution, paywalled-access recipes.
+- **`pre_update_confirmation` gate** — explicit 4-step preflight before Turn 2
+  atomic writes: second-opinion sources present, evidence clean-vetted, no
+  blocking contradictions, sources appended to the document.
 
 ## [1.1.1] — 2026-04-19
 

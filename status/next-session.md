@@ -1,5 +1,42 @@
 # Next session
 
+## Session 2026-06-23 (session 35)
+
+### What was done
+
+Shipped **PR-1: Release safety + changelog** — three items:
+
+- **P0-2 — tag after publish.** Moved the annotated-tag push from the `build`
+  job to the `github-release` job in `.github/workflows/release.yml`. Previously
+  a failed PyPI publish would leave an orphaned `vX.Y.Z` tag, locking the guard
+  into "already tagged" forever. Tag creation now runs only after
+  `publish-pypi` succeeds (`needs: [guard, publish-pypi]`). Removed the now-
+  unnecessary `permissions: contents: write` from the `build` job.
+- **P3-1 — CHANGELOG backfill.** Added 17 missing entries covering v1.2.0–
+  v1.13.0, reconstructed from `status/next-session.md` session logs. CHANGELOG
+  now has complete coverage from v1.0.3 through v1.13.0 (23 entries).
+- **P3-5 — per-version release notes.** Replaced the `--notes-file CHANGELOG.md`
+  approach (which dumped the entire history) with a Python heredoc that extracts
+  only the `## [VERSION]` section matching the release being cut, writing it to
+  `/tmp/release-notes.md` before `gh release create`. Uses
+  `r"(?m)^## \[" + re.escape(ver) + r"\].*?(?=^## \[|\Z)"` with `re.DOTALL`.
+
+No new tests (workflow-only + doc change). Gates: `make lint` clean, `make test`
+**588 passed**.
+
+PR: #117.
+
+### Next steps
+
+1. **PR-7b** (deferred): verdict-label dedup (renderer-wide `seen_ids`) +
+   dropped-content marker.
+2. **PR-11 (upgrade edge cases)**, then the PR-3/4/5 starter.md editorial
+   batches (the biggest editorial lift), and PR-12/13/14.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 34)
 
 ### What was done
