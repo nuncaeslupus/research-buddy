@@ -31,7 +31,11 @@ Shipped **PR-11: upgrade edge cases** — three items across `upgrade.py`,
   - `_line_in_fence` import promoted to module level (was a local import in one
     function; now needed by three).
 
-+15 tests. 593 passed, lint clean. PR: #118.
+Gemini review suggested skipping YAML comment lines (`#`) in `_sniff_project_indent`
+to avoid sniffing a bare `# comment` at column 0 as the indent unit — applied and
+resolved. +1 test for that case.
+
++16 tests total. 594 passed, lint clean. PR: #118.
 
 ### Next steps
 
