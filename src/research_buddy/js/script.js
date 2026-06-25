@@ -10,6 +10,37 @@ const TABS = /*TABS_INJECT*/['overview','research','theory','design','implementa
 /* ── helpers ── */
 function $(id) { return document.getElementById(id); }
 
+/* ── Tab bar fade-edge indicators ────────────────────────────────────── */
+var _tabScroll = $('tab-scroll');
+var _tabScrollWrap = $('tab-scroll-wrap');
+
+function _updateTabFade() {
+  if (!_tabScroll || !_tabScrollWrap) return;
+  var atLeft  = _tabScroll.scrollLeft <= 1;
+  var atRight = _tabScroll.scrollLeft + _tabScroll.clientWidth >= _tabScroll.scrollWidth - 1;
+  _tabScrollWrap.classList.toggle('fade-left',  !atLeft);
+  _tabScrollWrap.classList.toggle('fade-right', !atRight);
+}
+
+function _scrollTabIntoView(tab) {
+  if (TABS.indexOf(tab) === -1) return;
+  var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+  if (!btn || !_tabScroll) return;
+  var tsRect  = _tabScroll.getBoundingClientRect();
+  var btnRect = btn.getBoundingClientRect();
+  if (btnRect.left < tsRect.left) {
+    _tabScroll.scrollLeft += btnRect.left - tsRect.left - 8;
+  } else if (btnRect.right > tsRect.right) {
+    _tabScroll.scrollLeft += btnRect.right - tsRect.right + 8;
+  }
+}
+
+if (_tabScroll) {
+  _tabScroll.addEventListener('scroll', _updateTabFade, { passive: true });
+  window.addEventListener('resize', _updateTabFade, { passive: true });
+  _updateTabFade();
+}
+
 /* ── Tab switching ────────────────────────────────────────────────────── */
 function switchTab(tab, noSave) {
   TABS.forEach(function(t) {
@@ -23,6 +54,7 @@ function switchTab(tab, noSave) {
   var sb = $('sidebar');
   if (sb && window.matchMedia('(max-width: 768px), (max-height: 500px)').matches) sb.classList.remove('open');
   if (!noSave) try { sessionStorage.setItem('activeTab', tab); } catch(e) {}
+  _scrollTabIntoView(tab);
 }
 
 /* Tab bar clicks — event delegation on #tab-bar */

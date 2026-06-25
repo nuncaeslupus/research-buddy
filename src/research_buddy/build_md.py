@@ -740,8 +740,10 @@ def build_md_html(
     tab_bar = (
         '<div id="tab-bar">\n'
         '<button id="menu-toggle" aria-label="Menu">☰</button>\n'
+        '<div id="tab-scroll-wrap"><div id="tab-scroll">\n'
         + "\n".join(tab_btns)
-        + '\n<button id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">☾</button>'
+        + "\n</div></div>\n"
+        + '<button id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">☾</button>'
         + "</div>\n"
     )
 

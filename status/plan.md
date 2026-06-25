@@ -350,7 +350,7 @@ Notes:
 - P3-13, P3-14 nits fold into whichever PR touches the relevant file.
 - PRs follow the one-concern-per-PR rule [[feedback_pr_separation]].
 
-## Future improvements (queued, not in the current batch)
+## Future improvements
 
 Surfaced 2026-06-01 in a project-review pass. These are higher-leverage
 than further test-suite polish but are design-heavy / outward-facing, so
@@ -372,53 +372,37 @@ they need a decision before execution rather than being picked up blind.
   At minimum: document the trust boundary in the v2 docs. Ideally:
   sanitize the raw-HTML / `r_svg` passthrough on the v2 path.
 
-- **v1 sunset with a dated target.** v1 is "deprecated" in prose but every
-  feature still ships a dual path (`build`/`build_md`,
-  `validator`/`validator_md`, `upgrade`/`upgrade_md`, plus `migrate`),
-  roughly doubling surface area. A dated removal plan (e.g. v1 read-only
-  in 2.0, removed in 2.1) would let us stop investing in the legacy half
-  and shrink the codebase. Behavioural change for v1 users → needs a
-  decision.
+- ~~**v1 sunset with a dated target.**~~ **Decided (2026-06-23): remove in
+  v2.0.0.** No active projects use v1; deprecation warnings ship since
+  v1.18.0. The v2.0.0 release will remove all dual code paths
+  (`build`/`validate`/`upgrade` v1 branches, `init --v1`, `migrate` will
+  become a no-op stub or be dropped). v2.0.0 is a dedicated cleanup PR
+  once the active feature queue is empty.
 
-- **User-facing CHANGELOG.** `status/next-session.md` is an excellent
-  internal log but there's no `CHANGELOG.md` for `pip` upgraders — a
-  published PyPI package should have a "what changed" surface.
+- ~~**User-facing CHANGELOG.**~~ **Done (PR-1 / #127, 2026-06-23).** Full
+  backfill from v1.2.0 through v1.18.0 in `CHANGELOG.md`.
 
-- **Consistent encoding-error handling across all file reads.** PR #93
-  hardened the JSON-read paths (`build`/`validate`/`upgrade`/`migrate`)
-  to catch `UnicodeDecodeError` alongside `json.JSONDecodeError`, so a
-  `.json` with invalid UTF-8 bytes reports cleanly instead of crashing.
-  The remaining `read_text` sites are still unguarded and will traceback
-  on bad bytes: v2 Markdown build (`perform_build_md`), the `--theme`
-  / frontmatter `theme_css` / conventional `theme.css` loads, and the
-  bundled-starter loads in `_shared.py` / `upgrade_md`. Do it in one
-  pass for parity — ideally a small shared `read_text_or_error` helper
-  rather than scattering try/except, so the message/exit-code behaviour
-  stays uniform.
+- ~~**Consistent encoding-error handling.**~~ **Done (PR-10, 2026-06-22).**
+  `read_text_or_error` in `fileio.py` guards all user-file reads.
 
-- **Consistent temp-file cleanup across all atomic writers.** Surfaced in
-  the #95 review: `bump`, `upgrade`, `migrate`, and `init` all do
-  `tmp.write_text(...)` → `tmp.replace(target)` with no cleanup, so a
-  failed write leaves a `.tmp` behind. Low-severity (atomic-write cruft),
-  but worth one consistent pass — a shared `atomic_write(path, text)`
-  helper wrapping the write/replace in `try/finally` — rather than a
-  one-off in any single command. Pairs naturally with the encoding helper
-  above (both are "centralize a file-I/O concern" cleanups).
+- ~~**Consistent temp-file cleanup.**~~ **Done (PR-10, 2026-06-22).**
+  `atomic_write` in `fileio.py` replaces all ad-hoc temp writes.
 
-- **Mobile-friendly tab bar.** Symptom: when a document has many
-  tabs, the top menu overflows off-screen on mobile with no way to
-  scroll. Likely fix in `src/research_buddy/css/`: horizontal
-  `overflow-x: auto`, momentum scrolling, fade-edge scroll
-  indicators, and/or a hamburger fallback below a breakpoint. Needs
-  a real mobile device (or devtools emulation) to verify.
+- [ ] **Mobile-friendly tab bar (1.19.0).** Tab bar already has
+  `overflow-x: auto` but no visual affordance or active-tab scroll-into-
+  view. Fix: restructure HTML to separate scrollable tab strip
+  (`#tab-scroll`) from the fixed `#menu-toggle` / `#theme-toggle`; add
+  JS-controlled fade-edge overlays on a `#tab-scroll-wrap`; scroll the
+  active tab into view on switch. CSS-only on mobile media query;
+  `make regen-examples` required.
 
-- **Real PDF generator.** Current `--pdf` runs WeasyPrint over the
-  dark-themed HTML, which looks wrong on paper. Options:
-  (a) print-specific CSS — `@media print` with light theme, page
-  breaks, real headers/footers; (b) a separate JSON → PDF path
-  (ReportLab or similar) that treats PDF as a first-class output,
-  not a side effect of HTML. (a) is cheaper and probably good
-  enough; (b) is a bigger investment.
+- [ ] **Print / browser-PDF CSS (1.20.0).** `@media print` exists but is
+  minimal — dark theme bleeds through, no page-break control, code blocks
+  break awkwardly. Fix: force light theme in print, `page-break-inside:
+  avoid` on cards/tables/code, remove interactive chrome. Option (b)
+  (ReportLab / ReportLab PDF) deferred — the `@media print` path is
+  cheaper and good enough for the v1 WeasyPrint use case too.
+  CSS-only; `make regen-examples` required.
 
 [#24]: https://github.com/nuncaeslupus/research-buddy/pull/24
 [#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
