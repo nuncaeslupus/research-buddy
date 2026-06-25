@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.20.0"
+research_buddy_version: "1.21.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -172,7 +172,7 @@ The agent edits this file surgically with `str_replace` calls keyed off anchor s
 4. **YAML frontmatter** between `---` delimiters at the very top is the structured metadata. Add fields if needed; do not reorder existing ones.
 5. **Structured data uses fenced code blocks** with language hints `yaml rule`, `yaml da`, `yaml ref`. The Markdown body for the entry follows the code block.
 6. **Tables** for tabular data. Append rows immediately before the section's `@end` marker. Never delete rows from append-only sections; mark superseded by changing the Status column. The Open Research Queue is the exception: completed rows are removed (their finding lives in the Research Tracker).
-7. **Raw HTML is allowed for the following purposes only:** anchor comments (`<!-- @... -->`), inline link-target tags (`<a id="..."></a>`), inline SVG illustrations, and inline status chips (`<span class="rb-ok|rb-bad|rb-flag">…</span>`). The full set of allowed presentation primitives lives in [Element catalog](#element-catalog). Use Markdown for prose, tables, headings, lists, quotes, and code; the catalog is a closed list — anything outside it should be expressed as plain Markdown rather than invented locally.
+7. **Raw HTML is allowed for the following purposes only:** anchor comments (`<!-- @... -->`), inline link-target tags (`<a id="..."></a>`), inline SVG illustrations, and inline status chips (`<span class="rb-ok|rb-bad|rb-flag">…</span>`). The full set of allowed presentation primitives lives in [Element catalog](#element-catalog). Use Markdown for prose, tables, headings, lists, quotes, and code; the catalog is a closed list — anything outside it should be expressed as plain Markdown rather than invented locally. The HTML build **enforces** this: active content (`<script>`, inline `on*=` handlers, `javascript:`/`data:` URIs, `<iframe>`/`<foreignObject>`, and unlisted tags/attributes) is stripped at render time — and `validate` warns about it — so never rely on executable HTML; it will not survive the build. Inline SVG is rendered but sanitized as untrusted (no scripts, handlers, or animation).
 8. **Avoid em-dashes (`—`) in headings.** Slug algorithms handle them inconsistently. Use colons, parentheses, or plain dashes inside headings; em-dashes are fine in body prose.
 
 **Atomic-write semantics.** A "write" is one message containing all changes to all affected sections. Either every applicable update target executes in that message, or the agent reports the blocking issue without writing partial state.

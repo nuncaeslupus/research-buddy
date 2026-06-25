@@ -4,6 +4,40 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.21.0] — 2026-06-25
+
+v2 HTML sanitization — the render-time half of the v2 trust model. A v2 document
+is LLM-authored Markdown rendered to a single-file HTML page opened in a browser,
+and the renderer passes raw HTML through (for anchors, status chips, inline SVG).
+Previously a prompt-injected or careless agent emitting `<script>` / `onerror=` /
+`javascript:` was only *warned* about (1.14.0 / PR-8); now it is also stripped at
+build time.
+
+### Added
+
+- **`sanitize_html` (new `sanitize_html.py`, backed by `nh3`/ammonia).** Every
+  agent-authored HTML fragment on the v2 build path — each tab's rendered body,
+  the frontmatter `banners`, and the tab labels — is sanitized against an
+  allowlist matched to the framework's element catalog. Active content is removed
+  (`<script>` and its contents, inline `on*=` handlers, `javascript:`/`data:`
+  URIs, `<iframe>`/`<object>`/`<foreignObject>`/`<animate>`, and any unlisted
+  tag/attribute) while prose, tables, callouts, verdicts, cards, status chips,
+  and **inline SVG illustrations** are preserved. SVG is rendered but sanitized
+  as untrusted.
+- **`nh3>=0.3.0`** added as a core dependency (the `filter_style_properties`
+  sanitizer option requires 0.3.0).
+- **"Security & trust model (v2 Markdown)" section** in the README documenting
+  the trust boundary and the validate-warns / build-strips defense in depth.
+
+### Changed
+
+- **Frontmatter scalars are escaped into the page chrome.** `title`, `version`,
+  and `date` (which reach `<title>`, the footer and the sidebar) and the resolved
+  `lang_code` (`<html lang>`) are now `html.escape`d in `build_md`, closing a
+  `title: </title><script>…</script>` breakout in the otherwise-trusted chrome.
+- **`starter.md` rule 7** now states that the build enforces the raw-HTML
+  allowlist (strips active content), so agents don't rely on executable HTML.
+
 ## [1.20.0] — 2026-06-25
 
 Print / browser-PDF stylesheet overhaul. The generated HTML now produces a

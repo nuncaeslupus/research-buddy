@@ -43,6 +43,7 @@ from research_buddy.clean_md import (
     unwrap_framework_links,
 )
 from research_buddy.localize import localized_label
+from research_buddy.sanitize_html import sanitize_html
 from research_buddy.table_layout import TableLayout, compute_layouts
 from research_buddy.validator_md import _line_in_fence
 
@@ -695,6 +696,16 @@ def build_md_html(
     ver = fm.get("version") or (fill_placeholder if starter_mode else "")
     date = fm.get("date") or (fill_placeholder if starter_mode else "")
 
+    # These frontmatter scalars are interpolated raw into the page chrome and
+    # the (autoescape=False) Jinja template — including `<title>` and the
+    # `<!-- v… -->` comment. Escape them so an agent-authored title like
+    # `</title><script>…` can't break out. Display-only values, so escaping is
+    # transparent for ordinary text.
+    doc_title = html_lib.escape(str(doc_title))
+    short_title = html_lib.escape(str(short_title))
+    ver = html_lib.escape(str(ver))
+    date = html_lib.escape(str(date))
+
     body = "\n".join(text.splitlines()[body_start_idx:]) if body_start_idx else text
     body = _expand_admonitions(body)
     references_idx = _references_tab_index(body)
@@ -706,7 +717,7 @@ def build_md_html(
 
     state = BuildState()
     md = _md_renderer()
-    banners_html = _render_frontmatter_banners(md, fm.get("banners"))
+    banners_html = sanitize_html(_render_frontmatter_banners(md, fm.get("banners")))
 
     # Localization: framework section headings display in the document's
     # language (`language.code`) while their slugs/ids stay English so
@@ -730,7 +741,12 @@ def build_md_html(
         # displayed text localized.
         tid = state.unique_id(_slugify(label))
         tab_ids.append(tid)
-        rendered_label = md.renderInline(localized_label(label, lang_code, section_overrides))
+        # Tab label is agent-authored (an H2) rendered with html=True, then
+        # reused in the tab button, the <h1>, the footer and the sidebar nav —
+        # sanitize once so a label like `<img onerror=…>` can't inject anywhere.
+        rendered_label = sanitize_html(
+            md.renderInline(localized_label(label, lang_code, section_overrides))
+        )
         rendered_labels.append(rendered_label)
         active = " active" if i == 0 else ""
         tab_btns.append(
@@ -784,7 +800,11 @@ def build_md_html(
             "_rb_layouts": global_layouts[lo:hi],
             "_rb_table_idx": 0,
         }
-        body_html = md.renderer.render(tokens, md.options, env)
+        # Agent-authored body: markdown-it passed raw HTML through (html=True);
+        # neutralize active content (script / on*= / javascript: / unsafe SVG)
+        # while preserving the documented element catalog. The trusted chrome
+        # added around `body_html` below is NOT sanitized.
+        body_html = sanitize_html(md.renderer.render(tokens, md.options, env))
 
         # Frontmatter `banners` render above the first tab's content only —
         # they're top-of-doc chrome, not per-tab decoration.
@@ -804,7 +824,11 @@ def build_md_html(
         for entry in nav_entries:
             cls = ' class="sub"' if entry["level"] == 3 else ' class="subsub"'
             num_prefix = f"{entry['num']}. " if entry["num"] else ""
-            nav_html.append(f'<a href="#{entry["id"]}"{cls}>{num_prefix}{entry["title"]}</a>\n')
+            # `entry["title"]` is the raw heading source text; it lands as nav
+            # link text, so escape it (the nav doesn't render Markdown anyway).
+            nav_html.append(
+                f'<a href="#{entry["id"]}"{cls}>{num_prefix}{html_lib.escape(entry["title"])}</a>\n'
+            )
         nav_html.append("</nav>\n")
         nav_html_parts.append("".join(nav_html))
 
@@ -857,7 +881,9 @@ def build_md_html(
         _get_env()
         .get_template("base.html.j2")
         .render(
-            lang_code=lang_code,
+            # `lang_code` lands in `<html lang="…">`; escape for the attribute
+            # context (the template runs with autoescape=False).
+            lang_code=html_lib.escape(lang_code, quote=True),
             doc_title=doc_title,
             ver=ver,
             hljs_css=hljs_css,
