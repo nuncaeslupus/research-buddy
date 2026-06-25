@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "1.19.0"
+research_buddy_version: "1.20.0"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero

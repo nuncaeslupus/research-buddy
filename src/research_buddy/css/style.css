@@ -344,8 +344,60 @@ code { font-family: var(--mono); }
 }
 
 @media print {
-  #sidebar, #tab-bar, #menu-toggle, .copy-btn { display: none !important; }
-  #main { margin-left: 0; }
+  /* Force the light palette regardless of the on-screen theme toggle, and
+     print background colours so badges, tags and table headers stay legible
+     on paper. Keep these values in sync with the light `:root` palette above. */
+  :root, :root[data-theme="dark"] {
+    --bg:      #ffffff;  --bg2:    #f6f7fa;  --bg3: #eef0f5;  --bg4: #e2e6ee;
+    --border:  #d4d9e3;
+    --text:    #1a2030;  --text2:  #4a5568;  --text3: #8090a0;
+    --blue:    #2563eb;  --blue-d: #dbeafe;
+    --teal:    #0d9488;  --teal-d: #ccfbf1;
+    --green:   #16a34a;  --green-d: #dcfce7;
+    --amber:   #d97706;  --amber-d: #fef3c7;
+    --red:     #dc2626;  --red-d: #fee2e2;
+    --purple:  #7c3aed;  --purple-d: #ede9fe;
+    --code-bg: #fafafa;
+    --skip-bg: #f5ebeb; --skip-fg: #a07878;
+    color-scheme: light;
+  }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  @page { margin: 1.6cm; }
+
+  /* Drop the interactive app-shell chrome. #tab-bar carries the tab strip,
+     fade edges and both toggle buttons; #sidebar carries the section nav. */
+  #tab-bar, #sidebar, #menu-toggle, #theme-toggle, .copy-btn { display: none !important; }
+
+  /* Unpin the fixed full-viewport layout so the document flows across pages
+     instead of being clipped to a single screen. */
+  html, body { height: auto; }
+  #layout { display: block; height: auto; margin-top: 0; }
+  #main { overflow: visible; height: auto; position: static; }
+  .content { max-width: 100%; padding: 0; }
+
+  /* Stack every tab, each starting on a fresh page so the printout mirrors
+     the on-screen tab structure. */
   .tab-content { display: block !important; }
-  .content { padding: 20px; max-width: 100%; }
+  .tab-content + .tab-content { break-before: page; page-break-before: always; }
+
+  /* Don't split an atomic block across a page boundary. Tables are left out
+     on purpose: a long table should split, repeating its header (below) and
+     keeping each row intact, rather than being pushed whole onto a fresh page. */
+  .card, .callout, .verdict, .rb-verdict, .phase-card, .agnostic, .cc-banner,
+  .usage-banner, .code-wrap, pre, blockquote, tr, img, svg {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  thead { display: table-header-group; }   /* repeat header rows on each page */
+
+  /* Keep a heading with the content that follows it. */
+  h1, h2, h3, h4 { break-inside: avoid; break-after: avoid; page-break-after: avoid; }
+  h2 { margin-top: 24px; }                 /* trim the wide on-screen section gap */
+
+  /* Wrap long code lines instead of clipping them — paper has no horizontal
+     scroll. */
+  pre { white-space: pre-wrap; overflow-wrap: break-word; overflow: visible; }
+  .table-wrap { overflow: visible; }
+
+  p { orphans: 3; widows: 3; }
 }
