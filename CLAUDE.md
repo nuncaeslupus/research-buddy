@@ -214,6 +214,26 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   (`unsafe-html-{script,event-handler,js-uri}`) on `<script>` / inline `on*=` /
   `javascript:` in the body outside fenced/inline code — the LLM-authored-HTML
   trust surface; warnings, not errors, so an illustrative example still builds.
+- **v2 HTML sanitization (trust model).** The validator only *warns* about
+  active HTML; `sanitize_html.py` is the render-time backstop that actually
+  removes it. `build_md` runs every **agent-derived** fragment — each tab's
+  rendered body, the frontmatter `banners`, and the tab labels — through
+  `sanitize_html` (`nh3`/ammonia) with an allowlist matched to the renderer's
+  output + starter.md's Element catalog (block/inline tags, `<svg>` + its static
+  children, `span`/`div` with any class, `<a id>`, `<col style="width:…">` via a
+  `filter_style_properties` allowlist). It strips `<script>` (+ contents),
+  `on*=` handlers, `javascript:`/`data:` URIs (default ammonia `url_schemes`),
+  `<iframe>`/`<object>`/`<foreignObject>`/`<animate>`, and anything unlisted —
+  so **inline SVG is rendered but sanitized as untrusted**. `strip_comments=False`
+  (keeps `<!-- @anchor -->`), `link_rel=None` (no `rel` spam on internal links).
+  The **trusted chrome is NOT sanitized** (it carries the app's own
+  `<script>`/`data-tab`); instead the frontmatter scalars injected into it
+  (`title`/`version`/`date` → `<title>`, footer, sidebar) and `lang_code` (→
+  `<html lang>`) are `html.escape`d in `build_md`, closing the
+  `title: </title><script>…` breakout. Sanitizing the *rendered* HTML (not the
+  source) is deliberate: markdown-it has already escaped fenced/inline code, so
+  a `<script>` shown as a code example survives while a live one is stripped.
+  `nh3>=0.2` is a core dependency.
 - **`bump` writes a NEW versioned file, never in place.** `research-buddy
   bump <file>_vX.Y-source.md Q-NNN --apply` emits
   `<file>_vX.(Y+1)-source.md` (MINOR bump) and validates it with the input

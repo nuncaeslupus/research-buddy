@@ -363,14 +363,19 @@ they need a decision before execution rather than being picked up blind.
   keep the full framework in the source file; do not pursue a cheatsheet
   split.
 
-- **v2 escaping / trust model.** `build.py` runs Jinja with
-  `autoescape=False`; the PR #53 review pushback ("agents are instructed
-  not to embed JS") was reasonable for v1, where a human curates the
-  JSON. But v2's whole premise is *LLM-authored Markdown* rendered to
-  single-file HTML a human opens in a browser — a prompt-injected or
-  sloppy agent emitting `<script>`/`onerror=` is now in the threat model.
-  At minimum: document the trust boundary in the v2 docs. Ideally:
-  sanitize the raw-HTML / `r_svg` passthrough on the v2 path.
+- ~~**v2 escaping / trust model.**~~ **Done (1.21.0).** v2 is *LLM-authored
+  Markdown* rendered to single-file HTML a human opens in a browser, so a
+  prompt-injected/sloppy agent emitting `<script>`/`onerror=` is in the threat
+  model. PR-8 added validator *warnings* + `</style>` neutralization; this
+  closes the rest. New `sanitize_html.py` (`nh3`/ammonia) runs every
+  agent-derived fragment (tab bodies, `banners`, tab labels) through an
+  allowlist matched to the Element catalog — strips `<script>`/`on*=`/
+  `javascript:`/`data:`/`<iframe>`/`<foreignObject>` etc. while preserving
+  prose, tables, status chips, and **inline SVG (sanitized as untrusted)**.
+  Frontmatter scalars (`title`/`version`/`date`) + `lang_code` are `html.escape`d
+  into the chrome, closing the `title: </title><script>` breakout. Trust
+  boundary documented in README (new "Security & trust model" section),
+  `starter.md` rule 7, and CLAUDE.md. `nh3>=0.2` added as a core dependency.
 
 - ~~**v1 sunset with a dated target.**~~ **Decided (2026-06-23): remove in
   v2.0.0.** No active projects use v1; deprecation warnings ship since

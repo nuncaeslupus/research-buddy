@@ -1,5 +1,59 @@
 # Next session
 
+## Session 2026-06-25 (session 46)
+
+### What was done
+
+Shipped **v2 HTML sanitization** — **v1.21.0** — the render-time half of the
+"v2 escaping / trust model" backlog item (PR-8 had done the validator *warnings*
++ `</style>` neutralization; this closes the rest). First of two planned PRs this
+session; the second is the **v2.0.0 v1-removal** (in progress next).
+
+- **New `src/research_buddy/sanitize_html.py`** (`sanitize_html`, backed by
+  `nh3`/ammonia ≥0.2, added as a **core dependency**). Allowlist tuned to the
+  renderer's output + starter.md's Element catalog: block/inline tags, `<svg>` +
+  its static children, `span`/`div` with any class, `<a id>`, `<col
+  style="width:…">` via a `filter_style_properties` allowlist. Strips `<script>`
+  (+ contents via `clean_content_tags`), `on*=` handlers, `javascript:`/`data:`
+  URIs (default ammonia `url_schemes`), `<iframe>`/`<object>`/`<foreignObject>`/
+  `<animate>`, and anything unlisted. `strip_comments=False` (keeps
+  `<!-- @anchor -->`), `link_rel=None` (no `rel` spam).
+- **`build_md` wiring.** Sanitizes every **agent-derived** fragment — each tab's
+  rendered body, the frontmatter `banners`, the tab labels. The **trusted chrome
+  is NOT sanitized** (it carries the app's own `<script>`/`data-tab`). Instead the
+  frontmatter scalars injected into the chrome (`title`/`version`/`date` →
+  `<title>`/footer/sidebar) and `lang_code` (→ `<html lang>`) are `html.escape`d,
+  closing a `title: </title><script>…` breakout. Sanitizing the *rendered* HTML
+  (not the source) is deliberate: markdown-it has already escaped fenced/inline
+  code, so a `<script>` shown as a code example survives while a live one is
+  stripped.
+- **Docs.** README gained a "Security & trust model (v2 Markdown)" section;
+  `starter.md` rule 7 now says the build enforces the raw-HTML allowlist; CLAUDE.md
+  non-obvious note added; plan.md backlog item marked done.
+- **Verification.** The regen'd v2 example diff was only cosmetic normalization
+  (`&quot;`→`"`, `<hr />`→`<hr>`) — zero content loss; every anchor/table/chip
+  preserved. New tests: `test_sanitize_html.py` (20) + `TestBuildSanitization`
+  (7) in `test_build_md.py`, covering script/handler/js-uri/data-uri/iframe
+  stripping, SVG safety (script/onload/foreignObject/animate removed, static
+  shapes kept), chips/tables/anchors/style-filter preserved, and the `<title>`
+  breakout. The starter has no real `<svg>`, so SVG safety is unit-tested only.
+
+Gates: `make lint` clean, `make test-cov` **658 passed, 91.83%**
+(`sanitize_html.py` 100%), `make check-examples-sync` green. Version-synced
+1.21.0 across all five files; both examples regenerated.
+
+### Next steps
+
+1. **Merge this PR** (v2 sanitization, v1.21.0) once CI green.
+2. **v2.0.0 — v1 removal** (the second PR this session): remove all dual code
+   paths (`build`/`validate`/`upgrade` v1 branches, `init --v1`, the v1 renderer
+   `build.py`, `schema.json`, `starter.json`; `migrate-v1-to-v2` → stub or drop),
+   plus v1 tests + docs. MAJOR bump to 2.0.0. Confirm final scope with the user.
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-25 (session 45)
 
 ### What was done

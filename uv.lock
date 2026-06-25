@@ -1519,7 +1519,7 @@ wheels = [
 
 [[package]]
 name = "research-buddy"
-version = "1.20.0"
+version = "1.21.0"
 source = { editable = "." }
 dependencies = [
     { name = "argcomplete" },
@@ -1527,6 +1527,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "markdown-it-py" },
     { name = "mdit-py-plugins" },
+    { name = "nh3" },
     { name = "pyyaml" },
     { name = "watchdog" },
 ]
@@ -1559,6 +1560,7 @@ requires-dist = [
     { name = "mdit-py-plugins", specifier = ">=0.4" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "nh3", specifier = ">=0.2" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },

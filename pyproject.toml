@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-buddy"
-version = "1.20.0"
+version = "1.21.0"
 description = "Structured AI research collaborator — generates high-fidelity HTML from versioned JSON or Markdown research documents."
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,6 +32,7 @@ dependencies = [
     "pyyaml>=6.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
+    "nh3>=0.2",
 ]
 
 [project.optional-dependencies]

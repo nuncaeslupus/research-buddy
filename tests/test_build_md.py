@@ -263,6 +263,59 @@ class TestBuildSafety:
         assert "<br><br>" in html
 
 
+class TestBuildSanitization:
+    """End-to-end: agent-authored active content is neutralized in the built HTML
+    while the documented Element catalog survives. (Unit-level coverage of the
+    sanitizer itself lives in test_sanitize_html.py.)"""
+
+    def test_body_script_neutralized(self) -> None:
+        html = build_md_html(_doc("## Tab\n\nbefore\n\n<script>alert('xss')</script>\n\nafter\n"))
+        assert "<script>alert('xss')</script>" not in html
+        assert "alert('xss')" not in html
+        assert "before" in html and "after" in html  # surrounding prose intact
+
+    def test_body_event_handler_neutralized(self) -> None:
+        # Quoted attrs so markdown-it passes the tag through as raw HTML (the
+        # path that reaches the sanitizer); the handler is then stripped.
+        html = build_md_html(_doc('## Tab\n\n<img src="x" onerror="alert(\'xss\')">\n'))
+        assert "onerror" not in html
+        assert "alert('xss')" not in html
+
+    def test_body_javascript_uri_neutralized(self) -> None:
+        html = build_md_html(_doc('## Tab\n\n<a href="javascript:alert(1)">x</a>\n'))
+        assert "javascript:alert(1)" not in html
+
+    def test_frontmatter_title_breakout_escaped(self) -> None:
+        fm = _FM.replace('title: "Demo Project"', 'title: "</title><script>alert(1)</script>"')
+        html = build_md_html(fm + "\n## Tab\n\nbody\n")
+        # The payload must not survive as an executable <script>; it is escaped
+        # into the <title> text instead.
+        assert "<script>alert(1)</script>" not in html
+        assert "&lt;script&gt;alert(1)" in html
+
+    def test_tab_label_injection_neutralized(self) -> None:
+        # An H2 label is rendered (html=True) and reused across the chrome; a
+        # script payload in it must not survive as a live <script>. (The label
+        # text still appears, inertly escaped, in data-tab-label and the slug.)
+        html = build_md_html(_doc("## Tab <script>alert('xss')</script>\n\nbody\n"))
+        assert "<script>alert('xss')</script>" not in html
+        assert "alert('xss')" not in html
+
+    def test_legitimate_svg_survives_build(self) -> None:
+        svg = (
+            '<svg viewBox="0 0 10 10">'
+            '<circle cx="5" cy="5" r="4" fill="currentColor"></circle></svg>'
+        )
+        html = build_md_html(_doc(f"## Tab\n\n{svg}\n"))
+        assert "<svg" in html and "<circle" in html
+        assert 'fill="currentColor"' in html
+
+    def test_status_chip_survives_build(self) -> None:
+        html = build_md_html(_doc('## Tab\n\nResult: <span class="rb-flag">CHECK</span>\n'))
+        assert 'class="rb-flag"' in html
+        assert ">CHECK</span>" in html
+
+
 class TestBuildMdCli:
     """Integration: `research-buddy build foo.md` dispatches through cmd_build."""
 
