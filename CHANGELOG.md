@@ -4,6 +4,42 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.20.0] — 2026-06-25
+
+Print / browser-PDF stylesheet overhaul. The generated HTML now produces a
+clean printout (browser "Print → Save as PDF", or WeasyPrint on the v1 path)
+instead of a clipped, dark-theme-bleeding page. Shared stylesheet, so both the
+v2 Markdown and v1 JSON outputs benefit.
+
+### Changed
+
+- **`@media print` rewritten.** It now:
+  - forces the **light palette** regardless of the on-screen theme toggle, and
+    sets `print-color-adjust: exact` so badge/tag/table-header background colours
+    still print legibly;
+  - **unpins the fixed app-shell layout** (`#layout` / `#main` height + overflow)
+    so the document flows across pages instead of being clipped to one screen;
+  - **starts each tab on a fresh page** and stacks every tab, mirroring the
+    on-screen tab structure;
+  - keeps **cards, tables, code blocks, callouts and verdicts from splitting**
+    across a page boundary (`break-inside: avoid`), **repeats table headers** on
+    each page, and keeps a heading with the content that follows it;
+  - **wraps long code lines** (`white-space: pre-wrap`) instead of clipping them,
+    since paper has no horizontal scroll;
+  - sets sane `@page` margins and trims the wide on-screen section gaps.
+
+## [1.19.0] — 2026-06-23
+
+Mobile-friendly tab bar.
+
+### Changed
+
+- **Scrollable tab strip with fade-edge affordances.** The tab buttons now live
+  in a dedicated horizontally-scrollable container (`#tab-scroll` inside
+  `#tab-scroll-wrap`). JS-controlled left/right fade overlays appear when more
+  tabs are off-screen, and switching tabs scrolls the active button into view.
+  The menu and theme toggles stay pinned outside the scroll area.
+
 ## [1.18.0] — 2026-06-23
 
 Three design decisions from the Opus review initiative (PR-14):

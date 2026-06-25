@@ -1,5 +1,63 @@
 # Next session
 
+## Session 2026-06-25 (session 45)
+
+### What was done
+
+Shipped **Print / browser-PDF CSS** — **v1.20.0** — the last item in the
+feature queue before the v2.0.0 v1-removal cleanup.
+
+- **`css/style.css` `@media print` rewritten** (was 6 lines, now a full block):
+  - **Forces the light palette** by re-declaring the light `:root` variables for
+    `:root, :root[data-theme="dark"]` inside the print query (kept in sync with
+    the canonical light palette above, with a comment), plus
+    `print-color-adjust: exact` so badge / tag / table-header background colours
+    print legibly instead of vanishing (white-on-white badges).
+  - **Unpins the fixed app-shell layout** (`#layout` height auto + `display:
+    block`; `#main` overflow visible + height auto + static position) so the
+    document flows across pages. The old block only reset `#main` margin, so
+    print was clipped to roughly one screen.
+  - **Per-tab page breaks** (`.tab-content + .tab-content { page-break-before:
+    always }`) on top of the existing "show all tabs" rule.
+  - **`break-inside: avoid`** on cards, callouts, verdicts, rb-verdict, phase
+    cards, usage banners, code-wrap/pre, blockquotes, tables, rows, img, svg;
+    `thead { display: table-header-group }` repeats headers per page; headings
+    get `break-after: avoid`.
+  - **Long code wraps** (`pre { white-space: pre-wrap; overflow-wrap: break-word }`)
+    instead of clipping; `.table-wrap` overflow visible.
+  - `@page { margin: 1.6cm }`, trimmed h2 top gap, `orphans/widows: 3`.
+- **Shared stylesheet**, so the v1 JSON and v2 Markdown outputs (same
+  `#tab-bar`/`#layout`/`#main`/`.tab-content` structure, verified in both
+  committed examples) both benefit. WeasyPrint (`--pdf`, v1) reads the same
+  `@media print`.
+- **Verification (real, not assumed):** rendered `starter-example/starter-md.html`
+  with `data-theme="dark"` forced, then `emulate_media("print")` via
+  Playwright/Chromium. Screen control = dark; print render = **light, no chrome,
+  all 10 sections stacked**; `page.pdf()` = **10 paginated pages** (content flows,
+  not clipped). Screenshots in scratchpad.
+- **Also backfilled the missing CHANGELOG 1.19.0 entry** (the mobile tab bar PR
+  #129 shipped without one) alongside the new 1.20.0 entry.
+
+Version bump 1.19.0 → 1.20.0 (`make version-sync`), `make regen-examples`.
+Gates: `make lint` clean, `make test-cov` **631 passed, 91.79%**,
+`make check-examples-sync` green.
+
+### Next steps
+
+1. **Merge this PR** (print CSS, v1.20.0) once CI green.
+2. **v2.0.0 — v1 removal.** The feature queue is now empty, so this is the next
+   substantial work: a dedicated cleanup PR removing all dual code paths
+   (`build`/`validate`/`upgrade` v1 branches, `init --v1`, `migrate` → no-op
+   stub or dropped). Deprecation warnings have shipped since 1.18.0. This is a
+   MAJOR bump — confirm scope/timing with the user before starting.
+3. Backlog otherwise: **v2 escaping / trust model** (document the
+   `autoescape=False` trust boundary; optionally sanitize `r_svg`/raw-HTML on
+   the v2 path — partially addressed in PR-8).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-23 (session 44)
 
 ### What was done

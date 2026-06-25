@@ -396,13 +396,17 @@ they need a decision before execution rather than being picked up blind.
   active tab into view on switch. CSS-only on mobile media query;
   `make regen-examples` required.
 
-- [ ] **Print / browser-PDF CSS (1.20.0).** `@media print` exists but is
-  minimal — dark theme bleeds through, no page-break control, code blocks
-  break awkwardly. Fix: force light theme in print, `page-break-inside:
-  avoid` on cards/tables/code, remove interactive chrome. Option (b)
-  (ReportLab / ReportLab PDF) deferred — the `@media print` path is
-  cheaper and good enough for the v1 WeasyPrint use case too.
-  CSS-only; `make regen-examples` required.
+- [x] **Print / browser-PDF CSS (1.20.0).** *Shipped this session.* `@media
+  print` rewritten in `css/style.css`: forces the light palette regardless of
+  the on-screen theme toggle (with `print-color-adjust: exact` so badges/tags/
+  table headers stay legible), unpins the fixed app-shell layout so content
+  flows across pages (was clipped to one screen), starts each tab on a fresh
+  page, `break-inside: avoid` on cards/tables/code/callouts/verdicts, repeats
+  table headers per page, wraps long code lines, keeps headings with their
+  content, and sets `@page` margins. Verified by rendering the v2 example to PDF
+  with the dark theme active (Playwright/Chromium): print output is light, chrome
+  stripped, 10 paginated pages. Shared stylesheet → both v2 + v1 outputs benefit.
+  Option (b) (ReportLab PDF) stays deferred. `make regen-examples` ran.
 
 [#24]: https://github.com/nuncaeslupus/research-buddy/pull/24
 [#26]: https://github.com/nuncaeslupus/research-buddy/pull/26
