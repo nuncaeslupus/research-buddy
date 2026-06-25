@@ -1,5 +1,55 @@
 # Next session
 
+## Session 2026-06-25 (session 47)
+
+### What was done
+
+Shipped **v2.0.0 — v1 JSON removal** (the second of two PRs this session; the
+first was v1.21.0 v2 sanitization, merged as #131). User approved the scope
+("go", keeping `migrate`). This is a MAJOR breaking release.
+
+- **Removed** the entire v1 JSON pipeline: `build.py` (v1 renderer),
+  `validator.py`, `upgrade.py`, `schema.json`, `starter.json`, the v1 Jinja
+  templates (`blocks.html.j2`, `section.html.j2`); the `build`/`validate`/
+  `upgrade` JSON branches, `init --v1`, and `build --pdf`/`--watch`/`--all`/
+  `--validate-only`. `build`/`validate`/`upgrade` are now `.md`-only (non-`.md`
+  → clean error pointing at `migrate-v1-to-v2`).
+- **Kept `migrate-v1-to-v2`** as the escape hatch (decision change vs. the
+  2026-06-23 plan, which said stub/drop). It only needed `_LANGUAGE_NAME_TO_CODE`.
+- **New `chrome.py`**: shared HTML chrome (Jinja env, asset loading, `BuildState`,
+  footer, `_resolve_lang_code`, `_LANGUAGE_NAME_TO_CODE`, `_neutralize_style_close`)
+  extracted from the deleted `build.py`; imported by `build_md` + `migrate`.
+  `_parse_semver` moved to `upgrade_md.py` (its only remaining caller).
+- **Dependencies trimmed**: dropped `jsonschema`, `watchdog` (both now unused) and
+  the `[pdf]` extra (`weasyprint`). Core deps now: argcomplete, jinja2, pyyaml,
+  markdown-it-py, mdit-py-plugins, nh3.
+- **Tests**: deleted the v1 test files (test_build/schema/errors/upgrade/
+  validator_mutations/reference_ordering); rewrote test_main.py + test_main_coverage.py
+  to v2-only; relocated the v1 sample to `tests/fixtures/v1_starter.json` (test
+  data, repointing the `starter_doc` conftest fixture) so the migrate tests still
+  run; dropped the v1 `tmp_project` fixture and the starter.json version-sync check.
+- **Config/scripts/docs**: `pyproject` (deps, `[pdf]`, `*.json` package-data);
+  `Makefile` (dropped `regen-example`); `sync_version.py` + `check_version_sync.py`
+  + `check_examples_sync.py` (dropped starter.json/starter.html); deleted the v1
+  `starter-example/starter.html`; README + CLAUDE.md rewritten v2-only.
+
+Version 1.21.0 → 2.0.0 (`make version-sync` — now 4 files, not 5). Gates:
+`make lint` clean, `make test-cov` **487 passed, 92.41%**, `make
+check-examples-sync` green. End-to-end CLI smoke confirmed (init/build/validate/
+migrate work; `.json` rejected; removed flags gone).
+
+### Next steps
+
+1. **Merge the v2.0.0 PR** once CI green — note this is the **release** (merging a
+   version bump to `main` auto-tags + publishes to PyPI). It's a MAJOR; double-check
+   before merge.
+2. Feature queue + Future-improvements backlog are now empty. Next work is
+   user-driven (new features or real issues).
+
+### Blockers
+
+- None.
+
 ## Session 2026-06-25 (session 46)
 
 ### What was done

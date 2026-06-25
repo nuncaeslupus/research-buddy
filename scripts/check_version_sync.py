@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail with a non-zero exit code if the version strings in
-src/research_buddy/__init__.py, src/research_buddy/starter.json,
-src/research_buddy/starter.md, and README.md have drifted from pyproject.toml.
+src/research_buddy/__init__.py, src/research_buddy/starter.md, and README.md
+have drifted from pyproject.toml.
 
 Wired into CI as `make check-version-sync`. Unlike `sync_version.py`, this
 script makes no changes — it just compares values.
@@ -9,7 +9,6 @@ script makes no changes — it just compares values.
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 import tomllib
@@ -36,14 +35,6 @@ def _init_version() -> str:
     return m.group(1)
 
 
-def _starter_version() -> str:
-    doc = json.loads(Path("src/research_buddy/starter.json").read_text(encoding="utf-8"))
-    ver = doc.get("meta", {}).get("research_buddy_version")
-    if not ver:
-        raise SystemExit("starter.json is missing meta.research_buddy_version")
-    return str(ver)
-
-
 def _starter_md_version() -> str:
     content = Path("src/research_buddy/starter.md").read_text(encoding="utf-8")
     m = re.search(r'^research_buddy_version:\s*"([^"]+)"', content, re.MULTILINE)
@@ -65,7 +56,6 @@ def main() -> None:
     canonical = _pyproject_version()
     checks = {
         "src/research_buddy/__init__.py (__version__)": _init_version(),
-        "src/research_buddy/starter.json (meta.research_buddy_version)": _starter_version(),
         "src/research_buddy/starter.md (research_buddy_version)": _starter_md_version(),
         "README.md (# Research Buddy v…)": _readme_version(),
     }

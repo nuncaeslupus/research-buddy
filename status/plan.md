@@ -377,12 +377,15 @@ they need a decision before execution rather than being picked up blind.
   boundary documented in README (new "Security & trust model" section),
   `starter.md` rule 7, and CLAUDE.md. `nh3>=0.3.0` added as a core dependency.
 
-- ~~**v1 sunset with a dated target.**~~ **Decided (2026-06-23): remove in
-  v2.0.0.** No active projects use v1; deprecation warnings ship since
-  v1.18.0. The v2.0.0 release will remove all dual code paths
-  (`build`/`validate`/`upgrade` v1 branches, `init --v1`, `migrate` will
-  become a no-op stub or be dropped). v2.0.0 is a dedicated cleanup PR
-  once the active feature queue is empty.
+- ~~**v1 sunset with a dated target.**~~ **Done (2.0.0).** All dual code paths
+  removed: the `build`/`validate`/`upgrade` v1 branches, `init --v1`, the v1
+  renderer (`build.py`), `validator.py`, `upgrade.py`, `schema.json`,
+  `starter.json`, the v1 Jinja templates, and the `jsonschema`/`watchdog`/
+  `weasyprint` (`[pdf]`) dependencies. **Decision change vs. the 2026-06-23 plan:
+  `migrate-v1-to-v2` was KEPT** (not stubbed/dropped) as the escape hatch — it's
+  barely coupled (only `_LANGUAGE_NAME_TO_CODE`, now in `chrome.py`) and removing
+  the migration path in the same release that removes v1 rendering would strand
+  any remaining v1 user. Shared chrome extracted to `chrome.py`.
 
 - ~~**User-facing CHANGELOG.**~~ **Done (PR-1 / #127, 2026-06-23).** Full
   backfill from v1.2.0 through v1.18.0 in `CHANGELOG.md`.

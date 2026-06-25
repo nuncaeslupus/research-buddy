@@ -1,4 +1,4 @@
-"""Tests for `research_buddy.build_md` — v2 MD → HTML using v1 chrome."""
+"""Tests for `research_buddy.build_md` — v2 MD → HTML using the shared chrome."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from research_buddy.build import BuildState
 from research_buddy.build_md import (
     _dedupe_heading_ids,
     _md_renderer,
@@ -16,6 +15,7 @@ from research_buddy.build_md import (
     build_md_html,
     split_into_tabs,
 )
+from research_buddy.chrome import BuildState
 
 _FM = """\
 ---

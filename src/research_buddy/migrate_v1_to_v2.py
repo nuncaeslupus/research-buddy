@@ -49,7 +49,7 @@ from typing import Any
 import yaml
 
 from research_buddy import __version__
-from research_buddy.build import _LANGUAGE_NAME_TO_CODE
+from research_buddy.chrome import _LANGUAGE_NAME_TO_CODE
 from research_buddy.fileio import atomic_write
 
 Doc = dict[str, Any]

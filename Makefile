@@ -1,4 +1,4 @@
-.PHONY: lint format test test-cov clean sync regen-example regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
+.PHONY: lint format test test-cov clean sync regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
 
 sync:
 	uv sync --extra dev
@@ -38,13 +38,10 @@ version-sync:
 check-version-sync:
 	uv run scripts/check_version_sync.py
 
-regen-example:
-	uv run research-buddy build src/research_buddy/starter.json --output starter-example/starter.html --no-versioning
-
 regen-md-example:
 	uv run research-buddy build src/research_buddy/starter.md --output starter-example/starter-md.html --no-versioning
 
-regen-examples: regen-example regen-md-example
+regen-examples: regen-md-example
 
 # CI gate: fails if the committed starter-example/*.html files have drifted
 # from what `research-buddy build` produces. Run `make regen-examples` to fix.
