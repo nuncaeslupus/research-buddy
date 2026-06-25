@@ -24,7 +24,8 @@ build time.
   tag/attribute) while prose, tables, callouts, verdicts, cards, status chips,
   and **inline SVG illustrations** are preserved. SVG is rendered but sanitized
   as untrusted.
-- **`nh3>=0.2`** added as a core dependency.
+- **`nh3>=0.3.0`** added as a core dependency (the `filter_style_properties`
+  sanitizer option requires 0.3.0).
 - **"Security & trust model (v2 Markdown)" section** in the README documenting
   the trust boundary and the validate-warns / build-strips defense in depth.
 

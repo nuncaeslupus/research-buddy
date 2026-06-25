@@ -375,7 +375,7 @@ they need a decision before execution rather than being picked up blind.
   Frontmatter scalars (`title`/`version`/`date`) + `lang_code` are `html.escape`d
   into the chrome, closing the `title: </title><script>` breakout. Trust
   boundary documented in README (new "Security & trust model" section),
-  `starter.md` rule 7, and CLAUDE.md. `nh3>=0.2` added as a core dependency.
+  `starter.md` rule 7, and CLAUDE.md. `nh3>=0.3.0` added as a core dependency.
 
 - ~~**v1 sunset with a dated target.**~~ **Decided (2026-06-23): remove in
   v2.0.0.** No active projects use v1; deprecation warnings ship since

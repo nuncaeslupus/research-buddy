@@ -233,7 +233,7 @@ should use `_parse_semver` from `validator.py` when they need to synthesise
   `title: </title><script>…` breakout. Sanitizing the *rendered* HTML (not the
   source) is deliberate: markdown-it has already escaped fenced/inline code, so
   a `<script>` shown as a code example survives while a live one is stripped.
-  `nh3>=0.2` is a core dependency.
+  `nh3>=0.3.0` is a core dependency (`filter_style_properties` landed in 0.3.0).
 - **`bump` writes a NEW versioned file, never in place.** `research-buddy
   bump <file>_vX.Y-source.md Q-NNN --apply` emits
   `<file>_vX.(Y+1)-source.md` (MINOR bump) and validates it with the input

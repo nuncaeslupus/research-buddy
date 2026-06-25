@@ -32,7 +32,7 @@ dependencies = [
     "pyyaml>=6.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
-    "nh3>=0.2",
+    "nh3>=0.3.0",
 ]
 
 [project.optional-dependencies]

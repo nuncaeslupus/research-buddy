@@ -10,7 +10,7 @@ Shipped **v2 HTML sanitization** — **v1.21.0** — the render-time half of the
 session; the second is the **v2.0.0 v1-removal** (in progress next).
 
 - **New `src/research_buddy/sanitize_html.py`** (`sanitize_html`, backed by
-  `nh3`/ammonia ≥0.2, added as a **core dependency**). Allowlist tuned to the
+  `nh3`/ammonia ≥0.3.0, added as a **core dependency**). Allowlist tuned to the
   renderer's output + starter.md's Element catalog: block/inline tags, `<svg>` +
   its static children, `span`/`div` with any class, `<a id>`, `<col
   style="width:…">` via a `filter_style_properties` allowlist. Strips `<script>`
