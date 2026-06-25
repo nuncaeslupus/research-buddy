@@ -379,11 +379,13 @@ code { font-family: var(--mono); }
   /* Stack every tab, each starting on a fresh page so the printout mirrors
      the on-screen tab structure. */
   .tab-content { display: block !important; }
-  .tab-content + .tab-content { page-break-before: always; }
+  .tab-content + .tab-content { break-before: page; page-break-before: always; }
 
-  /* Don't split an atomic block across a page boundary. */
+  /* Don't split an atomic block across a page boundary. Tables are left out
+     on purpose: a long table should split, repeating its header (below) and
+     keeping each row intact, rather than being pushed whole onto a fresh page. */
   .card, .callout, .verdict, .rb-verdict, .phase-card, .agnostic, .cc-banner,
-  .usage-banner, .code-wrap, pre, blockquote, .table-wrap, table, tr, img, svg {
+  .usage-banner, .code-wrap, pre, blockquote, tr, img, svg {
     break-inside: avoid; page-break-inside: avoid;
   }
   thead { display: table-header-group; }   /* repeat header rows on each page */
@@ -394,7 +396,7 @@ code { font-family: var(--mono); }
 
   /* Wrap long code lines instead of clipping them — paper has no horizontal
      scroll. */
-  pre { white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; overflow: visible; }
+  pre { white-space: pre-wrap; overflow-wrap: break-word; overflow: visible; }
   .table-wrap { overflow: visible; }
 
   p { orphans: 3; widows: 3; }
