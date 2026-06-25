@@ -1,24 +1,17 @@
-"""`init` command — scaffold a new documentation project (v2 MD default, --v1 JSON)."""
+"""`init` command — scaffold a new v2 Markdown documentation project."""
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
-from research_buddy.commands._shared import _load_starter_md_text, _load_starter_template
+from research_buddy.commands._shared import _load_starter_md_text
 from research_buddy.fileio import atomic_write
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    """Scaffold a new documentation project.
-
-    Default: v2 Markdown. Pass `--v1` for the legacy JSON form.
-    """
-    if getattr(args, "v1", False):
-        return _init_v1(args)
+    """Scaffold a new v2 Markdown documentation project."""
     return _init_v2(args)
 
 
@@ -49,61 +42,8 @@ def _rel_to_cwd(p: Path) -> str:
         return str(p)
 
 
-def _init_v1(args: argparse.Namespace) -> int:
-    """Legacy JSON scaffolding (`--v1`)."""
-    print(
-        "Warning: v1 JSON format is deprecated and will be removed in v2.0. "
-        "Use `research-buddy init` (without --v1) to create v2 Markdown projects.",
-        file=sys.stderr,
-    )
-    dirs = _prepare_init_dirs(args)
-    if dirs is None:
-        return 1
-    source_dir, _ = dirs
-
-    try:
-        doc = _load_starter_template()
-    except Exception as e:
-        print(f"Error loading starter template: {e}", file=sys.stderr)
-        return 1
-
-    if args.title:
-        doc["meta"]["title"] = args.title
-        # Keep the first section's title aligned with the project title while
-        # preserving sibling order (Objective before Quick Links).
-        overview_sections = doc["tabs"][0]["sections"]
-        if overview_sections:
-            old_title = next(iter(overview_sections))
-            new_sections = {args.title: overview_sections.pop(old_title)}
-            new_sections.update(overview_sections)
-            doc["tabs"][0]["sections"] = new_sections
-        doc["meta"]["title_page_section_title"] = args.title
-    if args.subtitle:
-        doc["meta"]["subtitle"] = args.subtitle
-    if args.ver:
-        doc["meta"]["version"] = args.ver
-
-    doc["meta"]["date"] = datetime.now(tz=UTC).strftime("%B %Y")
-
-    doc_path = source_dir / "research-document.json"
-    atomic_write(doc_path, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
-
-    target = Path(args.path).resolve()
-    rb_ver = doc["meta"].get("research_buddy_version", "?")
-    print(f"Created {_rel_to_cwd(target)}/")
-    print(f"  source/research-document.json  (Research Buddy v{rb_ver} v1 JSON template)")
-    print("  versions/")
-    print()
-    print("Next steps:")
-    print(f"  1. Upload {_rel_to_cwd(doc_path)} to your AI assistant")
-    print("  2. The agent will run session_zero and produce [meta.file_name]_v1.0.json")
-    print("  3. research-buddy build [meta.file_name]_v1.0.json")
-    print("  4. Open [meta.file_name].html in a browser")
-    return 0
-
-
 def _init_v2(args: argparse.Namespace) -> int:
-    """v2 Markdown scaffolding (default)."""
+    """v2 Markdown scaffolding."""
     from research_buddy import __version__
 
     dirs = _prepare_init_dirs(args)

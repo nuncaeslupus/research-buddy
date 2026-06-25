@@ -1,26 +1,18 @@
-"""`upgrade` command — refresh project source(s) against the installed starter.
+"""`upgrade` command — refresh a v2 Markdown source against the installed starter.md.
 
-Dispatches on file extension: `.md` paths use the v2 Markdown upgrade
-(framework block + frontmatter migration); other paths use the v1 JSON
-upgrade (agent_guidelines refresh + key reordering).
+Replaces the template-owned regions (preamble, framework block, agent-reminder
+blockquote) and migrates frontmatter; project-owned content is preserved.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-from research_buddy.commands._shared import (
-    _load_starter_md_text,
-    _load_starter_template,
-    _resolve_source,
-)
+from research_buddy.commands._shared import _load_starter_md_text
 from research_buddy.fileio import atomic_write
-from research_buddy.upgrade import docs_equivalent, stamp_format_note, upgrade_doc
 from research_buddy.upgrade_md import UpgradeError, upgrade_md
-from research_buddy.validator import validate
 from research_buddy.validator_md import validate_md
 
 
@@ -82,90 +74,16 @@ def _upgrade_md_file(path: Path, args: argparse.Namespace) -> int:
 
 
 def cmd_upgrade(args: argparse.Namespace) -> int:
-    """Refresh project source(s) against the installed starter template.
-
-    Dispatches on file extension: `.md` paths use the v2 Markdown upgrade
-    (framework block + frontmatter migration); other paths use the v1 JSON
-    upgrade (agent_guidelines refresh + key reordering).
-    """
-    from research_buddy import __version__
-
-    try:
-        starter = _load_starter_template()
-    except Exception as e:
-        print(f"Error loading starter template: {e}", file=sys.stderr)
-        return 2
-
+    """Refresh v2 Markdown source(s) against the installed starter.md."""
     exit_code = 0
     for p in args.paths:
         path = Path(p).resolve()
-        if path.suffix == ".md":
-            exit_code = max(exit_code, _upgrade_md_file(path, args))
-            continue
-
-        res = _resolve_source(path)
-        if not res:
+        if path.suffix != ".md":
             print(
-                f"Error: no versioned document (*_v*.json) found for {path}",
+                f"Error: {path} is not a .md file. v1 JSON support was removed in v2.0.",
                 file=sys.stderr,
             )
-            exit_code = 2
+            exit_code = max(exit_code, 1)
             continue
-        json_path, _root = res
-
-        print(f"── {json_path.name} ──")
-        print(
-            "Warning: v1 JSON format is deprecated and will be removed in v2.0. "
-            "Migrate with: research-buddy migrate-v1-to-v2",
-            file=sys.stderr,
-        )
-        try:
-            with json_path.open(encoding="utf-8") as f:
-                doc = json.load(f)
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            print(
-                f"  Error: {json_path.name} is not valid JSON or has invalid encoding: {e}",
-                file=sys.stderr,
-            )
-            exit_code = 2
-            continue
-
-        upgraded, changes, key_diffs = upgrade_doc(doc, starter, __version__)
-
-        if docs_equivalent(doc, upgraded):
-            print("  Already in sync with starter.json.")
-            print()
-            continue
-
-        for line in changes:
-            print(f"  {line}")
-
-        diff_lines = [
-            f"    {label}: {', '.join(keys)}" for label, keys in key_diffs.items() if keys
-        ]
-        if diff_lines:
-            print("  Framework / session_protocol key changes:")
-            for line in diff_lines:
-                print(line)
-
-        if not args.apply:
-            print("  (dry-run — pass --apply to write)")
-            print()
-            exit_code = 1
-            continue
-
-        stamp_format_note(upgraded, __version__)
-        payload = json.dumps(upgraded, indent=2, ensure_ascii=False) + "\n"
-        atomic_write(json_path, payload)
-        print(f"  → wrote {json_path}")
-
-        if not args.no_validate:
-            issues = validate(upgraded)
-            if issues:
-                print(f"  ⚠  {len(issues)} issue(s) after upgrade:")
-                for issue in issues:
-                    print(f"     {issue}")
-                exit_code = 2
-        print()
-
+        exit_code = max(exit_code, _upgrade_md_file(path, args))
     return exit_code

@@ -47,11 +47,26 @@ and post-upgrade validation. This module is pure.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import yaml
 
 from research_buddy.validator_md import _line_in_fence
+
+
+def _parse_semver(v: str) -> tuple[int, int, int] | None:
+    """Parse "1.0", "1.0.3", "v1.0.3" → (major, minor, patch). Missing parts → 0.
+
+    Returns None if the string contains no digits at all.
+    """
+    if not isinstance(v, str):
+        return None
+    m = re.search(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", v)
+    if not m:
+        return None
+    return (int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0))
+
 
 FRAMEWORK_START = "<!-- @anchor: framework.core -->"
 FRAMEWORK_END = "<!-- @end: framework.reference -->"
@@ -395,8 +410,6 @@ def _bump_research_buddy_version(
     double-quoted; bare values stay bare. Inline comments after the value
     are preserved.
     """
-    from research_buddy.validator import _parse_semver
-
     out = list(fm_lines)
     for i, line in enumerate(out):
         if not line.startswith("research_buddy_version:"):

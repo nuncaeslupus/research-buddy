@@ -4,6 +4,38 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] — 2026-06-25
+
+**Breaking: legacy v1 JSON support removed.** v2 Markdown has been the default
+since 1.5 and the only format receiving features; this release removes the dual
+code paths. `migrate-v1-to-v2` is retained as the escape hatch for converting an
+existing v1 JSON document to a v2 Markdown source.
+
+### Removed
+
+- **v1 JSON pipeline:** the `build` / `validate` / `upgrade` JSON branches,
+  `init --v1`, and the `build --pdf` / `--watch` / `--all` / `--validate-only`
+  flags (all v1-only). `build`, `validate`, and `upgrade` now operate on `.md`
+  source files only; a non-`.md` path is a clean error pointing at
+  `migrate-v1-to-v2`.
+- **Modules / data:** `build.py` (v1 JSON renderer), `validator.py` (v1 schema
+  validator), `upgrade.py` (v1 template refresh), `schema.json`, `starter.json`,
+  and the v1 Jinja templates (`blocks.html.j2`, `section.html.j2`).
+- **Dependencies:** `jsonschema` and `watchdog` (now unused) dropped from the
+  core requirements; the `[pdf]` extra (`weasyprint`) removed.
+- The committed `starter-example/starter.html` (v1 example).
+
+### Changed
+
+- **New `chrome.py`** holds the shared HTML chrome (Jinja env, asset loading,
+  `BuildState`, footer, language resolution) the v2 renderer and the migrator
+  need — extracted from the deleted `build.py` so no v1 rendering code survives.
+  `_parse_semver` moved to `upgrade_md.py` (its only remaining caller).
+- `migrate-v1-to-v2` is retained and still tested; its v1 sample input now lives
+  in `tests/fixtures/v1_starter.json` (test data, no longer shipped in the wheel).
+- README and CLAUDE.md rewritten for the v2-only tool; `migrate` is documented as
+  the sole remaining JSON-reading command.
+
 ## [1.21.0] — 2026-06-25
 
 v2 HTML sanitization — the render-time half of the v2 trust model. A v2 document

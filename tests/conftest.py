@@ -3,34 +3,17 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
+# A representative v1 JSON document, kept as test data (no longer shipped in the
+# package after the v2.0 v1 removal) so the `migrate-v1-to-v2` escape hatch stays
+# tested against a realistic input.
+_V1_FIXTURE = Path(__file__).parent / "fixtures" / "v1_starter.json"
+
 
 @pytest.fixture
 def starter_doc() -> dict:
-    """Return a fresh copy of the default starter document."""
-    from research_buddy.main import _load_starter_template
-
-    return _load_starter_template()
-
-
-@pytest.fixture
-def tmp_project(tmp_path: Path) -> Generator[Path, None, None]:
-    """Create a temporary project directory with a valid versioned document."""
-    from research_buddy.main import _load_starter_template
-
-    doc = _load_starter_template()
-
-    source_dir = tmp_path / "source"
-    source_dir.mkdir()
-    (tmp_path / "versions").mkdir()
-
-    # Use a versioned filename so find_latest_json picks it up
-    doc_path = source_dir / "test-project_v1.0.json"
-    with doc_path.open("w", encoding="utf-8") as f:
-        json.dump(doc, f)
-
-    yield tmp_path
+    """Return a fresh copy of the representative v1 JSON document (for migrate tests)."""
+    return json.loads(_V1_FIXTURE.read_text(encoding="utf-8"))

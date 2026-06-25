@@ -27,7 +27,7 @@ from markdown_it import MarkdownIt
 from markdown_it.token import Token
 from mdit_py_plugins.anchors import anchors_plugin
 
-from research_buddy.build import (
+from research_buddy.chrome import (
     _RB_FOOTER_CSS,
     BuildState,
     _build_rb_footer_html,

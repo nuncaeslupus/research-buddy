@@ -1,12 +1,9 @@
 """CLI wiring — argparse parser construction and dispatch.
 
-`build`, `validate`, and `upgrade` dispatch on file extension. `.md` paths use
-the v2 Markdown pipeline (`build_md`, `validator_md`, `upgrade_md`); other
-paths use the v1 JSON pipeline. `validate --prior FILE` enables diff-based
-checks (anchor preservation + append-only invariants) on `.md` files.
-
-`init` defaults to v2 Markdown scaffolding; pass `--v1` for the legacy JSON
-form. `clean` and `migrate-v1-to-v2` are v2-only by definition.
+`build`, `validate`, `clean`, and `upgrade` operate on v2 Markdown source
+files. `validate --prior FILE` enables diff-based checks (anchor preservation +
+append-only invariants). `migrate-v1-to-v2` converts a legacy v1 JSON document
+to a v2 Markdown source — the one remaining entry point that reads JSON.
 """
 
 from __future__ import annotations
@@ -32,49 +29,38 @@ def build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser for the research-buddy CLI."""
     parser = argparse.ArgumentParser(
         prog="research-buddy",
-        description=(
-            "Generate high-fidelity research documentation from structured JSON or Markdown."
-        ),
+        description="Generate high-fidelity research documentation from Markdown source files.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     # build
-    p_build = sub.add_parser("build", help="Build HTML from document JSON(s) in order")
+    p_build = sub.add_parser("build", help="Build HTML from v2 Markdown source file(s)")
     p_build.add_argument(
         "paths",
         nargs="+",
-        help="JSON file(s) or directory(ies) containing source/. Processed IN ORDER.",
+        help="One or more *_v*-source.md files to build.",
     )
-    p_build.add_argument("--all", action="store_true", help="Build all JSON files in the directory")
     p_build.add_argument("--theme", help="CSS file with style overrides")
-    p_build.add_argument(
-        "--output", help="Output filename or path (default: {meta.file_name}.html)"
-    )
-    p_build.add_argument("--validate-only", action="store_true", help="Validate without building")
+    p_build.add_argument("--output", help="Output filename or path (default: {file_name}.html)")
     p_build.add_argument(
         "--no-versioning", action="store_true", help="Skip creating versioned HTML in versions/"
     )
-    p_build.add_argument(
-        "--watch", action="store_true", help="Watch for changes and rebuild automatically"
-    )
-    p_build.add_argument("--pdf", action="store_true", help="Generate PDF export")
 
     # validate
     p_val = sub.add_parser(
         "validate",
-        help="Validate document without building (supports .json and .md)",
+        help="Validate a v2 Markdown document without building",
     )
     p_val.add_argument(
         "paths",
         nargs="+",
-        help="File(s) or directory(ies) to validate. .md files use the v2 validator; "
-        "everything else uses the v1 JSON validator.",
+        help="One or more *_v*-source.md files to validate.",
     )
     p_val.add_argument(
         "--prior",
         default=None,
         help="Optional prior version of the same .md file (enables anchor-preservation "
-        "and append-only checks). Ignored for .json files.",
+        "and append-only checks).",
     )
 
     # clean
@@ -182,38 +168,21 @@ def build_parser() -> argparse.ArgumentParser:
     # init
     p_init = sub.add_parser(
         "init",
-        help="Scaffold a new documentation project (v2 Markdown by default; --v1 for legacy JSON)",
+        help="Scaffold a new v2 Markdown documentation project",
     )
     p_init.add_argument("path", help="Target directory")
     p_init.add_argument("--title", help="Project title")
     p_init.add_argument("--subtitle", help="Project subtitle")
-    p_init.add_argument(
-        "--ver",
-        default="1.0",
-        help="Initial version (default: 1.0). Applied to v1 JSON only; v2 starts null.",
-    )
-    p_init.add_argument(
-        "--v1",
-        action="store_true",
-        help="Scaffold a legacy v1 JSON project instead of the default v2 Markdown",
-    )
 
     # upgrade
     p_up = sub.add_parser(
         "upgrade",
-        help=(
-            "Refresh project source(s) against the installed starter template. "
-            ".json → v1 agent_guidelines refresh; .md → v2 framework block + "
-            "frontmatter migration."
-        ),
+        help="Refresh a v2 Markdown source's framework block against the installed starter.md",
     )
     p_up.add_argument(
         "paths",
         nargs="+",
-        help=(
-            "Path(s) to upgrade. JSON file or directory containing source/ for "
-            "v1; .md source file for v2."
-        ),
+        help="One or more *_v*-source.md files to upgrade.",
     )
     p_up.add_argument(
         "--apply",

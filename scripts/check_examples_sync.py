@@ -21,7 +21,6 @@ from pathlib import Path
 
 # (source file, committed example) — mirrors the regen-* Makefile targets.
 EXAMPLES = [
-    ("src/research_buddy/starter.json", "starter-example/starter.html"),
     ("src/research_buddy/starter.md", "starter-example/starter-md.html"),
 ]
 
