@@ -388,13 +388,11 @@ they need a decision before execution rather than being picked up blind.
 - ~~**Consistent temp-file cleanup.**~~ **Done (PR-10, 2026-06-22).**
   `atomic_write` in `fileio.py` replaces all ad-hoc temp writes.
 
-- [ ] **Mobile-friendly tab bar (1.19.0).** Tab bar already has
-  `overflow-x: auto` but no visual affordance or active-tab scroll-into-
-  view. Fix: restructure HTML to separate scrollable tab strip
-  (`#tab-scroll`) from the fixed `#menu-toggle` / `#theme-toggle`; add
-  JS-controlled fade-edge overlays on a `#tab-scroll-wrap`; scroll the
-  active tab into view on switch. CSS-only on mobile media query;
-  `make regen-examples` required.
+- [x] **Mobile-friendly tab bar (1.19.0).** Shipped PR #129. Tab bar restructured
+  with `#tab-scroll-wrap > #tab-scroll` so only the tab strip scrolls while
+  hamburger/theme-toggle stay anchored. JS-controlled `.fade-left`/`.fade-right`
+  fade-edge overlays; active tab scrolls into view on switch. Gemini review fix
+  applied: `TABS.indexOf(tab) === -1` guard in `_scrollTabIntoView`.
 
 - [ ] **Print / browser-PDF CSS (1.20.0).** `@media print` exists but is
   minimal — dark theme bleeds through, no page-break control, code blocks
