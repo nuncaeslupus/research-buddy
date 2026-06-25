@@ -357,6 +357,17 @@ class TestBuildErrors:
         rc = cmd_build(self._args(paths=[str(empty)]))
         assert rc == 1
 
+    def test_output_with_multiple_paths_is_error(self, tmp_path: Path) -> None:
+        """--output + multiple inputs would overwrite the same file — reject it."""
+        from research_buddy.main import cmd_build
+
+        a = tmp_path / "a.md"
+        b = tmp_path / "b.md"
+        a.write_text("x")
+        b.write_text("x")
+        rc = cmd_build(self._args(paths=[str(a), str(b)], output=str(tmp_path / "out.html")))
+        assert rc == 1
+
 
 # ---------------------------------------------------------------------------
 # perform_build_md — MD-specific helper that drives the .md → HTML pipeline

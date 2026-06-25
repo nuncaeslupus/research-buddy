@@ -103,6 +103,13 @@ def perform_build_md(
 
 def cmd_build(args: argparse.Namespace) -> int:
     """Build HTML from v2 Markdown source file(s)."""
+    if args.output and len(args.paths) > 1:
+        print(
+            "Error: --output cannot be combined with multiple input files "
+            "(each build would overwrite the same output). Build them one at a time.",
+            file=sys.stderr,
+        )
+        return 1
     exit_code = 0
     for p in args.paths:
         md_path = Path(p).resolve()
