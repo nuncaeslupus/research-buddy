@@ -115,5 +115,31 @@ def build_summary(old_text: str, new_text: str) -> str:
     )
 
 
+def build_downstream_action(old_text: str, new_text: str) -> str | None:
+    """Return a downstream-action block when new Adopted Rules were added, else None.
+
+    Lists newly added rules as an unchecked checklist so the agent or user can
+    propagate decisions to implementation specs or plans before the next session.
+    Revised rules are not included — they refine an already-adopted decision.
+    """
+    old_rules = _entry_blocks(old_text, "rule", "rules")
+    new_rules = _entry_blocks(new_text, "rule", "rules")
+    added = [r for r in new_rules if r not in old_rules]
+    if not added:
+        return None
+    new_version = _version(new_text)
+    items = "\n".join(
+        f"- [ ] [{r}](#{r.lower()}) — {{{{downstream files or specs to update}}}}" for r in added
+    )
+    return (
+        "<!-- downstream-action-start -->\n"
+        f"**Downstream action required (v{new_version}).** "
+        "New decisions adopted this session may require propagation"
+        " to implementation specs or plans:\n\n"
+        f"{items}\n"
+        "<!-- downstream-action-end -->"
+    )
+
+
 def has_append_only_violation(old_text: str, new_text: str) -> bool:
     return bool(_check_append_only(old_text, new_text))
