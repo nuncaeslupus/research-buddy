@@ -4,6 +4,12 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-06-26
+
+### Added
+
+- **`diff-summary` downstream-action checklist.** When `research-buddy diff-summary` detects new Adopted Rules (`<!-- @rule: R-XXX-N -->` entries), it now outputs a `<!-- downstream-action-start/end -->` block after the `@summary-end` block. Each new rule appears as a GFM task-list item with a `{{downstream files or specs to update}}` placeholder, giving downstream implementation projects a mechanical propagation checklist rather than relying on agent memory. The Turn 2 workflow in `starter.md` instructs the agent to paste this block into the source file's `## Session Notes` section when present.
+
 ## [2.0.0] — 2026-06-25
 
 **Breaking: legacy v1 JSON support removed.** v2 Markdown has been the default
