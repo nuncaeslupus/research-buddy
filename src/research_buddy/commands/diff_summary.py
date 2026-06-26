@@ -13,7 +13,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from research_buddy.diff_summary import build_summary, has_append_only_violation
+from research_buddy.diff_summary import (
+    build_downstream_action,
+    build_summary,
+    has_append_only_violation,
+)
 
 
 def cmd_diff_summary(args: argparse.Namespace) -> int:
@@ -36,4 +40,8 @@ def cmd_diff_summary(args: argparse.Namespace) -> int:
     new_text = new_path.read_text(encoding="utf-8")
 
     print(build_summary(old_text, new_text))
+    action = build_downstream_action(old_text, new_text)
+    if action:
+        print()
+        print(action)
     return 1 if has_append_only_violation(old_text, new_text) else 0

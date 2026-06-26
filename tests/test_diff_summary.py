@@ -10,7 +10,11 @@ import pytest
 from research_buddy.bump import bump_md_text
 from research_buddy.commands._shared import _load_starter_md_text
 from research_buddy.commands.init import _set_frontmatter_scalar
-from research_buddy.diff_summary import build_summary, has_append_only_violation
+from research_buddy.diff_summary import (
+    build_downstream_action,
+    build_summary,
+    has_append_only_violation,
+)
 
 
 def _old_source() -> str:
@@ -85,6 +89,44 @@ class TestBuildSummary:
         )
         assert has_append_only_violation(old, new)
         assert "Append-only invariant: FAIL" in build_summary(old, new)
+
+
+class TestBuildDownstreamAction:
+    def test_no_new_rules_returns_none(self) -> None:
+        old = _old_source()
+        new, _, _ = bump_md_text(old, "Q-001", "1.1", "2026-06-01")
+        assert build_downstream_action(old, new) is None
+
+    def test_new_rule_produces_checklist(self) -> None:
+        old = _old_source()
+        new = _new_source(old)  # adds R-CHUNK-1
+        block = build_downstream_action(old, new)
+        assert block is not None
+        assert "<!-- downstream-action-start -->" in block
+        assert "<!-- downstream-action-end -->" in block
+        assert "[R-CHUNK-1](#r-chunk-1)" in block
+        assert "{{downstream files or specs to update}}" in block
+        assert "v1.1" in block
+
+    def test_revised_rule_not_included(self) -> None:
+        old = _new_source(_old_source())  # already has R-CHUNK-1
+        new = old.replace("Chunk at 512 tokens.", "Chunk at 256 tokens.", 1)
+        assert build_downstream_action(old, new) is None
+
+    def test_command_prints_downstream_block(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        from research_buddy.commands.diff_summary import cmd_diff_summary
+
+        old_text = _old_source()
+        old = tmp_path / "demo_v1.0-source.md"
+        new = tmp_path / "demo_v1.1-source.md"
+        old.write_text(old_text, encoding="utf-8")
+        new.write_text(_new_source(old_text), encoding="utf-8")
+        cmd_diff_summary(Namespace(old=str(old), new=str(new)))
+        out = capsys.readouterr().out
+        assert "downstream-action-start" in out
+        assert "[R-CHUNK-1](#r-chunk-1)" in out
 
 
 class TestDiffSummaryCommand:
