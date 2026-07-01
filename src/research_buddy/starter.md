@@ -207,7 +207,7 @@ The closed list of presentation primitives the agent MAY use. Plain Markdown alo
 | EL-06 | Code blocks | fenced ` ``` ` with language hint; syntax-highlighted via highlight.js |
 | EL-07 | Tables | GFM `\|...\|`; widths auto-derived from content (never tune manually) |
 | EL-08 | Horizontal rule | `---` on its own line |
-| EL-09 | Inline SVG | `<svg>...</svg>`. Use `currentColor` and theme variables (`var(--text)`, `var(--bg)`, `var(--blue)`, `var(--green)`, `var(--amber)`, `var(--red)`) where colour should follow the active theme; hard-coded hex renders the same in light and dark. |
+| EL-09 | Inline SVG | `<svg>...</svg>`. Use `currentColor` and theme variables (`var(--text)`, `var(--bg)`, `var(--blue)`, `var(--green)`, `var(--amber)`, `var(--red)`) where color should follow the active theme; hard-coded hex renders the same in light and dark. |
 | EL-10 | Callouts | `> [!KIND]` blockquote. Kinds: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, `LIMITATION`, `HYPOTHESIS`. The last two are research-specific. |
 | EL-11 | Verdict badge | ` ```rb-verdict <kind> ` fenced block with prose body. Kinds: `supports`, `contradicts`, `unverifiable`, `silent`. |
 | EL-12 | Card grid | ` ```rb-cards ` fenced block; YAML list of `{title, body, icon?}`. |
@@ -419,7 +419,7 @@ The matrix lives in the relevant Session Notes block.
 <!-- @anchor: framework.reference.validation -->
 ### Self-validation
 
-Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: **mechanical / compliance** (structural invariants — verifiable deterministically from the file alone) and **semantic** (judgement-based — depend on understanding the content). Mechanical checks are the bulk of validation by count and the cheapest by effort; doing them first catches most write errors before semantic review even starts.
+Before declaring Turn 2 complete, the agent runs a self-validation pass over the new file. Two kinds of checks: **mechanical / compliance** (structural invariants — verifiable deterministically from the file alone) and **semantic** (judgment-based — depend on understanding the content). Mechanical checks are the bulk of validation by count and the cheapest by effort; doing them first catches most write errors before semantic review even starts.
 
 The `research-buddy validate <file>` command runs all mechanical checks deterministically. When shell access AND `research-buddy` are available, the agent MUST invoke it and treat its exit code as authoritative. When shell access is unavailable, the agent MUST instead paste a mental-simulation checklist that names every mechanical check below and gives each a PASS/FAIL outcome — no shortcuts, no "all good" summaries. **Compliance validation passing is a precondition for delivering the file artifact** (Turn 2 step 3); the validator output (real or simulated) MUST appear in the Turn 2 message before the file. A failing validation is a blocking issue per Turn 2 step 5; the agent emits the `status=blocked:reason=validation_failed` marker and does not deliver the file.
 

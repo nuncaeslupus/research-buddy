@@ -85,7 +85,7 @@ def _install_table_layout_rules(md: MarkdownIt) -> None:
 
     Render-time state (current table index, current column index, current
     layout) flows through `env`, never closure-captured — the cached `md`
-    instance is reused across builds, so each call must initialise its own
+    instance is reused across builds, so each call must initialize its own
     counters.
     """
 

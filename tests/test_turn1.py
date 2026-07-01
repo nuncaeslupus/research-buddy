@@ -104,7 +104,7 @@ class TestBuildBriefSkeleton:
         assert "without traceable authorship" in brief
         assert any("Q-003" in n for n in notes)
 
-    def test_leaves_judgement_slots_as_placeholders(self) -> None:
+    def test_leaves_judgment_slots_as_placeholders(self) -> None:
         brief, _ = build_brief_skeleton(_doc())
         for ph in (
             "{{RELEVANT_DISCARDED_ALTERNATIVES}}",

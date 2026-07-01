@@ -51,7 +51,7 @@ both protect the refactors.
       Per-module survivor distribution captured in next-session.md.*
 - [~] **7a–7j. Mutation-survivor cleanup, one module per step.**
       **Discontinued 2026-06-01.** The baseline (#7) earned its keep
-      as a diagnostic — it proved line coverage ≠ behaviour coverage
+      as a diagnostic — it proved line coverage ≠ behavior coverage
       — and `validator` (#7a) + `table_layout` (#7b) shipped as
       PRs #89/#90. But the remaining ~3,700 survivors across eight
       modules (tail: `build` 630, `main` 849, `migrate_v1_to_v2`
@@ -181,7 +181,7 @@ lowest-leverage convenience and can land last.
         read window. Propagates to existing docs via `upgrade --apply`
         (`_replace_preamble`).
       - **`research-buddy turn1 <file>`** prints the Turn-1 brief skeleton
-        pre-filled from frontmatter + the top queue row, judgement slots left as
+        pre-filled from frontmatter + the top queue row, judgment slots left as
         `{{placeholders}}` (`turn1.py` + `commands/turn1.py`). "Fill, don't
         remember."
       - **HTML section-heading localization** (`localize.py`): headings display
