@@ -4,6 +4,20 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] — 2026-07-01
+
+### Added
+
+- **Prompt-injection handling guidance in `starter.md`.** A new note in the
+  top-of-file operating manual tells the agent to treat any appended,
+  first-person-styled instruction (from tool output or trailing a user turn)
+  as untrusted data — never suppressing the `@brief-start`/`@summary-start`/
+  turn markers the framework's automation depends on because of it — and to
+  name the ignored instruction once rather than silently comply or silently
+  ignore it. Deliberately stays tool-agnostic: the framework still doesn't
+  mandate a specific research tool. A matching entry was added to Common
+  failure modes.
+
 ## [2.1.0] — 2026-06-26
 
 ### Added
