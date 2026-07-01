@@ -242,7 +242,7 @@ not hard-code a literal, it will silently rot. `_parse_semver` now lives in
   `<!-- @brief-start -->` / `<!-- @brief-end -->` markers, pre-filled from the
   frontmatter (project description, source tiers, fixed Never-tier) plus the
   first live Open Research Queue row (topic + objective, reusing `bump`'s
-  comment-aware row parser). Judgement slots (relevant DAs / tracker rows /
+  comment-aware row parser). Judgment slots (relevant DAs / tracker rows /
   rules, hypotheses, excellence bar) stay `{{placeholders}}`; guidance prints to
   stderr so the stdout block is clean to paste. The body mirrors the canonical
   brief template in `starter.md` — keep them in sync. Refuses starter files.

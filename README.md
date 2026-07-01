@@ -209,6 +209,58 @@ research-buddy upgrade ... --apply --no-validate                       # skip po
 Exit codes: `0` clean (no changes or applied), `1` dry-run found changes, `2`
 error (bad path, validation failed, starter missing, malformed framework block).
 
+### `research-buddy bump <path> <queue-id>`
+
+Perform the mechanical Turn-2 edits for one queue item: moves the row from the
+Open Research Queue to the Research Tracker, bumps the frontmatter
+`version`/`date`, and inserts session/changelog/references stubs with
+`{{placeholders}}` for the agent to fill. Always writes a **new** versioned
+file — never edits in place — and validates the result against the input as
+`--prior`.
+
+```
+research-buddy bump my-research_v1.0-source.md Q-003            # dry-run
+research-buddy bump my-research_v1.0-source.md Q-003 --apply    # writes my-research_v1.1-source.md
+research-buddy bump my-research_v1.0-source.md Q-003 --apply --force
+research-buddy bump my-research_v1.0-source.md Q-003 --apply --no-validate
+```
+
+Refuses starter files and unknown queue IDs.
+
+### `research-buddy locate <path> <anchor>`
+
+Print the line of the live `<!-- @end: <anchor> -->` marker plus context —
+the exact insertion point for a manual `str_replace`, fence-aware so it never
+matches a marker mentioned inside a code block.
+
+```
+research-buddy locate my-research_v1.0-source.md rules
+research-buddy locate my-research_v1.0-source.md "@end: rules" --context 5
+```
+
+### `research-buddy diff-summary <old> <new>`
+
+Emit the mechanical part of the Turn-2 `@summary` block by diffing two source
+files: version bump, queue→tracker moves, rules/DAs/sessions added, and an
+append-only PASS/FAIL verdict. Leaves the narrative as a `{{placeholder}}`.
+Exit code `1` signals an append-only violation.
+
+```
+research-buddy diff-summary my-research_v1.0-source.md my-research_v1.1-source.md
+```
+
+### `research-buddy turn1 <path>`
+
+Print the Turn-1 second-opinion brief skeleton, pre-filled from the
+frontmatter (project description, source tiers, Never-tier) and the first
+live Open Research Queue row (topic + objective), wrapped in real
+`@brief-start`/`@brief-end` markers ready to paste. Judgement slots stay
+`{{placeholders}}`. Refuses starter files.
+
+```
+research-buddy turn1 my-research_v1.0-source.md
+```
+
 ## Project layout
 
 ```
@@ -262,11 +314,14 @@ frontmatter when you upgrade the CLI.
 ## Development
 
 ```bash
-make sync           # Install dev dependencies
-make lint           # ruff + mypy + version-sync check
-make format         # Auto-fix + format
-make test           # Run full test suite
-make update-skills  # Pull latest shared Claude skills
+make sync                  # Install dev dependencies
+make lint                  # ruff + mypy + version-sync check
+make format                # Auto-fix + format
+make test                  # Run full test suite (fast, ungated)
+make test-cov              # Full suite + coverage gate (what CI's test job runs)
+make check-version-sync    # CI gate: fails if the version strings drifted
+make check-examples-sync   # CI gate: fails if starter-example/*.html drifted
+make update-skills         # Pull latest shared Claude skills
 ```
 
 ## Examples

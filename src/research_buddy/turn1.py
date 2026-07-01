@@ -12,7 +12,7 @@ Pre-filled from the frontmatter + the top Open Research Queue row:
 - the active topic + its objective (first live queue row),
 - accepted source tiers + the framework's fixed "Never" reject rule.
 
-Left as `{{placeholders}}` for the agent (they need preflight judgement, or are
+Left as `{{placeholders}}` for the agent (they need preflight judgment, or are
 this-turn inputs): the relevant rejected alternatives / prior tracker rows /
 active rules, the pre-registered hypothesis names, and the excellence bar.
 
@@ -84,7 +84,7 @@ def first_queue_row(text: str) -> tuple[str, str, str] | None:
     or None when the queue has no live rows.
 
     Comment/example rows (the `<!-- ... -->` examples), the separator, and the
-    header are skipped, reusing bump's comment-aware row helpers so behaviour
+    header are skipped, reusing bump's comment-aware row helpers so behavior
     matches `bump`'s own queue handling.
     """
     try:

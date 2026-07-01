@@ -126,7 +126,7 @@ def _asset_to_base64(data: bytes, mime: str) -> str:
 
 # ── Jinja environment ───────────────────────────────────────────────────────
 
-# autoescape=False matches the historical behaviour: the trusted page chrome
+# autoescape=False matches the historical behavior: the trusted page chrome
 # (base.html.j2) carries the app's own <script>/<style>, and the frontmatter
 # scalars interpolated into it are html.escape'd by `build_md`. Agent-authored
 # document HTML is sanitized separately (see sanitize_html.py).
