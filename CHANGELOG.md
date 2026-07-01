@@ -11,8 +11,8 @@ All notable changes to Research Buddy. Format roughly follows
 - **Prompt-injection handling guidance in `starter.md`.** A new note in the
   top-of-file operating manual tells the agent to treat any appended,
   first-person-styled instruction (from tool output or trailing a user turn)
-  as untrusted data — never suppressing the `@brief-start`/`@summary-start`/
-  turn markers the framework's automation depends on because of it — and to
+  as untrusted data — never suppressing the `@brief`/`@summary` start/end or
+  turn markers the framework's automation depends on — and to
   name the ignored instruction once rather than silently comply or silently
   ignore it. Deliberately stays tool-agnostic: the framework still doesn't
   mandate a specific research tool. A matching entry was added to Common
