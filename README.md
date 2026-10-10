@@ -1,6 +1,8 @@
 # Research Buddy v2.2.0
 
-<img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/images/research-buddy.png" alt="Research Buddy" width="200">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/docs/hero.png" width="100%" alt="Research Buddy: a versioned source document with its frontmatter, queue, rules and devil's-advocate anchors; one queue topic per session in two turns, a brief and discovery that stops for your results, then the next version written and validated append-only; and the rendered single-file HTML with tabs and a tracker of settled and in-progress topics">
+</p>
 
 A structured AI research collaborator for any domain.
 
