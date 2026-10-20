@@ -102,7 +102,7 @@ Written → heat-pumps.html (207 KB)
 
 ## Use with AI agents
 
-There is no MCP server. Agents use Research Buddy in two ways:
+There is no MCP server. Agents use Research Buddy in these ways:
 
 - **Chat assistants (no shell).** Attach the `*-source.md` file. The framework at
   the top of the document is the agent's instructions: session zero, the two-turn
@@ -154,7 +154,7 @@ There is no MCP server. Agents use Research Buddy in two ways:
 | `locate <source> <anchor> [--context N]` | Line of the live `@end` marker, fence-aware |
 | `diff-summary <old> <new>` | Mechanical part of the Turn 2 `@summary` block |
 | `upgrade <source...> [--apply] [--no-validate]` | Refresh the framework block and frontmatter from the installed starter (dry run without `--apply`) |
-| `migrate-v1-to-v2 <json...> [-o] [--force]` | Convert a legacy v1 JSON document (v1 support was removed in 2.0) |
+| `migrate-v1-to-v2 <json...> [-o] [--force]` | Convert a legacy v1 JSON document (current releases no longer read v1) |
 
 Run `research-buddy <command> --help` for full options.
 
