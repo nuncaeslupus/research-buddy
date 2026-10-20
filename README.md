@@ -1,340 +1,218 @@
 # Research Buddy v2.2.0
 
+[![PyPI](https://img.shields.io/pypi/v/research-buddy)](https://pypi.org/project/research-buddy/)
+[![CI](https://github.com/nuncaeslupus/research-buddy/actions/workflows/ci.yml/badge.svg)](https://github.com/nuncaeslupus/research-buddy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/docs/hero.png" width="100%" alt="Research Buddy: a versioned source document with its frontmatter, queue, rules and devil's-advocate anchors; one queue topic per session in two turns, a brief and discovery that stops for your results, then the next version written and validated append-only; and the rendered single-file HTML with tabs and a tracker of settled and in-progress topics">
 </p>
 
-A structured AI research collaborator for any domain.
+**A structured AI research collaborator for any domain, carried inside a single versioned Markdown file.**
 
-## Format
-
-Research Buddy documents are **v2 Markdown**: YAML frontmatter + a Markdown body
-with HTML-comment anchors (`<!-- @anchor: ... -->`, `<!-- @rule: ... -->`,
-`<!-- @da: ... -->`). The source of truth is `*_v*-source.md` (agent-edited,
-carries the full framework); the reader-facing artifacts are the clean view
-`*_v*.md` (framework stripped) and the rendered single-file HTML. Each top-level
-`## H2` becomes a tab.
-
-> **Upgrading from v1 JSON?** Legacy v1 JSON support was removed in **v2.0**.
-> Convert an existing v1 document with `research-buddy migrate-v1-to-v2 old.json`
-> — it writes a v2 `*-source.md` you can then `build`. This is the only command
-> that still reads JSON.
-
-## How it works
-
-The AI agent reads the framework embedded in your research document and behaves as a Research Buddy for the full lifetime of the project. Every session produces an updated, versioned source file — the source of truth — and a rendered HTML document for reading.
-
-**Session zero**: run `research-buddy init my-project/` to scaffold `source/research-document.md`. Upload that file to an AI assistant. The agent introduces itself, asks questions to understand the project, does discovery research, and proposes the initial structure — sections, source tiers, queue items, and methodology rules tailored to your domain. Output: `{file_name}_v1.0-source.md`. Run `research-buddy build my-project/source/{file_name}_v1.0-source.md` to generate HTML.
-
-**Subsequent sessions**: upload the latest `*-source.md`, say *"Continue research"* — the agent picks up exactly where you left off and works through the queue one topic at a time in exactly 2 turns.
-
-## Install
-
-### For users (pip)
-
-```bash
-pip install research-buddy
-```
-
-### For development
-
-```bash
-uv sync --extra dev
-# or:
-pip install -e ".[dev]"
-```
-
-## For AI Agents or AI users
-
-If you are an AI agent or a user of a chatbot looking for the initial research template:
-
-- **Direct download**: [starter.md](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.md)
-- **Package path**: `research_buddy.starter.md` (when installed via pip)
-- **Source path**: `src/research_buddy/starter.md` (in this repository)
-
-Download this file and attach it into an AI chatbot session to start researching. The AI agent will know what to do.
-
-### Generating HTML
-
-After each research session, to give the user a readable HTML document:
-
-```bash
-pip install research-buddy
-research-buddy build my-project/source/my-project_v1.0-source.md
-```
-
-The output will be `[file_name].html` in the project directory.
-
-### Workflow
-
-1. **Session start**: User uploads their `*-source.md` file. If new, ask them to run `research-buddy init <project-name>` first to get the starter template.
-2. **Session end**: After making changes, run `research-buddy build <source-file>` to generate HTML. Tell the user the HTML is ready and they can download it.
-3. **Next session**: Ask the user to upload the latest `*-source.md` file and say "Continue research".
-
-The source file is always the source of truth — never the HTML.
+Long research with a chatbot drifts: context is lost between sessions, settled
+questions get reopened, and sources go unchecked. Research Buddy puts the method
+in the document itself. You upload one `*-source.md` file to any AI assistant; the
+framework embedded in it makes the agent work one queued topic per session, in two
+turns, with tiered sources and append-only history. The `research-buddy` CLI
+scaffolds, validates and versions that file and renders it to a single-file HTML page.
 
 ## Quick start
 
 ```bash
-# Scaffold a new project
+pip install research-buddy
 research-buddy init my-project/
-
-# Upload my-project/source/research-document.md to your AI assistant
-# The agent runs session_zero and produces {file_name}_v1.0-source.md
-
-# Build HTML from the versioned output
-research-buddy build my-project/source/my-project_v1.0-source.md
-
-# Open the result
-open my-project.html
 ```
 
-## Research protocol
+Upload `my-project/source/research-document.md` to your AI assistant. It runs
+session zero (asks about your project, proposes sections, source tiers, rules and a
+research queue) and returns `{file_name}_v1.0-source.md`. Save it in
+`my-project/source/`, then:
 
-Every session follows a strict, high-integrity 2-turn workflow:
+```bash
+research-buddy build my-project/source/my-project_v1.0-source.md
+```
 
-1. **Turn 1: Research & Brief**
-   - Agent reads the in-document framework, detects session state, and emits a second-opinion brief before touching any research tool. (`research-buddy turn1 <file>` pre-fills the brief from frontmatter + the top queue row.)
-   - Agent performs discovery research using domain-appropriate Tier 1 sources with inline citations, then **STOPS** and waits for the user to provide results from other researchers (other AI agents, human experts, etc.).
-2. **Turn 2: Vet & Write**
-   - User submits findings from other researchers.
-   - Agent vets each finding, resolves pre-registered hypotheses, then performs an **atomic write** to the versioned source file `*_vX.Y-source.md`, bumping the version.
-   - User runs `research-buddy build <source-file>` to generate HTML.
-   - New research topics are queued for the next session, not shoehorned into the current one.
+That writes `my-project.html` next to the source, plus a per-version copy in
+`versions/`. In later sessions, upload the latest `*-source.md` and say
+*"Continue research"*.
 
-**Failure modes are explicit**: the in-document framework lists failure modes that agents use to self-check before and after every action.
+No install needed to start: the template is also a
+[direct download](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.md).
 
-## File naming
+## Example
 
-The tool uses the `file_name` field from your document to name outputs.
+A `heat-pumps_v1.0-source.md` after session zero, whose top queue row is
+`Q-001 | Radiator sizing | Can existing radiators deliver design heat load at 45 C flow?`.
 
-| File                          | Purpose                                                        |
-| ----------------------------- | -------------------------------------------------------------- |
-| `source/research-document.md` | Unversioned starter — uploaded to the agent for session zero  |
-| `[file_name]_v1.0-source.md`  | First versioned source, produced by session zero               |
-| `[file_name]_v1.1-source.md`  | After first research session                                   |
-| `[file_name]_vX.Y.md`         | Clean view (framework stripped) — shareable artifact           |
-| `[file_name]_vX.Y.html`       | Versioned HTML build                                           |
-| `[file_name].html`            | Latest stable HTML build                                       |
+Turn 1 starts from a brief pre-filled from the frontmatter and that row:
+
+```
+$ research-buddy turn1 heat-pumps_v1.0-source.md
+pre-filled from the top queue row Q-001 (Radiator sizing).
+...
+<!-- @brief-start -->
+I am working on a Retrofitting heat pumps into pre-1950 houses (deliverable: plan;
+goal: A go/no-go decision and sizing plan for one house). I'm trying to decide
+Radiator sizing.
+
+I need you to do a deep research that allows you to answer these questions: Can
+existing radiators deliver design heat load at 45 C flow?.
+...
+Accepted sources will be: Tier 1 (primary, supports VALIDATED): Peer-reviewed
+building-physics journals; national energy agencies. Tier 2 (official secondary):
+Manufacturer datasheets; installer handbooks.
+...
+<!-- @brief-end -->
+```
+
+Turn 2 writes the next version. The mechanical edits are one command, and the
+result is checked against the append-only rules:
+
+```
+$ research-buddy bump heat-pumps_v1.0-source.md Q-001 --apply
+── heat-pumps_v1.0-source.md → heat-pumps_v1.1-source.md ──
+  topic: Radiator sizing
+  queue: removed row Q-001 (Radiator sizing)
+  tracker: appended row Q-001 (v1.1)
+  sessions: inserted skeleton for Q-001
+  changelog: prepended v1.1 entry
+  references: prepended v1.1 subsection
+  frontmatter: version → 1.1, date → 2026-10-20
+  → wrote heat-pumps_v1.1-source.md
+
+$ research-buddy diff-summary heat-pumps_v1.0-source.md heat-pumps_v1.1-source.md
+<!-- @summary-start -->
+{{Narrative — 1-3 plain-language sentences on what this version accomplished. ...}}
+
+- Version: v1.0 → v1.1
+- Queue: Q-001 → tracker.
+- Session notes: +Q-001.
+- Append-only invariant: PASS
+<!-- @summary-end -->
+
+$ research-buddy build heat-pumps_v1.1-source.md
+Reading heat-pumps_v1.1-source.md…
+Building HTML…
+Written → versions/heat-pumps_v1.1.html
+Written → heat-pumps.html (207 KB)
+```
+
+`starter-example/starter-md.html` is a pre-built render of the bundled template.
+
+## Use with AI agents
+
+There is no MCP server. Agents use Research Buddy in two ways:
+
+- **Chat assistants (no shell).** Attach the `*-source.md` file. The framework at
+  the top of the document is the agent's instructions: session zero, the two-turn
+  protocol, source tiers, failure modes. The starter is
+  [`starter.md`](https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/src/research_buddy/starter.md)
+  (also `research_buddy/starter.md` in the installed package).
+- **Agents with a shell** (Claude Code, Codex, etc.) drive the CLI for the
+  mechanical steps and keep the judgement for themselves:
+
+  | Step | Command |
+  |---|---|
+  | Turn 1 brief skeleton | `research-buddy turn1 <source>` |
+  | Where to insert a rule, DA or entry | `research-buddy locate <source> <anchor>` |
+  | Turn 2 queue-to-tracker move, stubs, version bump | `research-buddy bump <source> <Q-id> --apply` |
+  | Turn 2 change summary | `research-buddy diff-summary <old> <new>` |
+  | Check before handing back | `research-buddy validate <new> --prior <old>` |
+  | Render for the user | `research-buddy build <source>` |
+
+  Exit codes are scriptable: `validate` returns `1` on errors (`2` if the `--prior`
+  file is missing); `diff-summary` returns `1` on an append-only violation;
+  `upgrade` returns `1` when a dry run finds changes and `2` on error. Slots the
+  agent must fill are left as `{{...}}` placeholders.
+
+## How it works
+
+- **One file is the source of truth.** `*_vX.Y-source.md` is YAML frontmatter plus
+  a Markdown body with HTML-comment anchors (`<!-- @anchor: ... -->`,
+  `<!-- @rule: ... -->`, `<!-- @da: ... -->`). The clean view `*_vX.Y.md` and the
+  HTML are derived. Each top-level `## H2` becomes a tab.
+- **Two turns per session.** Turn 1: brief, then discovery with inline Tier 1
+  citations, then **stop** for results from other researchers (other AIs, human
+  experts). Turn 2: vet each finding, resolve pre-registered hypotheses, write the
+  next version atomically. New topics go to the queue, not into the current session.
+- **Append-only history.** Tracker rows, discarded alternatives, references and
+  changelog entries never disappear; `validate --prior` enforces it.
+- **Every session is a new file**: `_v1.0`, `_v1.1`, ... The HTML build keeps a
+  copy per version in `versions/`.
 
 ## Commands
 
-### `research-buddy init <dir>`
+| Command | What it does |
+|---|---|
+| `init <dir> [--title] [--subtitle]` | Scaffold `source/research-document.md` and `versions/` |
+| `build <source...> [--output] [--theme] [--no-versioning]` | Render single-file HTML (tabs, sidebar, theme toggle). Strips the framework, sanitizes agent HTML, aborts on validation errors |
+| `validate <source...> [--prior <old>]` | Frontmatter, anchor pairing, links, ID uniqueness, unsafe-HTML warnings; with `--prior`, append-only checks |
+| `clean <source...> [-o]` | Write the shareable clean view `{file_name}_v{version}.md` |
+| `turn1 <source>` | Print the Turn 1 brief skeleton |
+| `bump <source> <Q-id> [--apply] [--force] [--no-validate]` | Turn 2 mechanical edits into a new versioned file (dry run without `--apply`) |
+| `locate <source> <anchor> [--context N]` | Line of the live `@end` marker, fence-aware |
+| `diff-summary <old> <new>` | Mechanical part of the Turn 2 `@summary` block |
+| `upgrade <source...> [--apply] [--no-validate]` | Refresh the framework block and frontmatter from the installed starter (dry run without `--apply`) |
+| `migrate-v1-to-v2 <json...> [-o] [--force]` | Convert a legacy v1 JSON document (v1 support was removed in 2.0) |
 
-Scaffold a new project: creates `source/research-document.md` (the bundled v2
-starter, frontmatter patched with `--title`/`--subtitle` if provided) and
-`versions/`.
+Run `research-buddy <command> --help` for full options.
 
-```
-research-buddy init my-project/ [--title "Project Name"] [--subtitle "..."]
-```
+**Language.** `language` in the frontmatter (`"Spanish"` or `{code: es, label: Español}`)
+sets the HTML `lang` and, for shipped languages (currently Spanish), displays the
+framework's section headings translated while keeping English slugs so links still
+resolve. Override or add labels with a `section_labels:` mapping:
 
-### `research-buddy build <path...>`
-
-Build a single-file HTML page from one or more v2 Markdown source files (tab
-bar, sidebar nav, theme toggle, syntax highlighting).
-
-```
-research-buddy build my-research_v1.0-source.md
-research-buddy build my-research_v1.0-source.md --output master.html
-research-buddy build my-research_v1.0-source.md --no-versioning
-```
-
-The build strips the framework block by default (the framework is for the agent
-reading the source, not for HTML readers) and **sanitizes** all agent-authored
-HTML (see [Security & trust model](#security--trust-model)). The render aborts
-without writing HTML if the document has validation errors.
-
-### `research-buddy validate <path...>`
-
-Run the v2 mechanical validator (frontmatter, anchor pairing, link resolution,
-ID uniqueness, dangerous-HTML warnings).
-
-```
-research-buddy validate my-research_v1.0-source.md
-research-buddy validate my-research_v1.1-source.md --prior my-research_v1.0-source.md
+```yaml
+section_labels:
+  Open Research Queue: Cola de tareas
 ```
 
-The optional `--prior` flag compares against an earlier version of the same file
-and enforces append-only invariants: anchors, Discarded Alternatives,
-References, and Changelog entries must never disappear.
+**Versions.** Each document records `research_buddy_version` in its frontmatter.
+After upgrading the CLI, run `research-buddy upgrade <file> --apply`.
 
-### `research-buddy clean <path...>`
+## Security
 
-Generate the shareable clean view from a v2 source file: strips the framework
-block (`<!-- @anchor: framework.core -->` … `<!-- @end: framework.reference -->`)
-and regenerates the title block from the YAML frontmatter. Output:
-`{file_name}_v{version}.md` alongside the source.
+Documents are Markdown written by an LLM and rendered to HTML you open in a
+browser, so injected `<script>`, `on*=` handlers and `javascript:` links are in
+scope.
 
-```
-research-buddy clean my-research_v1.0-source.md
-research-buddy clean my-research_v1.0-source.md -o /tmp/out.md
-```
+- `validate` warns on them (`unsafe-html-script`, `-event-handler`, `-js-uri`).
+- `build` runs every agent-authored fragment through [`nh3`](https://nh3.readthedocs.io/)
+  with an allowlist matching the framework's elements. Scripts, event handlers,
+  `javascript:`/`data:` URIs, `<iframe>`, `<object>` and `<foreignObject>` are removed;
+  prose, tables, callouts, status chips and inline SVG (itself sanitized) are kept.
+- A `theme_css` file is inlined with `</style>` neutralized.
 
-Refuses to run on a starter file (`project.domain` is null in the frontmatter) —
-there's nothing to clean until session zero fills in the project specification.
+This protects the rendered HTML; the source file is still yours to trust.
 
-### `research-buddy migrate-v1-to-v2 <path...>`
+## Limitations
 
-One-way migration from a legacy v1 JSON document to a v2 Markdown source file —
-the only command that still reads JSON. Maps `meta.*` +
-`agent_guidelines.project_specific.*` to YAML frontmatter; injects the v2
-framework block from the bundled `starter.md`; promotes research-tab sections to
-top-level H2s; converts verdict blocks to `@rule` / `@da` blocks with stable IDs.
-
-```
-research-buddy migrate-v1-to-v2 my-research_v3.0.json     # writes my-research_v3.0-source.md
-research-buddy migrate-v1-to-v2 old.json -o new-source.md
-research-buddy migrate-v1-to-v2 old.json --force          # overwrite existing output
-```
-
-Refuses to overwrite an existing output unless `--force` is passed. After
-migration, run `research-buddy validate <output>.md` to confirm the result.
-
-### `research-buddy upgrade <path...>`
-
-Re-sync a v2 Markdown source against the installed `starter.md`. Replaces the
-framework block (everything between `<!-- @anchor: framework.core -->` and
-`<!-- @end: framework.reference -->`) with the installed starter's block,
-preserves all project-owned content (frontmatter values, project specification,
-queue, tracker, rules, DAs, sessions, journey, references, changelog), bumps
-`research_buddy_version`, renames legacy `format_version` → `doc_format_version`,
-and inserts missing `project.source_tiers` / `project.domain_rules` frontmatter
-fields with null values.
-
-```
-research-buddy upgrade my-project/source/foo_v1.0-source.md            # dry-run
-research-buddy upgrade my-project/source/foo_v1.0-source.md --apply    # write + validate
-research-buddy upgrade ... --apply --no-validate                       # skip post-write validation
-```
-
-Exit codes: `0` clean (no changes or applied), `1` dry-run found changes, `2`
-error (bad path, validation failed, starter missing, malformed framework block).
-
-### `research-buddy bump <path> <queue-id>`
-
-Perform the mechanical Turn-2 edits for one queue item: moves the row from the
-Open Research Queue to the Research Tracker, bumps the frontmatter
-`version`/`date`, and inserts session/changelog/references stubs with
-`{{placeholders}}` for the agent to fill. Always writes a **new** versioned
-file — never edits in place — and validates the result against the input as
-`--prior`.
-
-```
-research-buddy bump my-research_v1.0-source.md Q-003            # dry-run
-research-buddy bump my-research_v1.0-source.md Q-003 --apply    # writes my-research_v1.1-source.md
-research-buddy bump my-research_v1.0-source.md Q-003 --apply --force
-research-buddy bump my-research_v1.0-source.md Q-003 --apply --no-validate
-```
-
-Refuses starter files and unknown queue IDs.
-
-### `research-buddy locate <path> <anchor>`
-
-Print the line of the live `<!-- @end: <anchor> -->` marker plus context —
-the exact insertion point for a manual `str_replace`, fence-aware so it never
-matches a marker mentioned inside a code block.
-
-```
-research-buddy locate my-research_v1.0-source.md rules
-research-buddy locate my-research_v1.0-source.md "@end: rules" --context 5
-```
-
-### `research-buddy diff-summary <old> <new>`
-
-Emit the mechanical part of the Turn-2 `@summary` block by diffing two source
-files: version bump, queue→tracker moves, rules/DAs/sessions added, and an
-append-only PASS/FAIL verdict. Leaves the narrative as a `{{placeholder}}`.
-Exit code `1` signals an append-only violation.
-
-```
-research-buddy diff-summary my-research_v1.0-source.md my-research_v1.1-source.md
-```
-
-### `research-buddy turn1 <path>`
-
-Print the Turn-1 second-opinion brief skeleton, pre-filled from the
-frontmatter (project description, source tiers, Never-tier) and the first
-live Open Research Queue row (topic + objective), wrapped in real
-`@brief-start`/`@brief-end` markers ready to paste. Judgement slots stay
-`{{placeholders}}`. Refuses starter files.
-
-```
-research-buddy turn1 my-research_v1.0-source.md
-```
-
-## Project layout
-
-```
-my-project/
-├── source/
-│   └── research-document.md       # Starter (agent uploads this for session_zero)
-├── versions/                      # Versioned HTML builds
-│   └── [file_name]_v1.0.html
-├── [file_name].html               # Latest stable build (copy of most recent version)
-└── theme.css                      # Optional CSS overrides
-```
-
-## Multi-language support
-
-The document language is set in session_zero based on the user's preference and recorded in frontmatter. `language` accepts a string (`"Spanish"`) or an object (`{code: es, label: Español}`). It drives two things:
-
-- The HTML `lang` attribute (set automatically).
-- **Localized section headings.** The framework names its user-facing sections in English ("Open Research Queue", "References", …) because their slugs are load-bearing cross-link targets — translating them in the source would break every `[Queue](#open-research-queue)` link. So when `language.code` is a shipped language (currently **Spanish**), the HTML build *displays* those headings in that language while keeping the English slugs/ids, so nothing breaks. Add or override labels — and enable languages not shipped built-in — with an optional `section_labels:` frontmatter mapping (English heading → label):
-
-  ```yaml
-  section_labels:
-    Open Research Queue: Cola de tareas
-  ```
-
-  Localization is HTML-render-only; the clean-view Markdown keeps English headings (there a heading's slug *is* its text, so display and link target can't diverge). The framework prose itself stays English and is stripped from the clean view / HTML.
-
-Research *content* (findings, decisions, status text) is authored in the document language by the agent — there is no fixed status column, so the agent writes status text (and `rb-ok`/`rb-flag` chips) directly in the document language.
-
-## Security & trust model
-
-A v2 document is **Markdown authored by an LLM** and rendered to a single-file HTML page you open in a browser. The renderer intentionally lets raw HTML through (so the framework's comment anchors, inline SVG illustrations, and status chips work). That means a prompt-injected or careless agent emitting `<script>`, an `onerror=` handler, or a `javascript:` link is part of the threat model. Research Buddy defends in two layers:
-
-- **`validate` warns.** `research-buddy validate <file>.md` flags `<script>`, inline `on*=` event handlers, and `javascript:` URIs in the body (`unsafe-html-script` / `-event-handler` / `-js-uri`). These are warnings, not errors — a document may legitimately *discuss* such an example inside a code block.
-- **`build` sanitizes.** When rendering HTML, every agent-authored fragment (each tab's body, frontmatter banners, tab labels, and the document title) is run through a sanitizer ([`nh3`](https://nh3.readthedocs.io/), the Rust *ammonia* bindings) with an allowlist matching the framework's element catalog (see `src/research_buddy/starter.md`). Active content — `<script>` and its contents, inline event handlers, `javascript:` / `data:` URIs, `<iframe>` / `<object>` / `<foreignObject>`, and anything outside the allowlist — is stripped, while prose, tables, callouts, verdicts, cards, status chips, and **inline SVG illustrations** are preserved. SVG specifically is sanitized as untrusted (its `<script>`, event handlers, `<animate>`, and `<foreignObject>` are removed) rather than passed through.
-
-The page's own chrome (syntax highlighting, the tab/theme toggle script) is generated by the tool, not by the agent, and is not affected. Theme CSS supplied via `theme_css` is inlined but has its `</style>` neutralized so it cannot break out of the `<style>` element.
-
-This is defense-in-depth for the *rendered HTML*; the source `.md` is still yours to trust. If you build a document from an untrusted source, the sanitizer is what stands between that source and script execution in your browser.
-
-## Version compatibility (tool ↔ document)
-
-Research Buddy uses **MAJOR.MINOR.PATCH** semver. Every v2 document records the
-tool version that produced it in `research_buddy_version` (YAML frontmatter).
-
-The field is checked only for *presence* (it is required) — there is no active
-MAJOR/MINOR comparison gate. The agent updates it to the current tool version on
-each Turn 2 atomic write, so it stays in sync automatically. Run
-`research-buddy upgrade <file>.md --apply` to refresh the framework block and
-frontmatter when you upgrade the CLI.
+- It does not call any AI model or search engine. The research is done by the
+  assistant you upload the file to; the CLI only handles the file.
+- The HTML is output only; the `*-source.md` is the one file to edit and upload.
 
 ## Development
 
 ```bash
-make sync                  # Install dev dependencies
+make sync                  # install dev dependencies (uv)
 make lint                  # ruff + mypy + version-sync check
-make format                # Auto-fix + format
-make test                  # Run full test suite (fast, ungated)
-make test-cov              # Full suite + coverage gate (what CI's test job runs)
-make check-version-sync    # CI gate: fails if the version strings drifted
-make check-examples-sync   # CI gate: fails if starter-example/*.html drifted
-make update-skills         # Pull latest shared Claude skills
+make test                  # test suite
+make test-cov              # suite + coverage gate (what CI runs)
+make check-examples-sync   # starter-example/*.html is up to date
+make regen-examples        # regenerate it
 ```
 
-## Examples
+The version lives in `pyproject.toml`; `make version-sync` propagates it, including
+to this README's heading.
 
-The `starter-example/` directory contains `starter-md.html` — a pre-built HTML
-output from the bundled `starter.md` (framework stripped to match the reader
-view). Regenerate with:
+## Related projects
 
-```bash
-make regen-examples   # (alias: make regen-md-example)
-```
+- [claude-arsenal](https://github.com/nuncaeslupus/claude-arsenal) — spec-driven Claude Code workflow and gated task queue.
+- [drawspec](https://github.com/nuncaeslupus/drawspec) — declarative diagram spec → clean SVG/PNG/text, writable by LLMs; MCP server included.
+- [doc-control](https://github.com/nuncaeslupus/doc-control) — lets AI agents edit Word documents as tracked changes.
+- [literary-critic](https://github.com/nuncaeslupus/literary-critic) — LLM manuscript analysis the way a professional editor would.
+- [integral-job-search](https://github.com/nuncaeslupus/integral-job-search) — candidate-centred job search run in Claude Code.
 
 ## License
 
