@@ -4,6 +4,14 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.1] — 2026-10-20
+
+### Fixed
+
+- **The README renders on PyPI.** Its relative links are now absolute GitHub URLs, so they
+  work on the PyPI project page (images were already absolute); the README rewritten after
+  2.2.0 reaches PyPI with this release.
+
 ## [2.2.0] — 2026-07-01
 
 ### Added
