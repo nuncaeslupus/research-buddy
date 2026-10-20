@@ -1,8 +1,8 @@
-# Research Buddy v2.2.0
+# Research Buddy v2.2.1
 
 [![PyPI](https://img.shields.io/pypi/v/research-buddy)](https://pypi.org/project/research-buddy/)
 [![CI](https://github.com/nuncaeslupus/research-buddy/actions/workflows/ci.yml/badge.svg)](https://github.com/nuncaeslupus/research-buddy/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nuncaeslupus/research-buddy/blob/main/LICENSE)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/nuncaeslupus/research-buddy/main/docs/hero.png" width="100%" alt="Research Buddy: a versioned source document with its frontmatter, queue, rules and devil's-advocate anchors; one queue topic per session in two turns, a brief and discovery that stops for your results, then the next version written and validated append-only; and the rendered single-file HTML with tabs and a tracker of settled and in-progress topics">
