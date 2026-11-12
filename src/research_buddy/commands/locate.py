@@ -17,6 +17,7 @@ import re
 import sys
 from pathlib import Path
 
+from research_buddy.fileio import read_text_or_error
 from research_buddy.validator_md import _line_in_fence
 
 
@@ -53,7 +54,7 @@ def cmd_locate(args: argparse.Namespace) -> int:
         print("Error: empty anchor", file=sys.stderr)
         return 2
 
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = read_text_or_error(path).splitlines()
     hits = find_end_marker(lines, anchor)
 
     if not hits:

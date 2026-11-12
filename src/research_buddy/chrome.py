@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import functools
+import html
 import re
 from importlib import resources
 from typing import Any
@@ -174,7 +175,7 @@ def _build_rb_footer_html(meta: Doc) -> str:
     """Render the inline "Powered by Research Buddy" footer div."""
     rb_version = meta.get("research_buddy_version", "")
     logo_data = _rb_logo_data_url()
-    ver_suffix = f" v{rb_version}" if rb_version else ""
+    ver_suffix = f" v{html.escape(str(rb_version))}" if rb_version else ""
     return (
         f'<div class="rb-powered-by">'
         f'<img src="{logo_data}" alt="Research Buddy" class="rb-logo">'

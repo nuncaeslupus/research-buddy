@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from research_buddy.commands._shared import _load_starter_md_text
-from research_buddy.fileio import atomic_write
+from research_buddy.fileio import atomic_write, read_text_or_error
 from research_buddy.upgrade_md import UpgradeError, upgrade_md
 from research_buddy.validator_md import validate_md
 
@@ -31,7 +31,7 @@ def _upgrade_md_file(path: Path, args: argparse.Namespace) -> int:
         return 2
 
     print(f"── {path.name} ──")
-    source_text = path.read_text(encoding="utf-8")
+    source_text = read_text_or_error(path)
 
     try:
         upgraded, changes = upgrade_md(source_text, starter_text, __version__)
