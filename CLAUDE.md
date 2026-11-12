@@ -127,16 +127,12 @@ Workflow on a bump: edit `pyproject.toml`, run `make version-sync`, commit. CI's
 `make check-version-sync` catches drift; `tests/test_version_sync.py` is the
 local belt-and-suspenders.
 
-Releasing is automatic. `.github/workflows/release.yml` runs on every push to
-`main`: if `pyproject.toml`'s version has no `vX.Y.Z` tag yet, CI tags the
-commit, builds, publishes to PyPI (trusted publishing / OIDC), and cuts a
-GitHub release. So **merging a version bump to `main` is the release** — no
-manual `git tag` / push. Pushes that don't introduce a new version are a cheap
-no-op. `make publish` remains only as an emergency fallback: it uploads to
-PyPI **without** creating the `vX.Y.Z` tag, so a later merge of that version to
-`main` would see no tag, attempt to release, and fail at the upload step with a
-"file already exists" error. Don't use it in the normal flow — let the merge
-release.
+Releasing is tag-triggered (see `RELEASE.md`). Merging a version bump to
+`main` publishes nothing. Pushing a `vX.Y.Z` tag on `main` runs
+`.github/workflows/release.yml`: full CI, then tag/version/CHANGELOG checks,
+then build, PyPI publish (trusted publishing / OIDC) and the GitHub release.
+`make publish` is only an emergency fallback and refuses when the tag already
+exists on origin.
 
 v2 documents record `research_buddy_version` but there is **no active
 version-compatibility gate** — the field is checked only for presence, and the

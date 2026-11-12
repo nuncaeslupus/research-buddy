@@ -43,16 +43,21 @@ git tag -a vX.Y.Z -m "Research Buddy vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
+Merging the bump to `main` publishes nothing; only pushing the tag does.
 Pushing the tag triggers `.github/workflows/release.yml`:
 
-1. **build** — verifies the tag matches `pyproject.toml.project.version`,
-   runs `make check-version-sync`, builds the wheel + sdist, and runs
-   `twine check`.
-2. **publish-pypi** — uploads `dist/*` to PyPI via trusted publishing (no
+1. **ci** — runs the full `ci.yml` (lint + tests on every supported Python)
+   on the tagged commit. Nothing below runs if it fails.
+2. **build** — all the checks that can reject a release, before anything is
+   published: the tagged commit is on `main`, the tag matches
+   `pyproject.toml.project.version`, `make check-version-sync` passes,
+   `CHANGELOG.md` has a `## [X.Y.Z]` entry; then builds the wheel + sdist and
+   runs `twine check`.
+3. **publish-pypi** — uploads `dist/*` to PyPI via trusted publishing (no
    token needed). Gated behind the `pypi` GitHub environment so you can
    require manual approval if desired.
-3. **github-release** — creates the GitHub release from the tag, uses
-   `CHANGELOG.md` as the body, and attaches the built distributions.
+4. **github-release** — creates the GitHub release for the pushed tag, uses
+   the `CHANGELOG.md` entry as the body, and attaches the built distributions.
 
 ## Do not also `make publish` locally
 
@@ -69,9 +74,9 @@ locally after `git push origin vX.Y.Z`.
 
 ## Failure recovery
 
-- **Tag ↔ version mismatch**: the `build` job fails early. Delete the tag
+- **Tag ↔ version mismatch, or no CHANGELOG entry**: the `build` job fails before anything is published. Delete the tag
   locally and on origin (`git tag -d vX.Y.Z && git push origin :vX.Y.Z`),
-  fix `pyproject.toml` + `make version-sync`, commit, and re-tag.
+  fix `pyproject.toml` / `CHANGELOG.md` (+ `make version-sync`), merge, and re-tag.
 - **PyPI upload fails after build succeeded**: `dist/` artifacts are retained
   for 7 days on the build job. Re-run the `publish-pypi` job from the Actions
   UI.
