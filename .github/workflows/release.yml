@@ -1,35 +1,37 @@
 name: Release
 
-# Auto-release on merge: whenever a commit lands on `main` whose
-# pyproject.toml version has no corresponding `vX.Y.Z` tag yet, CI tags it,
-# builds, publishes to PyPI (trusted publishing / OIDC), and cuts a GitHub
-# release. No manual tag push is required — bump the version in a PR, merge,
-# and the release happens on its own. Idempotent: pushes that don't introduce
-# a new version are a cheap no-op (the `guard` job exits early).
+# Tag-triggered release: pushing a `vX.Y.Z` tag runs the full CI, checks the
+# tag against pyproject.toml and CHANGELOG.md, builds, publishes to PyPI
+# (trusted publishing / OIDC) and cuts a GitHub release. Nothing is published
+# on a plain merge to `main`; see RELEASE.md for the procedure.
 #
 # Keep this workflow filename as `release.yml` — the PyPI trusted-publisher
 # config is keyed to repo + workflow filename + the `pypi` environment.
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch: {}
+    tags: ["v*"]
 
 permissions:
   contents: read
 
-# Serialise releases so two quick merges can't race into a double publish.
+# Serialise releases so two quick tag pushes can't race into a double publish.
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  guard:
-    name: Decide whether to release
+  # Full CI (lint + tests on every supported Python) on the tagged commit.
+  ci:
+    name: CI on the tagged commit
+    uses: ./.github/workflows/ci.yml
+
+  # Every check that can reject a release runs here, before anything is
+  # published: tag/version agreement, ancestry on main, CHANGELOG entry.
+  build:
+    name: Verify and build distributions
+    needs: ci
     runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -40,34 +42,40 @@ jobs:
           python-version: "3.12"
       - name: Install dev extras
         run: uv sync --extra dev
-      - name: Verify version strings in sync
-        run: make check-version-sync
-      - id: check
-        name: Has this version already been released?
+
+      - name: Tag commit must be on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "Tag $GITHUB_REF_NAME is not on main — refusing to release." >&2
+            exit 1
+          }
+
+      - name: Tag must match pyproject.toml version
         run: |
           VER=$(uv run python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          if git ls-remote --tags --exit-code origin "refs/tags/v$VER" >/dev/null 2>&1; then
-            echo "v$VER is already tagged — nothing to release."
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "v$VER has no tag yet — will release."
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_NAME" != "v$VER" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match pyproject.toml version $VER." >&2
+            exit 1
           fi
+          echo "VER=$VER" >> "$GITHUB_ENV"
 
-  build:
-    name: Build distributions
-    needs: guard
-    if: needs.guard.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - name: Install dev extras
-        run: uv sync --extra dev
+      - name: Verify version strings in sync
+        run: make check-version-sync
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          python3 << 'EOF'
+          import re, os, pathlib, sys
+          ver = os.environ["VER"]
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          pattern = r"(?m)^## \[" + re.escape(ver) + r"\].*?(?=^## \[|\Z)"
+          m = re.search(pattern, text, re.DOTALL)
+          if not m:
+              print(f"No CHANGELOG entry for {ver}", file=sys.stderr)
+              sys.exit(1)
+          pathlib.Path("release-notes.md").write_text(m.group().strip())
+          EOF
 
       - name: Build wheel and sdist
         run: make build
@@ -82,9 +90,16 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
   publish-pypi:
     name: Publish to PyPI
-    needs: [guard, build]
+    needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -99,43 +114,25 @@ jobs:
 
   github-release:
     name: Create GitHub release
-    needs: [guard, publish-pypi]
+    needs: publish-pypi
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
-
-      - name: Tag the release commit
-        env:
-          VER: ${{ needs.guard.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VER" -m "v$VER"
-          git push origin "v$VER"
-
-      - name: Extract release notes and create release
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+      - name: Create release for the pushed tag
         env:
           GH_TOKEN: ${{ github.token }}
-          VER: ${{ needs.guard.outputs.version }}
         run: |
-          python3 << 'EOF'
-          import re, os, pathlib, sys
-          ver = os.environ["VER"]
-          text = pathlib.Path("CHANGELOG.md").read_text()
-          pattern = r"(?m)^## \[" + re.escape(ver) + r"\].*?(?=^## \[|\Z)"
-          m = re.search(pattern, text, re.DOTALL)
-          if not m:
-              print(f"No CHANGELOG entry for {ver}", file=sys.stderr)
-              sys.exit(1)
-          pathlib.Path("/tmp/release-notes.md").write_text(m.group().strip())
-          EOF
-          gh release create "v$VER" \
-            --title "v$VER" \
-            --notes-file /tmp/release-notes.md \
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
             dist/*
