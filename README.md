@@ -33,8 +33,8 @@ research queue) and returns `{file_name}_v1.0-source.md`. Save it in
 research-buddy build my-project/source/my-project_v1.0-source.md
 ```
 
-That writes `my-project.html` next to the source, plus a per-version copy in
-`versions/`. In later sessions, upload the latest `*-source.md` and say
+That writes `my-project.html` in the project folder (the parent of `source/`), plus a
+per-version copy in `versions/`. In later sessions, upload the latest `*-source.md` and say
 *"Continue research"*.
 
 No install needed to start: the template is also a

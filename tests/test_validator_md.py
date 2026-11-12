@@ -686,3 +686,11 @@ class TestAgentStateValidation:
         path = _write(tmp_path / "demo_v1.0.md", _PROJECT_FM + "\n")
         codes = _codes(validate_md(path))
         assert "unknown-agent-state" not in codes
+
+
+def test_unquoted_version_float_is_an_error(tmp_path: Path) -> None:
+    text = _PROJECT_FM.replace('version: "1.0"', "version: 1.10")
+    path = _write(tmp_path / "demo_v1.10-source.md", text)
+    issues = validate_md(path)
+    assert "version-not-string" in _codes(issues)
+    assert "filename-mismatch" not in _codes(issues)

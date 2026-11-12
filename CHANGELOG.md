@@ -4,6 +4,21 @@ All notable changes to Research Buddy. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Stored XSS via `research_buddy_version`.** The footer now HTML-escapes the value.
+- **Built pages can no longer load remote resources.** A Content-Security-Policy meta
+  (`default-src 'none'; img-src data:`) blocks remote images and external SVG references.
+- **Unquoted `version: 1.10`** (YAML float 1.1) is now reported as `version-not-string`
+  with a "quote the version" message, instead of a misleading filename mismatch.
+- **Non-UTF-8 files** no longer traceback in `validate`, `bump`, `locate`, `turn1`,
+  `diff-summary` and `upgrade`; they report a clean error and exit 1.
+- **`build` on an `init` project** now writes per-version copies to the top-level
+  `versions/` (the parent of `source/`) instead of `source/versions/`.
+- **Release workflow** is tag-triggered, runs after CI and checks before publishing.
+
 ## [2.2.1] — 2026-10-20
 
 ### Fixed

@@ -283,6 +283,8 @@ All extraction markers are HTML comments — invisible in rendered Markdown, ign
 
 Bump MINOR (1.0 → 1.1 → 1.2) on any content change. Format-only changes do not bump.
 
+Always quote `version` in the frontmatter (`version: "1.10"`): unquoted, YAML reads `1.10` as the number 1.1 and the validator rejects it.
+
 **Bump locations** (all in the same atomic write):
 
 1. YAML frontmatter `version` and `date` fields.
