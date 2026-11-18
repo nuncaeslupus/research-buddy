@@ -44,6 +44,8 @@ from typing import Any
 
 import yaml
 
+from research_buddy.fileio import read_text_or_error
+
 # ---------------------------------------------------------------------------
 # Issue type and helpers
 # ---------------------------------------------------------------------------
@@ -521,6 +523,18 @@ def _check_filename_version(path: Path, text: str) -> list[Issue]:
     version = fm.get("version")
     file_name = fm.get("file_name")
 
+    if version is not None and not isinstance(version, str):
+        # An unquoted `version: 1.10` parses as the float 1.1; the real value is lost.
+        return [
+            Issue(
+                "error",
+                "version-not-string",
+                f"frontmatter 'version' must be a quoted string (got {version!r}); "
+                'write version: "1.10" with quotes so MINOR 10 is not read as 1.1',
+                0,
+            )
+        ]
+
     # Detect whether this is a source file (has framework block) or a clean view
     has_framework = "<!-- @anchor: framework.core -->" in text
 
@@ -953,7 +967,7 @@ def _check_dangerous_html(lines: list[str]) -> list[Issue]:
 
 
 def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
-    text = path.read_text(encoding="utf-8")
+    text = read_text_or_error(path)
     lines = text.splitlines()
 
     issues: list[Issue] = []
@@ -976,7 +990,7 @@ def validate_md(path: Path, prior: Path | None = None) -> list[Issue]:
     issues.extend(_check_dangerous_html(lines))
 
     if prior is not None:
-        prior_text = prior.read_text(encoding="utf-8")
+        prior_text = read_text_or_error(prior)
         issues.extend(_check_anchor_preservation(prior_text, text, lines))
         issues.extend(_check_append_only(prior_text, text))
 

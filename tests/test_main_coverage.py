@@ -470,3 +470,45 @@ class TestSetFrontmatterScalar:
         text = "---\nfoo: bar\n---\n"
         # Returns the input unchanged (no `title:` line to patch)
         assert _set_frontmatter_scalar(text, "title", "x") == text
+
+
+class TestNonUtf8Input:
+    """Every subcommand reports a non-UTF-8 file cleanly instead of a traceback."""
+
+    @pytest.mark.parametrize(
+        "argv_tail",
+        [
+            ["validate", "{p}"],
+            ["bump", "{p}", "Q-001", "--apply"],
+            ["locate", "{p}", "queue"],
+            ["turn1", "{p}"],
+            ["diff-summary", "{p}", "{p}"],
+            ["upgrade", "{p}"],
+        ],
+    )
+    def test_reports_error_not_traceback(
+        self, tmp_path: Path, capsys, argv_tail: list[str]
+    ) -> None:
+        from research_buddy.main import main
+
+        bad = tmp_path / "r.md"
+        bad.write_bytes(b"\xff\xfe")
+        argv = ["research-buddy", *(a.format(p=bad) for a in argv_tail)]
+        with patch.object(sys, "argv", argv), pytest.raises(SystemExit) as e:
+            main()
+        assert e.value.code == 1
+        assert "invalid UTF-8" in capsys.readouterr().err
+
+
+class TestBuildProjectRoot:
+    def test_build_from_init_layout_fills_top_level_versions(self, tmp_path: Path) -> None:
+        from argparse import Namespace
+
+        from research_buddy.main import cmd_build
+
+        md = _scaffold_md(tmp_path)
+        rc = cmd_build(Namespace(paths=[str(md)], output=None, theme=None, no_versioning=False))
+        assert rc in (0, 1)
+        root = md.parent.parent
+        assert list((root / "versions").glob("*.html"))
+        assert not (md.parent / "versions").exists()

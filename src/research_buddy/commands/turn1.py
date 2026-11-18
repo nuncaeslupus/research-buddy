@@ -13,6 +13,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from research_buddy.fileio import read_text_or_error
 from research_buddy.turn1 import Turn1Error, build_brief_skeleton
 
 
@@ -28,7 +29,7 @@ def cmd_turn1(args: argparse.Namespace) -> int:
         print(f"Error: {path} not found", file=sys.stderr)
         return 2
 
-    text = path.read_text(encoding="utf-8")
+    text = read_text_or_error(path)
     try:
         skeleton, notes = build_brief_skeleton(text)
     except Turn1Error as e:

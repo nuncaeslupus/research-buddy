@@ -18,6 +18,7 @@ from research_buddy.diff_summary import (
     build_summary,
     has_append_only_violation,
 )
+from research_buddy.fileio import read_text_or_error
 
 
 def cmd_diff_summary(args: argparse.Namespace) -> int:
@@ -36,8 +37,8 @@ def cmd_diff_summary(args: argparse.Namespace) -> int:
             print(f"Error: {p} not found", file=sys.stderr)
             return 2
 
-    old_text = old_path.read_text(encoding="utf-8")
-    new_text = new_path.read_text(encoding="utf-8")
+    old_text = read_text_or_error(old_path)
+    new_text = read_text_or_error(new_path)
 
     print(build_summary(old_text, new_text))
     action = build_downstream_action(old_text, new_text)

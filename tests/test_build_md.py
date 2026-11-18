@@ -432,3 +432,20 @@ def _clear_md_renderer_cache() -> None:
     from research_buddy.build_md import _md_renderer
 
     _md_renderer.cache_clear()
+
+
+class TestFooterAndCsp:
+    def test_footer_version_is_html_escaped(self) -> None:
+        fm = _FM.replace(
+            'research_buddy_version: "1.4.0"',
+            'research_buddy_version: "<img src=x onerror=alert(1)>"',
+        )
+        html = build_md_html(fm + "\n## Tab\n\nbody\n")
+        assert "<img src=x onerror" not in html
+        assert "&lt;img src=x onerror=alert(1)&gt;" in html
+
+    def test_csp_blocks_remote_loads(self) -> None:
+        html = build_md_html(_doc("## Tab\n\nbody\n"))
+        assert "Content-Security-Policy" in html
+        assert "img-src data:" in html
+        assert "default-src 'none'" in html

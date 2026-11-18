@@ -17,7 +17,7 @@ from pathlib import Path
 
 from research_buddy.bump import BumpError, bump_md_text, next_minor_version
 from research_buddy.clean_md import parse_frontmatter
-from research_buddy.fileio import atomic_write
+from research_buddy.fileio import atomic_write, read_text_or_error
 from research_buddy.validator_md import validate_md
 
 
@@ -33,7 +33,7 @@ def cmd_bump(args: argparse.Namespace) -> int:
         print(f"Error: {path} not found", file=sys.stderr)
         return 2
 
-    text = path.read_text(encoding="utf-8")
+    text = read_text_or_error(path)
     fm, _ = parse_frontmatter(text)
     if fm is None:
         print(f"Error: {path.name} has missing or invalid YAML frontmatter", file=sys.stderr)
