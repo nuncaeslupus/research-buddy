@@ -55,7 +55,7 @@ class TestAtomicWrite:
         assert p.read_text(encoding="utf-8") == "café — ✓\n"
 
     def test_suffixless_target(self, tmp_path: Path) -> None:
-        # `with_name` appends `.tmp` cleanly even when the target has no suffix.
+        # The temp name is built by appending, so a suffixless target is fine.
         p = tmp_path / "README"
         atomic_write(p, "no suffix\n")
         assert p.read_text(encoding="utf-8") == "no suffix\n"
@@ -67,6 +67,22 @@ class TestAtomicWrite:
         assert not (tmp_path / "out.md.tmp").exists()
         # Nothing but the target should remain.
         assert [c.name for c in tmp_path.iterdir()] == ["out.md"]
+
+    def test_concurrent_writers_use_distinct_temp_files(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        p = tmp_path / "out.md"
+        seen: list[str] = []
+        real_replace = Path.replace
+
+        def spy(self: Path, target: Path) -> Path:
+            seen.append(self.name)
+            return real_replace(self, target)
+
+        monkeypatch.setattr(Path, "replace", spy)
+        atomic_write(p, "a\n")
+        atomic_write(p, "b\n")
+        assert len(set(seen)) == 2
 
     def test_cleans_up_tmp_when_rename_fails(self, tmp_path: Path, monkeypatch) -> None:
         p = tmp_path / "out.md"
@@ -80,6 +96,6 @@ class TestAtomicWrite:
             atomic_write(p, "new\n")
 
         # The temp file written before the failed rename is cleaned up …
-        assert not (tmp_path / "out.md.tmp").exists()
+        assert [c.name for c in tmp_path.iterdir()] == ["out.md"]
         # … and the original target is left untouched.
         assert p.read_text(encoding="utf-8") == "original\n"

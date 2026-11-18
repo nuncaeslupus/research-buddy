@@ -44,12 +44,12 @@ class BumpError(Exception):
 def next_minor_version(version: str) -> str:
     """Return the next MINOR version. `1.0` → `1.1`, `2.5` → `2.6`.
 
-    The framework versions are ``MAJOR.MINOR``. Anything else (a PATCH
-    component, a negative or non-numeric part) is rejected rather than silently
-    rewritten.
+    A trailing PATCH component (`1.1.4`, kept by the v1 migrator) is dropped
+    since MINOR moves. Negative, non-numeric or absurdly long parts are
+    rejected rather than silently rewritten.
     """
     parts = version.strip().split(".")
-    if len(parts) > 2 or not all(p.isascii() and p.isdigit() for p in parts):
+    if len(parts) > 3 or not all(re.fullmatch(r"[0-9]{1,9}", p) for p in parts):
         raise BumpError(f"cannot parse version {version!r} as MAJOR.MINOR")
     major = int(parts[0])
     minor = int(parts[1]) if len(parts) > 1 else 0

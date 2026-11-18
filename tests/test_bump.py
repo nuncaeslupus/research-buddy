@@ -65,7 +65,10 @@ class TestNextMinorVersion:
         assert next_minor_version("1.0") == "1.1"
         assert next_minor_version("2.5") == "2.6"
 
-    @pytest.mark.parametrize("bad", ["1.0.3", "-1.5", "1.-2", "1.x", ""])
+    def test_drops_patch_component(self) -> None:
+        assert next_minor_version("1.0.3") == "1.1"
+
+    @pytest.mark.parametrize("bad", ["-1.5", "1.-2", "1.x", "", "1.2.3.4", "9" * 5000])
     def test_rejects_non_major_minor(self, bad: str) -> None:
         with pytest.raises(BumpError):
             next_minor_version(bad)

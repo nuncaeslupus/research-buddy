@@ -10,7 +10,7 @@ All notable changes to Research Buddy. Format roughly follows
 
 - **`build` with a missing `--theme` / `theme_css` file** now errors instead of silently using the default theme.
 - **`build` writes HTML atomically**, so an interrupted build can no longer leave a truncated page.
-- **`bump` rejects** negative, non-numeric and three-part versions instead of rewriting them; `bump`, `clean` and `build` report a non-mapping `project:` instead of crashing.
+- **`bump` rejects** negative, non-numeric and absurdly long versions instead of rewriting them; `bump`, `clean` and `build` report a non-mapping `project:` instead of crashing.
 - **Starter protocol:** the version-compatibility check now runs only with shell access (`research-buddy --version`) and is skipped silently otherwise; added guidance for editing in place (file tools) or emitting only changed sections (very large files).
 - **Stored XSS via `research_buddy_version`.** The footer now HTML-escapes the value.
 - **Built pages can no longer load remote resources.** A Content-Security-Policy meta

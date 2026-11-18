@@ -19,6 +19,7 @@ Two concerns centralized here so every command behaves the same way:
 from __future__ import annotations
 
 import contextlib
+import uuid
 from pathlib import Path
 
 
@@ -54,9 +55,11 @@ def atomic_write(path: Path, text: str) -> None:
     leaves a ``.tmp`` sibling behind. After a successful rename the temp path no
     longer exists, so the cleanup is a no-op on the happy path.
     """
-    tmp = path.with_name(path.name + ".tmp")
+    # Unique per call, so concurrent writers to one target never share a temp file.
+    tmp = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        tmp.write_text(text, encoding="utf-8")
+        with tmp.open("x", encoding="utf-8") as fh:
+            fh.write(text)
         tmp.replace(path)
     finally:
         # Best-effort cleanup. After a successful rename `tmp` is gone, so this
