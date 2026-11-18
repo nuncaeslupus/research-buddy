@@ -1,8 +1,7 @@
 """Build single-file HTML from a v2 Markdown research document.
 
-Mirrors the chrome of `build.py` (tab bar, sidebar nav, hljs, theme toggle,
-Research Buddy footer) so v1-JSON-built and v2-MD-built documents look the
-same in a browser.
+Renders the shared chrome from `chrome.py` (tab bar, sidebar nav, hljs, theme
+toggle, Research Buddy footer).
 
 Mapping:
 - YAML frontmatter → page title / version / date / lang.
@@ -39,6 +38,7 @@ from research_buddy.chrome import (
 from research_buddy.clean_md import (
     collect_framework_targets,
     parse_frontmatter,
+    project_domain,
     strip_framework_block,
     unwrap_framework_links,
 )
@@ -683,7 +683,7 @@ def build_md_html(
     # hasn't filled them in yet), emit the same "[FILL in session_zero …]"
     # placeholders the v1 JSON starter uses. Keeps the unconfigured-starter
     # render legible side-by-side with starter.html.
-    starter_mode = ((fm.get("project") or {}).get("domain")) is None
+    starter_mode = project_domain(fm) is None
     fill_placeholder = "[FILL in session_zero]"
 
     def _or_fill(value: Any, label: str) -> str:

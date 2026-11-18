@@ -119,6 +119,12 @@ def unwrap_framework_links(text: str, framework_targets: set[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def project_domain(fm: dict[str, Any]) -> Any:
+    """`project.domain`, or None when `project` is missing or not a mapping."""
+    project = fm.get("project")
+    return project.get("domain") if isinstance(project, dict) else None
+
+
 def parse_frontmatter(text: str) -> tuple[dict[str, Any] | None, int]:
     """Parse YAML frontmatter; return (parsed_dict_or_None, end_line_idx_1based)."""
     lines = text.splitlines()
@@ -320,7 +326,7 @@ def clean_md(source_path: Path, output_path: Path | None = None) -> Path:
         raise ValueError(
             f"{source_path}: doc_format_version is not 2 (this tool processes v2 Markdown only)"
         )
-    if (fm.get("project") or {}).get("domain") is None:
+    if project_domain(fm) is None:
         raise ValueError(
             f"{source_path}: this is a starter file (project.domain is null); "
             f"nothing to clean yet — fill it in via session zero first"
@@ -372,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         if fm is None or fm.get("doc_format_version", fm.get("format_version")) != 2:
             print(f"Error: {args.file} is not a v2 Markdown document", file=sys.stderr)
             return 2
-        if (fm.get("project") or {}).get("domain") is None:
+        if project_domain(fm) is None:
             print(f"Error: {args.file} is a starter file (project.domain is null)", file=sys.stderr)
             return 2
         sys.stdout.write(clean_md_text(text, fm))

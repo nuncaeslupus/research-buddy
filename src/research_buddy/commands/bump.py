@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from research_buddy.bump import BumpError, bump_md_text, next_minor_version
-from research_buddy.clean_md import parse_frontmatter
+from research_buddy.clean_md import parse_frontmatter, project_domain
 from research_buddy.fileio import atomic_write, read_text_or_error
 from research_buddy.validator_md import validate_md
 
@@ -41,7 +41,7 @@ def cmd_bump(args: argparse.Namespace) -> int:
     if fm.get("doc_format_version", fm.get("format_version")) != 2:
         print(f"Error: {path.name} is not a v2 Markdown document", file=sys.stderr)
         return 2
-    if (fm.get("project") or {}).get("domain") is None:
+    if project_domain(fm) is None:
         print(
             f"Error: {path.name} is a starter file (project.domain is null); "
             "run session zero before bumping",

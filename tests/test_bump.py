@@ -68,6 +68,11 @@ class TestNextMinorVersion:
     def test_drops_patch_component(self) -> None:
         assert next_minor_version("1.0.3") == "1.1"
 
+    @pytest.mark.parametrize("bad", ["-1.5", "1.-2", "1.x", "", "1.2.3.4", "9" * 5000])
+    def test_rejects_non_major_minor(self, bad: str) -> None:
+        with pytest.raises(BumpError):
+            next_minor_version(bad)
+
     def test_major_only(self) -> None:
         assert next_minor_version("3") == "3.1"
 
@@ -168,6 +173,17 @@ class TestBumpCommand:
         src = _make_source(tmp_path)
         assert cmd_bump(_bump_args(src, "Q-099", apply=True)) == 2
         assert not (tmp_path / "demo_v1.1-source.md").exists()
+
+    def test_non_mapping_project_reports_instead_of_crashing(self, tmp_path: Path) -> None:
+        from research_buddy.commands.bump import cmd_bump
+
+        src = _make_source(tmp_path)
+        text = src.read_text(encoding="utf-8")
+        text = re.sub(
+            r"^project:\n(?:[ \t]+.*\n)+", "project: my-topic\n", text, count=1, flags=re.M
+        )
+        src.write_text(text, encoding="utf-8")
+        assert cmd_bump(_bump_args(src, "Q-001", apply=True)) == 2
 
     def test_starter_file_refused(self, tmp_path: Path) -> None:
         from research_buddy.commands.bump import cmd_bump

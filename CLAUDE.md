@@ -124,8 +124,7 @@ Four places hold the version, one source of truth:
 - `README.md` — `# Research Buddy v…` heading (same)
 
 Workflow on a bump: edit `pyproject.toml`, run `make version-sync`, commit. CI's
-`make check-version-sync` catches drift; `tests/test_version_sync.py` is the
-local belt-and-suspenders.
+`make check-version-sync` catches drift (CI lint job, `make lint`, release guard).
 
 Releasing is tag-triggered (see `RELEASE.md`). Merging a version bump to
 `main` publishes nothing. Pushing a `vX.Y.Z` tag on `main` runs

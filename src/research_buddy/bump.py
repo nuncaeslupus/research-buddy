@@ -44,16 +44,15 @@ class BumpError(Exception):
 def next_minor_version(version: str) -> str:
     """Return the next MINOR version. `1.0` → `1.1`, `2.5` → `2.6`.
 
-    The framework bumps MINOR on any content change (1.0 → 1.1 → 1.2); a
-    trailing PATCH component, if present (`1.0.3`), is dropped on the bump
-    since MINOR moves.
+    A trailing PATCH component (`1.1.4`, kept by the v1 migrator) is dropped
+    since MINOR moves. Negative, non-numeric or absurdly long parts are
+    rejected rather than silently rewritten.
     """
     parts = version.strip().split(".")
-    try:
-        major = int(parts[0])
-        minor = int(parts[1]) if len(parts) > 1 else 0
-    except (ValueError, IndexError) as e:
-        raise BumpError(f"cannot parse version {version!r} as MAJOR.MINOR") from e
+    if len(parts) > 3 or not all(re.fullmatch(r"[0-9]{1,9}", p) for p in parts):
+        raise BumpError(f"cannot parse version {version!r} as MAJOR.MINOR")
+    major = int(parts[0])
+    minor = int(parts[1]) if len(parts) > 1 else 0
     return f"{major}.{minor + 1}"
 
 
