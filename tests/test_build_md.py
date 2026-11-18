@@ -375,6 +375,32 @@ class TestBuildMdCli:
         assert "/* THEMED */" in html
         assert "body{color:lime}" in html
 
+    def test_missing_explicit_theme_is_an_error(self, tmp_path: Path) -> None:
+        from research_buddy.main import perform_build_md
+
+        src = tmp_path / "demo_v1.0.md"
+        src.write_text(_doc("## Tab\n\nbody\n"), encoding="utf-8")
+        rc = perform_build_md(src, tmp_path, theme=str(tmp_path / "typo.css"), no_versioning=True)
+        assert rc == 1
+        assert not (tmp_path / "demo.html").exists()
+
+    def test_interrupted_write_leaves_no_partial_html(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from research_buddy.main import perform_build_md
+
+        src = tmp_path / "demo_v1.0.md"
+        src.write_text(_doc("## Tab\n\nbody\n"), encoding="utf-8")
+
+        def boom(self: Path, target: object) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr(Path, "replace", boom)
+        with pytest.raises(OSError):
+            perform_build_md(src, tmp_path, no_versioning=True)
+        assert not (tmp_path / "demo.html").exists()
+        assert not list(tmp_path.glob("*.tmp"))
+
 
 _FM_ES = _FM.replace("code: en", "code: es").replace("label: English", "label: Español")
 

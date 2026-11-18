@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
 import sys
 from pathlib import Path
 
 from research_buddy.build_md import build_md_html
 from research_buddy.clean_md import parse_frontmatter as parse_md_frontmatter
-from research_buddy.fileio import FileReadError, read_text_or_error
+from research_buddy.fileio import FileReadError, atomic_write, read_text_or_error
 from research_buddy.validator_md import validate_md
 
 
@@ -50,6 +49,7 @@ def perform_build_md(
     # 2. Frontmatter `theme_css` field (project-relative)
     # 3. Conventional `theme.css` next to the project root
     theme_css = None
+    explicit_theme = bool(theme or fm.get("theme_css"))
     if theme:
         theme_path = Path(theme)
     elif fm.get("theme_css"):
@@ -58,6 +58,9 @@ def perform_build_md(
             theme_path = (project_root / str(fm["theme_css"])).resolve()
     else:
         theme_path = project_root / "theme.css"
+    if explicit_theme and not theme_path.is_file():
+        print(f"Error: theme file not found: {theme_path}", file=sys.stderr)
+        return 1
     if theme_path.is_file():
         try:
             theme_css = read_text_or_error(theme_path)
@@ -88,17 +91,17 @@ def perform_build_md(
         version = fm.get("version", "1.0")
         versioned_name = f"{base_name}_v{version}.html"
         versioned_path = versions_dir / versioned_name
-        versioned_path.write_text(html, encoding="utf-8")
+        atomic_write(versioned_path, html)
         stable_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(versioned_path, stable_path)
+        atomic_write(stable_path, html)
         print(f"Written → versions/{versioned_name}")
     else:
         stable_path.parent.mkdir(parents=True, exist_ok=True)
-        stable_path.write_text(html, encoding="utf-8")
+        atomic_write(stable_path, html)
 
     size_kb = len(html.encode()) / 1024
     print(f"Written → {stable_path} ({size_kb:.0f} KB)")
-    return 1 if errors else 0
+    return 0
 
 
 def cmd_build(args: argparse.Namespace) -> int:
