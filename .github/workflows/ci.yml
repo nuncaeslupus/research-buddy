@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Reused by release.yml so a release only publishes after the full CI passes.
+  workflow_call:
 
 jobs:
   lint:

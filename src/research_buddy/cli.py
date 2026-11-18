@@ -23,6 +23,7 @@ from research_buddy.commands.migrate import cmd_migrate
 from research_buddy.commands.turn1 import cmd_turn1
 from research_buddy.commands.upgrade import cmd_upgrade
 from research_buddy.commands.validate import cmd_validate
+from research_buddy.fileio import FileReadError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -214,4 +215,8 @@ def main() -> None:
         "init": cmd_init,
         "upgrade": cmd_upgrade,
     }
-    sys.exit(handlers[args.command](args))
+    try:
+        sys.exit(handlers[args.command](args))
+    except FileReadError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

@@ -126,7 +126,9 @@ def cmd_build(args: argparse.Namespace) -> int:
             print(f"Error: {md_path} not found.", file=sys.stderr)
             exit_code = 1
             continue
-        rc = perform_build_md(md_path, md_path.parent, args.theme, args.output, args.no_versioning)
+        # Project layout from `init`: <project>/source/<doc>.md, with versions/ beside source/.
+        project_root = md_path.parent.parent if md_path.parent.name == "source" else md_path.parent
+        rc = perform_build_md(md_path, project_root, args.theme, args.output, args.no_versioning)
         if rc != 0:
             exit_code = rc
     return exit_code

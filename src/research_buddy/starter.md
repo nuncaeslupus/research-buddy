@@ -1,6 +1,6 @@
 ---
 doc_format_version: 2
-research_buddy_version: "2.2.0"
+research_buddy_version: "2.2.1"
 agent_state: needs_session_zero   # → "ready" once session zero completes
 version: null            # bumped to "1.0" at end of session zero
 date: null               # filled in session zero
@@ -282,6 +282,8 @@ All extraction markers are HTML comments — invisible in rendered Markdown, ign
 ### Versioning
 
 Bump MINOR (1.0 → 1.1 → 1.2) on any content change. Format-only changes do not bump.
+
+Always quote `version` in the frontmatter (`version: "1.10"`): unquoted, YAML reads `1.10` as the number 1.1 and the validator rejects it.
 
 **Bump locations** (all in the same atomic write):
 

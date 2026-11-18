@@ -1,4 +1,4 @@
-.PHONY: lint format test test-cov clean sync regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills
+.PHONY: lint format test test-cov clean sync regen-md-example regen-examples check-examples-sync build publish publish-force version-sync check-version-sync update-skills hero
 
 sync:
 	uv sync --extra dev
@@ -61,6 +61,10 @@ test:
 # ungated for local iteration.
 test-cov:
 	uv run pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=85
+
+# Redraw the README banner, docs/hero.svg and docs/hero.png (needs Chromium).
+hero:
+	uv run python scripts/hero.py
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
