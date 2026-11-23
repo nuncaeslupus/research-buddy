@@ -180,6 +180,21 @@ class TestBumpCommand:
         assert start and end
         assert start.end() < stub < end.start()
 
+    def test_section_markers_must_stand_alone(self) -> None:
+        from research_buddy.bump import BumpError, _get_section_body
+
+        # Trailing text after a marker, or a marker split across lines, is not a marker.
+        for text in (
+            "<!-- @anchor: x --> example\nbody\n<!-- @end: x -->\n",
+            "<!-- @anchor: x -->\nbody\n<!-- @end: x --> example\n",
+            "<!-- @anchor:\nx -->\nbody\n<!-- @end: x -->\n",
+            "<!-- @anchor: x\n-->\nbody\n<!-- @end: x -->\n",
+        ):
+            with pytest.raises(BumpError):
+                _get_section_body(text, "x")
+        ok = "<!-- @anchor: x -->  \nbody\n<!-- @end: x -->\t\n"
+        assert _get_section_body(ok, "x") == "  \nbody\n"
+
     def test_unknown_queue_id_returns_2(self, tmp_path: Path) -> None:
         from research_buddy.commands.bump import cmd_bump
 

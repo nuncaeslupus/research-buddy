@@ -66,7 +66,8 @@ def _section_re(anchor_id: str) -> re.Pattern[str]:
     # Markers must stand alone on their line: the same text quoted inline
     # (e.g. the Element catalog's EL-14 row) is not a section boundary.
     return re.compile(
-        rf"^([ \t]*<!-- @anchor:\s*{e}\s*-->)(.*?)(^[ \t]*<!-- @end:\s*{e}\s*-->)",
+        rf"^([ \t]*<!-- @anchor:[ \t]*{e}[ \t]*-->)(?=[ \t]*$)(.*?)"
+        rf"(^[ \t]*<!-- @end:[ \t]*{e}[ \t]*-->)(?=[ \t]*$)",
         re.DOTALL | re.MULTILINE,
     )
 

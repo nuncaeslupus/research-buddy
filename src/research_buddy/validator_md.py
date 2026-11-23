@@ -582,7 +582,8 @@ def _extract_section(text: str, anchor_id: str) -> str | None:
     """Return the text between <!-- @anchor: anchor_id --> and <!-- @end: anchor_id -->."""
     escaped = re.escape(anchor_id)
     pattern = re.compile(
-        rf"^[ \t]*<!-- @anchor:\s*{escaped}\s*-->(.*?)^[ \t]*<!-- @end:\s*{escaped}\s*-->",
+        rf"^[ \t]*<!-- @anchor:[ \t]*{escaped}[ \t]*-->(?=[ \t]*$)(.*?)"
+        rf"^[ \t]*<!-- @end:[ \t]*{escaped}[ \t]*-->(?=[ \t]*$)",
         re.DOTALL | re.MULTILINE,
     )
     m = pattern.search(text)
