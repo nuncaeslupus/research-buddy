@@ -8,6 +8,7 @@ All notable changes to Research Buddy. Format roughly follows
 
 ### Fixed
 
+- **`bump` put the References stub inside "Framework (Reference)".** Section anchors are now matched only when the `<!-- @anchor: -->` / `<!-- @end: -->` marker stands alone on its line, so the inline-code mention in the EL-14 catalog row no longer opens the "references" section (#164). `validate`'s section lookup got the same fix.
 - **`build` with a missing `--theme` / `theme_css` file** now errors instead of silently using the default theme.
 - **`build` writes HTML atomically**, so an interrupted build can no longer leave a truncated page.
 - **`bump` rejects** negative, non-numeric and absurdly long versions instead of rewriting them; `bump`, `clean` and `build` report a non-mapping `project:` instead of crashing.

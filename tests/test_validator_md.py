@@ -694,3 +694,15 @@ def test_unquoted_version_float_is_an_error(tmp_path: Path) -> None:
     issues = validate_md(path)
     assert "version-not-string" in _codes(issues)
     assert "filename-mismatch" not in _codes(issues)
+
+
+def test_extract_section_markers_must_stand_alone() -> None:
+    from research_buddy.validator_md import _extract_section
+
+    for text in (
+        "<!-- @anchor: x --> example\nbody\n<!-- @end: x -->\n",
+        "<!-- @anchor: x -->\nbody\n<!-- @end: x --> example\n",
+        "<!-- @anchor:\nx -->\nbody\n<!-- @end: x -->\n",
+    ):
+        assert _extract_section(text, "x") is None
+    assert _extract_section("<!-- @anchor: x -->\nbody\n<!-- @end: x -->\n", "x") == "\nbody\n"
