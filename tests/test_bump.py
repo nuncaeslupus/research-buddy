@@ -167,6 +167,19 @@ class TestBumpCommand:
         assert "Q-001" not in _get_section_body(new_text, "queue")
         assert "Q-001" in _get_section_body(new_text, "tracker")
 
+    def test_references_stub_lands_in_references_section(self, tmp_path: Path) -> None:
+        # EL-14 quotes `<!-- @anchor: references -->` inline; that must not
+        # be taken as the section start (regression: stub landed in the framework).
+        from research_buddy.bump import bump_md_text
+
+        text = _make_source(tmp_path).read_text(encoding="utf-8")
+        new_text, _, _ = bump_md_text(text, "Q-001", "1.1", "2026-05-02")
+        stub = new_text.index("### v1.1 — 2026-05-02")
+        start = re.search(r"^<!-- @anchor: references -->$", new_text, re.MULTILINE)
+        end = re.search(r"^<!-- @end: references -->$", new_text, re.MULTILINE)
+        assert start and end
+        assert start.end() < stub < end.start()
+
     def test_unknown_queue_id_returns_2(self, tmp_path: Path) -> None:
         from research_buddy.commands.bump import cmd_bump
 
