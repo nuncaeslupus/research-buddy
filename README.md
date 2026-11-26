@@ -217,3 +217,5 @@ to this README's heading.
 ## License
 
 MIT
+
+More tools by the same author: [github.com/nuncaeslupus](https://github.com/nuncaeslupus).
