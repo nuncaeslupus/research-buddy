@@ -8,6 +8,10 @@ on:
   # Reused by release.yml so a release only publishes after the full CI passes.
   workflow_call:
 
+# CI only reads the code. Declared so the repo's token default can be read-only.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
