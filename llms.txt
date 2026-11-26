@@ -1,0 +1,15 @@
+# Research Buddy
+
+> A structured AI research collaborator for any domain, carried inside a single versioned Markdown file.
+
+Research Buddy embeds a research method in one `*-source.md` file that you upload to any AI assistant: the agent works one queued topic per session, in two turns, with tiered sources and append-only history. The `research-buddy` CLI (`pip install research-buddy`) scaffolds, validates and versions that file and renders it to a single-file HTML page.
+
+## Docs
+
+- [README](https://github.com/nuncaeslupus/research-buddy/blob/main/README.md)
+- [Changelog](https://github.com/nuncaeslupus/research-buddy/blob/main/CHANGELOG.md)
+
+## Optional
+
+- [Contributing](https://github.com/nuncaeslupus/research-buddy/blob/main/CONTRIBUTING.md)
+- [Security policy](https://github.com/nuncaeslupus/research-buddy/blob/main/SECURITY.md)
